@@ -8,7 +8,7 @@ import { LEVELS } from './data/level1'
 import { NIGHTS } from './data/endless'
 import { heroPainter, loadPreviewHeads } from './hero/HeroPreview'
 
-export const gameLink = () => `${location.origin}/?siege`
+export const gameLink = () => 'https://knock.timidan.xyz'
 export function shareText(result: Outcome, id: number) {
   const score = result.score.toLocaleString('en-US'), stars = `${'★'.repeat(result.stars)}${'☆'.repeat(3 - result.stars)}`
   if (result.mode === 'endless') return `I held out to wave ${result.wave} in Candy Siege Endless with Chog #${id}: ${result.kills} Chogs stopped, ${score} points. Can you beat it? ${gameLink()}`
@@ -69,7 +69,7 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   }
   text('YOUR PORCH. YOUR CHOG. YOUR HIGH SCORE.', 540, 1228, 27, '#ffd8a1', 'Patrick Hand')
   ctx.textAlign = 'left'; text(new Date(result.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), 68, 1283, 23, '#d7c1e3', 'Patrick Hand')
-  ctx.textAlign = 'right'; ctx.font = '24px "Patrick Hand", sans-serif'; ctx.fillText(gameLink(), 1006, 1283, 710)
+  ctx.textAlign = 'right'; ctx.font = '24px "Patrick Hand", sans-serif'; ctx.fillText(gameLink().replace('https://', ''), 1006, 1283, 710)
   return new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The image could not be created.')), 'image/png'))
 }
 

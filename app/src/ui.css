@@ -139,7 +139,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sticker, .sticker:hover:not(:disabled), .bubble { animation: none; transition: none; }
-  .sticker .splash { display: none; }
 }
 
 /* The candy bag: what the Chog's own wallet holds. */

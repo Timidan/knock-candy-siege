@@ -135,7 +135,7 @@ export class Hero {
       return
     }
     if (s.crew === 1 && amount >= 1 && s.random() < .1) { s.dodgeFeedback(this); this.reaction.dodge = .26; return }
-    if (this.shield && amount >= 1) { this.shield--; s.shieldFeedback(this); s.options.sfx.play('armor'); return }
+    if (this.shield && amount >= 1) { this.shield--; s.shieldFeedback(this); return }
     const armor = (this.kit.headgear === 'armored' ? this.has('headgear') ? .45 : .3 : 0) + (this.kit.skin === 'metal' ? .2 : 0) + (this.waveBuff === 'guard' ? .15 : 0)
     this.hp -= amount * (1 - Math.min(.65, armor))
     if (amount > 1) {

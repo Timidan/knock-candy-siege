@@ -107,7 +107,7 @@ const art = (b: BossState, name: string) => `hero-legend-${b.id}:${name}`
 function startIntro(s: SiegeScene, e: Enemy, b: BossState) {
   s.hud.bossBanner(b)
   if (b.rig) b.rig.emote(); else s.emote('taunt', e.x, e.y - 250)
-  s.options.sfx.boss(b.id, true); s.shake(.006)
+  s.options.sfx.boss(b.id, true); s.options.sfx.music('boss'); s.shake(.006)
 }
 
 function enrage(s: SiegeScene, e: Enemy, b: BossState) {
@@ -256,6 +256,7 @@ export function bossDeath(s: SiegeScene, e: Enemy) {
   for (let i = 0; i < count; i++) { const coin = i % 3 === 0; s.effect(coin ? 'fx/coin' : 'fx/candy-burst/0', e.x + (s.visualRandom() - .5) * 220, e.y - 120 - s.visualRandom() * 90, .7 + i * .035, coin ? .3 : .9, coin ? 'coin' : 'burst', 261, 82) }
   s.shake(last ? .014 : .007)
   if (last) {
+    s.options.sfx.music('level')
     s.bossesDefeated.push(String(b.id))
     s.hud.banner(`${b.name.toUpperCase()}  ·  DEFEATED`); s.options.sfx.play('candy-cascade')
   }

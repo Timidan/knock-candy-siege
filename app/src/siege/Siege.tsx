@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
+import { flushSync } from 'react-dom'
 import Phaser from 'phaser'
 import { Sticker, PlaqueInput } from '../ui'
 import type { WalletState } from '../wallet'
@@ -41,10 +42,12 @@ if (import.meta.env.DEV) selfCheck()
 track('session') // once per page load: this module is evaluated once
 // Random picks never land on a Chog with crude cap or shirt text; those stay playable by number.
 const randomHero = (random: () => number) => { let id: number; do id = Math.floor(random() * 1969) + 1; while (CRUDE_TEXT_CHOGS.has(id)); return String(id) }
-function Modal({ children, label, onEscape, className = '' }: { children: ReactNode; label: string; onEscape: () => void; className?: string }) {
+// Dialogs settle in (siege.css); `closing` plays the exit while the parent waits to remove it. One replacing another keeps its backdrop steady.
+function Modal({ children, label, onEscape, className = '', closing = false }: { children: ReactNode; label: string; onEscape: () => void; className?: string; closing?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const [swap] = useState(() => !!document.querySelector('dialog.siege-modal[open]'))
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); dialog?.querySelector<HTMLElement>('[data-initial-focus]')?.focus(); return () => dialog?.close() }, [])
-  return <dialog ref={ref} className={`siege-modal board ${className}`} aria-label={label} onCancel={event => { event.preventDefault(); onEscape() }}>{children}</dialog>
+  return <dialog ref={ref} inert={closing} className={`siege-modal board ${className}${swap ? ' siege-modal--swap' : ''}${closing ? ' siege-modal--closing' : ''}`} aria-label={label} onCancel={event => { event.preventDefault(); onEscape() }}>{children}</dialog>
 }
 function EnemyPortrait({ assets, kind, id }: { assets: AssetPack; kind: EnemyKind; id: number }) {
   const atlas = assets.atlases.find(a => a.data.frames[`enemy/${kind}/walk/0`]), frame = atlas?.data.frames[`enemy/${kind}/walk/0`]?.frame
@@ -68,8 +71,13 @@ const SLAMS = [300, 650, 1000], IMPACT = 200
 const SHAKE: Keyframe[] = [{ translate: '0 0' }, { translate: '-5px 2px' }, { translate: '4px -2px' }, { translate: '-2px 1px' }, { translate: '0 0' }]
 // Three stars rain candy over the card once the last star lands: [left %, extra delay ms, fall seconds, spin degrees].
 const CONFETTI = [[6, 0, 1.6, 320], [19, 260, 1.9, -400], [31, 90, 1.5, 260], [44, 380, 2, -300], [56, 30, 1.7, 380], [69, 300, 1.8, -260], [81, 150, 1.55, 340], [94, 420, 1.85, -360], [25, 620, 1.7, 300], [75, 700, 1.9, -340]]
-function ResultStars({ count, fx, shake }: { count: number; fx?: AssetPack['atlases'][number]; shake: boolean }) {
+function ResultStars({ count, fx, shake, sfx }: { count: number; fx?: AssetPack['atlases'][number]; shake: boolean; sfx: { current: Sfx | null } }) {
   const ref = useRef<HTMLDivElement>(null)
+  // Each star lands with a cue, a little higher each time, scheduled on the audio clock so a busy main thread can't make it late.
+  // With reduced motion the stars appear at once, so no cue.
+  useEffect(() => {
+    if (!reducedMotion()) SLAMS.slice(0, count).forEach((at, i) => sfx.current?.play('star', 1 + i * .12, 1, true, (at + IMPACT) / 1000))
+  }, [count, sfx])
   useEffect(() => {
     // `translate` leaves the card's slide-in transform alone.
     const card = ref.current?.closest('dialog')
@@ -136,8 +144,11 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const pendingRun = useRef<Run | null>(null), startToken = useRef(0)
   const accountNow = useRef(activeWallet.account); accountNow.current = activeWallet.account
   const [starting, setStarting] = useState(false)
-  useEffect(() => { startToken.current++; pendingRun.current = null; setStarting(false); setStreetRead(null); setMenu(m => m === 'street' ? 'hero' : m) }, [activeWallet.account, activeWallet.sandbox])
-  useEffect(() => () => { startToken.current++ }, [])
+  // The menu where a $CHOG perk read failed: it shows a Retry / Continue note until the menu changes.
+  const [perksFailed, setPerksFailed] = useState<Menu>(null)
+  useEffect(() => setPerksFailed(null), [menu])
+  useEffect(() => { startToken.current++; pendingRun.current = null; setStarting(false); setStreetRead(null); setPerksFailed(null); setMenu(m => m === 'street' ? 'hero' : m) }, [activeWallet.account, activeWallet.sandbox])
+  useEffect(() => () => { startToken.current++; clearTimeout(closeTimer.current) }, [])
   const [outcome, setOutcome] = useState<Outcome | null>(null), [defeatTip, setDefeatTip] = useState('')
   const [intro, setIntro] = useState('treater')
   const [icons, setIcons] = useState<AssetPack['atlases'][number]>()
@@ -238,11 +249,13 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     return () => controller.abort()
   }, [loadAttempt])
   useEffect(() => {
+    // Sfx unlocks itself inside the first gesture and retries anything that failed on later ones.
     const audio = new Sfx(saveRef.current.settings); sfx.current = audio
-    const unlock = () => void audio.unlock()
-    document.addEventListener('pointerdown', unlock, { once: true })
-    return () => { document.removeEventListener('pointerdown', unlock); audio.destroy(); sfx.current = null }
+    return () => { audio.destroy(); sfx.current = null }
   }, [])
+  // Music follows the screen: the level theme in a run, the menu theme on menus and the result card. Boss.ts switches to the boss theme.
+  const musicTrack = run && menu !== 'result' ? 'level' : 'menu'
+  useEffect(() => { sfx.current?.music(musicTrack) }, [musicTrack, run])
   useEffect(() => {
     if (!run || !assets || !host.current || !sfx.current) return
     setReady(false)
@@ -300,14 +313,24 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   }, [ownedKey, ready, assets])
   useEffect(() => { scene.current?.applySettings(save.settings); sfx.current?.apply(save.settings) }, [save.settings])
   const updateSettings = (settings: Settings) => persist({ ...saveRef.current, settings })
-  const resume = () => { setMenu(null); scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() }
+  // Closing the last dialog waits for its 120 ms exit; `after` runs once it is gone (the canvas is inert while a modal is open).
+  const [closing, setClosing] = useState(false), closeTimer = useRef(0)
+  const closeMenu = (after: () => void) => {
+    setClosing(true); clearTimeout(closeTimer.current)
+    closeTimer.current = window.setTimeout(() => { flushSync(() => { setClosing(false); setMenu(null) }); after() }, 120)
+  }
+  const resume = () => closeMenu(() => { scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() })
   const leaveLevel = () => { setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
+  // A story win with a playable level after it leads on to that night's hero picker, keeping the hero and costume.
+  const nextLevel = outcome?.won && run?.mode === 'level' && LEVELS[run.level]?.waves.length ? run.level + 1 : 0
+  const nextNight = () => { if (!run) return; const id = run.id; leaveLevel(); setLevel(nextLevel); setHero(String(id)); setMenu('hero') }
   const launchRun = (next: Run) => {
-    setRun(next); pendingRun.current = null; setStreetRead(null); setOutcome(null); setMenu(null)
+    closeMenu(() => { setRun(next); pendingRun.current = null; setStreetRead(null); setOutcome(null) })
     void sfx.current?.unlock(); sfx.current?.pause(false)
   }
   const start = async (tutorial = level === 1 && !save.tutorial) => {
     if (starting) return
+    setPerksFailed(null)
     let next: Run
     if (run && menu !== 'hero') next = { ...run, serial: Date.now(), tutorial, owned: shop.owned, stars: saveRef.current.stars, street: NO_STREET, assets: scene.current?.options.assets ?? run.assets }
     else {
@@ -320,12 +343,15 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     if (token !== startToken.current || accountNow.current !== account) return
     setStarting(false)
     if (menuNow.current !== fromMenu) return
+    // "Could not check" is not "no perks": ask before starting without them.
+    if (result.status === 'unavailable') { pendingRun.current = { ...next, home: ownedHero }; setPerksFailed(fromMenu); return }
     if (!result.bonuses.chog) { launchRun({ ...next, home: ownedHero }); return }
     pendingRun.current = { ...next, home: ownedHero, street: result.bonuses }
     setStreetRead(result); setMenu('street')
   }
   const subMenu = (next: Menu) => { setReturnMenu(menu); setMenu(next) }
   const escape = () => {
+    if (closing) return
     if (menu === 'settings' || menu === 'book' || menu === 'shop') setMenu(returnMenu)
     else if (menu === 'pause' || menu === 'intro') resume()
     else if (menu === 'street') { startToken.current++; pendingRun.current = null; setStreetRead(null); setMenu(run ? 'pause' : 'hero') }
@@ -337,34 +363,42 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     <div className="siege-stage" ref={host} />
     {run && !menu && activeWallet.sandbox && <aside style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', maxWidth: '36%', padding: '4px 10px', borderRadius: 6, background: '#241632e6', color: '#fff1b3', fontSize: 13, textAlign: 'center', pointerEvents: 'none' }}>Sandbox: a demo copy of Monad, nothing is real</aside>}
     <div className="siege-safe-area" aria-hidden="true" />
-    {!run && <div className="siege-night" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#24163266, #241632aa), url(/siege/levels/level1.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>}
+    {!run && <div className="siege-night" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#24163233, #24163277), url(/siege/levels/level1.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>}
     {onBack && <div className="siege-back"><Sticker onClick={onBack}>← Knock</Sticker></div>}
     <div className="siege-rotate bubble">Turn your phone sideways for the best view</div>
     {run && !ready && <div className="siege-loading" role="status">Lighting the lanterns…</div>}
-    {menu && <Modal key={menu} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={menu === 'result' ? 'siege-modal--result' : menu === 'shop' ? 'siege-modal--shop' : menu === 'hero' ? 'siege-modal--hero' : ''}>
+    {menu && <Modal key={menu} closing={closing} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={menu === 'result' ? 'siege-modal--result' : menu === 'shop' ? 'siege-modal--shop' : menu === 'hero' ? 'siege-modal--hero' : menu === 'title' ? 'siege-modal--title' : ''}>
       {installTip && <aside className="siege-install-tip" aria-label="Play full screen on iPhone">
         <strong>Add Knock to your Home Screen to play full screen</strong>
         <p>In Safari, tap Share (the square with an arrow). Scroll down and tap “Add to Home Screen”, then “Add”. Open Knock from its new icon.</p>
         <button className="siege-text-button" onClick={() => setInstallTip(false)}>Got it</button>
       </aside>}
       {displayNotice && <p role="status">{displayNotice}</p>}
+      {perksFailed === menu && pendingRun.current && <p className="siege-perks-failed" role="alert">Couldn’t check your $CHOG perks.<Sticker disabled={starting} onClick={() => void start(pendingRun.current?.tutorial)}>Retry</Sticker><Sticker tone="orange" onClick={() => { const next = pendingRun.current; setPerksFailed(null); if (next) launchRun(next) }}>Continue</Sticker></p>}
       {menu === 'title' && <div className="siege-title">
-        <span className="siege-eyebrow">A LITTLE MISCHIEF. A LOT OF CANDY.</span>
-        <h1>Candy<br /><span>Siege</span><i aria-hidden="true">✦</i></h1>
-        <p>The whole neighbourhood wants your candy.<br />Give them a Halloween to remember.</p>
-        <Sticker tone="orange" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Hold the porch →</Sticker>
-        <div className="row"><Sticker tone="gold" onClick={() => subMenu('shop')}>Shop · $KNOCK</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker></div>
-        {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK available</button>}
-        <small>20 jars. Your Chog. One very long night.</small>
-        {STATS_URL && <a className="siege-text-button" href="/stats" style={{ width: 'fit-content', lineHeight: '44px' }}>Live stats</a>}
+        {/* Tonight's hero, the same Chog the hero picker opens on. */}
+        {valid && <figure className="siege-title-chog"><img src={`/chogs-256/${Number(hero)}.webp`} alt="" /><figcaption>Chog #{Number(hero)} · on porch duty</figcaption></figure>}
+        <div className="siege-title-card board">
+          <img className="siege-wordmark" src="/art/ui/logo.svg" alt="Knock" />
+          <span className="siege-eyebrow">A LITTLE MISCHIEF. A LOT OF CANDY.</span>
+          <h1>Candy<br /><span>Siege</span><i aria-hidden="true">✦</i></h1>
+          <p>The whole neighbourhood wants your candy.<br />Give them a Halloween to remember.</p>
+          <Sticker tone="orange" className="siege-title-play" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Hold the porch →</Sticker>
+          <div className="row"><Sticker tone="gold" onClick={() => subMenu('shop')}>Shop · $KNOCK</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker></div>
+          <small>20 jars. Your Chog. One very long night.</small>
+          <div className="siege-title-links">
+            {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK available</button>}
+            {STATS_URL && <a className="siege-text-button" href="/stats" style={{ width: 'fit-content', lineHeight: '44px' }}>Live stats</a>}
+          </div>
+        </div>
       </div>}
       {menu === 'levels' && <>
         <span className="siege-eyebrow">CHOG TOWN · AFTER DARK</span><h2>Pick your porch</h2>
-        <div className="siege-levels">{LEVELS.map((item, index) => { const playable = item.waves.length > 0 || !!item.endless, best = item.endless ? save.endless.wave : save.stars[item.id] ?? 0; return <Sticker key={item.id} aria-label={`${item.endless ? 'Endless mode' : item.name}, ${playable ? item.endless ? `best wave ${best}` : `${best} stars${item.id === 1 ? ', Start here' : ''}` : 'Coming soon'}`} tone={item.endless ? 'orange' : playable ? 'gold' : 'paper'} className="siege-level" disabled={!playable} onClick={() => { setLevel(item.id); setMenu('hero') }}>
-          <img className="siege-map-thumb" src={`/siege/levels/${mapFile(item.id)}.webp`} alt="" /><strong>{item.endless ? '∞' : String(index + 1).padStart(2, '0')}</strong><span>{item.endless ? 'Endless · Town Square' : item.name}</span>{item.endless ? <small>{save.endless.wave ? `Best: wave ${save.endless.wave}` : 'Waves never stop'}</small> : stars(best)}{item.id === 1 && <small className="siege-start-here">Start here</small>}{!playable && <small>Coming soon</small>}
+        <div className="siege-levels">{LEVELS.map((item, index) => { const playable = item.waves.length > 0 || !!item.endless, best = item.endless ? save.endless.wave : save.stars[item.id] ?? 0, boss = item.waves.map(wave => wave.boss?.id).filter(id => typeof id === 'number').pop(); return <Sticker key={item.id} aria-label={`${item.endless ? 'Endless mode' : item.name}, ${playable ? item.endless ? `best wave ${best}` : `${best} stars${item.id === 1 ? ', Start here' : ''}` : 'Coming soon'}`} tone={item.endless ? 'orange' : playable ? 'gold' : 'paper'} className="siege-level" disabled={!playable} onClick={() => { setLevel(item.id); setMenu('hero') }}>
+          <span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/${mapFile(item.id)}.webp)` }}>{boss && <img src={`/chogs-256/${boss}.webp`} alt="" />}</span><strong>{item.endless ? '∞' : String(index + 1).padStart(2, '0')}</strong><span>{item.endless ? 'Endless · Town Square' : item.name}</span>{item.endless ? <small>{save.endless.wave ? `Best: wave ${save.endless.wave}` : 'Waves never stop'}</small> : stars(best)}{item.id === 1 && <small className="siege-start-here">Start here</small>}{!playable && <small>Coming soon</small>}
         </Sticker> })}
           <Sticker aria-label={`Daily challenge number ${daily.number}: ${LEVELS[daily.level - 1].name}, ${NIGHTS[daily.theme].name}`} tone="gold" className="siege-level siege-daily" onClick={() => { setLevel(DAILY_LEVEL); setMenu('hero') }}>
-            <img className="siege-map-thumb" src={`/siege/levels/level${daily.level}.webp`} alt="" /><strong>{icons ? <AtlasSprite atlas={icons} name={NIGHTS[daily.theme].icon} size={46} /> : '☾'}</strong><span>Daily #{daily.number}</span><small>{LEVELS[daily.level - 1].name} · {NIGHTS[daily.theme].name}</small><small>{save.daily[daily.day] ? `Best today: ${save.daily[daily.day].toLocaleString()}` : NIGHTS[daily.theme].text}</small>
+            <span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/level${daily.level}.webp)` }} /><strong>{icons ? <AtlasSprite atlas={icons} name={NIGHTS[daily.theme].icon} size={46} /> : '☾'}</strong><span>Daily #{daily.number}</span><small>{LEVELS[daily.level - 1].name} · {NIGHTS[daily.theme].name}</small><small>{save.daily[daily.day] ? `Best today: ${save.daily[daily.day].toLocaleString()}` : NIGHTS[daily.theme].text}</small>
           </Sticker>
         </div>
         <p className="siege-hint">3 stars: 18–20 jars · 2 stars: 10–17 · 1 star: 1–9</p>
@@ -447,10 +481,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       {menu === 'result' && outcome && <div className={outcome.won ? 'siege-win' : ''}>
         <span className="siege-eyebrow">{outcome.mode === 'endless' ? 'ENDLESS · TOWN SQUARE' : outcome.mode === 'daily' ? `DAILY #${outcome.daily} · ${NIGHTS[outcome.theme].name.toUpperCase()}` : outcome.won ? 'THE SWEET TASTE OF' : 'THE NEIGHBOURHOOD SAYS THANKS'}</span>
         <h2>{outcome.mode === 'endless' ? `Wave ${outcome.wave}!` : outcome.won ? 'Sweet victory!' : 'They got the candy.'}</h2>
-        {outcome.mode !== 'endless' && (outcome.won ? <ResultStars count={outcome.stars} fx={(run?.assets ?? assets)?.atlases.find(a => a.key === 'fx')} shake={save.settings.shake} /> : stars(0))}<p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.won ? `${outcome.jars} jars saved. The porch is yours.` : defeatTip}</p>
+        {outcome.mode !== 'endless' && (outcome.won ? <ResultStars count={outcome.stars} fx={(run?.assets ?? assets)?.atlases.find(a => a.key === 'fx')} shake={save.settings.shake} sfx={sfx} /> : stars(0))}<p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.won ? `${outcome.jars} jars saved. The porch is yours.` : defeatTip}</p>
         <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span><span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span><span><b>{outcome.heroLevel}</b> hero level</span></div>
-        <div className="row"><Sticker tone="orange" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker><Sticker onClick={leaveLevel}>Level select</Sticker></div>
+        <div className="row">{nextLevel ? <><Sticker tone="orange" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker onClick={leaveLevel}>Level select</Sticker></div>
         {run && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} dance={run.victoryDance} result={outcome} />}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}

@@ -14,7 +14,7 @@ import type { Daily } from './data/endless'
 import { eliteBonus, modifiersFor, traitsFor, MODIFIERS } from './data/traits'
 import { reducedMotion } from './data/save'
 import type { Settings } from './data/save'
-import { Sfx } from './Sfx'
+import { Sfx, type Cue } from './Sfx'
 import { Route, clearStatuses, distanceSq, reaction } from './world'
 import type { Ally, Blocker, DamageNumber, Effect, Enemy, Guard, Projectile, Reaction, Tower, Trap, UnitArt } from './world'
 import { Hud } from './Hud'
@@ -163,7 +163,7 @@ export class SiegeScene extends Phaser.Scene {
   hitPause = 0
   private nextHitPause = 0
   private impactProjectile: Projectile | null = null
-  private impactSound: 'splat' | 'armor' | 'throw' | null = null
+  private impactSound: Cue | null = null
   get presentationFrozen() { return this.hitPause > 0 && this.motion && this.settings.shake }
   private combos = new Set<string>()
   private signatures: { player: Signature; enemy?: Enemy; generation?: number; bubble?: boolean }[] = []
@@ -934,7 +934,7 @@ export class SiegeScene extends Phaser.Scene {
       guard.poseUntil = this.presentationTime + .24; guard.recoilX = dx / length * 5; guard.recoilY = dy / length * 5
       this.kick(e.art.reaction, e, -dx / length * 9, -dy / length * 9, 0)
       this.effect('combat/block/0', (e.x + guard.x) / 2, (e.y + guard.y) / 2 - 48, .24, .72)
-      if (this.presentationTime >= e.art.popAt) { this.combatPop('block', guard.x, guard.y - 106); e.art.popAt = this.presentationTime + 1.2 }
+      if (this.presentationTime >= e.art.popAt) { this.combatPop('block', guard.x, guard.y - 106); this.options.sfx.play('block'); e.art.popAt = this.presentationTime + 1.2 }
     }
     return true
   }
@@ -1041,11 +1041,13 @@ export class SiegeScene extends Phaser.Scene {
   dodgeFeedback(at: Point) {
     this.effect('combat/dodge/0', at.x, at.y - 58, .36, 1.1, 'travel', at.x - (this.motion ? 38 : 0), at.y - 58)
     this.combatPop('miss', at.x, at.y - 142)
+    if (!this.impactProjectile) this.options.sfx.play('miss')
   }
   shieldFeedback(at: Point) {
     this.effect('combat/shield/0', at.x, at.y - 75, .4, 1.9)
     this.effect('combat/block/0', at.x + 35, at.y - 82, .22, .7)
     this.combatPop('block', at.x, at.y - 166)
+    if (!this.impactProjectile) this.options.sfx.play('block')
   }
   private deflectFeedback(e: Enemy, cue?: HitCue) {
     if (this.presentationTime < e.art.deflectAt) return
@@ -1071,7 +1073,7 @@ export class SiegeScene extends Phaser.Scene {
       const hit = this.effect(`combat/impact-${kind}/0`, e.x, e.y - (e.boss ? 100 : 55), .26, .7 + weight * .65)
       if (hit && kind !== 'tp') hit.angle = Math.atan2(d.y, d.x)
     }
-    if (cue?.crit) this.effect('combat/crit/0', e.x, e.y - (e.boss ? 125 : 72), .38, 1.5)
+    if (cue?.crit) { this.effect('combat/crit/0', e.x, e.y - (e.boss ? 125 : 72), .38, 1.5); this.options.sfx.play('crit') }
     // Multiple pellets / splash recipients share a beat, never repeatedly extend it.
     if ((cue?.crit || e.boss) && this.motion && this.settings.shake && this.presentationTime >= this.nextHitPause) {
       this.hitPause = cue?.crit ? .05 : .035; this.nextHitPause = this.presentationTime + .24
@@ -1114,14 +1116,14 @@ export class SiegeScene extends Phaser.Scene {
   }
   damage(e: Enemy, amount: number, type: 'magic' | 'physical' | 'egg', feedback = true, hero = false, cue?: HitCue): boolean {
     if (!e.active || e.returning) return false
-    if (feedback && e.mods.includes('smoke') && this.random() < .2) { if (this.impactProjectile) this.impactSound ??= 'throw'; if (this.presentationTime >= e.art.missAt) { this.dodgeFeedback(e); e.art.reaction.dodge = .22; e.art.missAt = this.presentationTime + .25 }; return false }
+    if (feedback && e.mods.includes('smoke') && this.random() < .2) { if (this.impactProjectile) this.impactSound ??= 'miss'; if (this.presentationTime >= e.art.missAt) { this.dodgeFeedback(e); e.art.reaction.dodge = .22; e.art.missAt = this.presentationTime + .25 }; return false }
     const deflected = type === 'egg' && (e.kind === 'pumpkin' || e.armour)
     if (type !== 'magic') { if (e.kind === 'pumpkin' && type === 'egg') amount *= .2; if (e.armour) amount *= .65 }
     if (e.status.mark > 0) amount *= 1.5
     if (this.crew === 4 && ENEMIES[e.kind].flying) amount *= 1.25
     // Testudo and the Pumpkin's split absorb the hit; Sanctuary's shield turns it aside.
-    if (e.boss && bossAbsorbs(this, e, feedback)) { if (this.impactProjectile && this.impactSound !== 'splat') this.impactSound = 'armor'; if (feedback) { if (type === 'egg') this.deflectFeedback(e, cue); else this.shieldFeedback(e) }; return false }
-    if (e.shield > 0) { if (this.impactProjectile && this.impactSound !== 'splat') this.impactSound = 'armor'; if (feedback && this.presentationTime >= e.art.deflectAt) { this.shieldFeedback(e); e.art.deflectAt = this.presentationTime + .3 }; return false }
+    if (e.boss && bossAbsorbs(this, e, feedback)) { if (this.impactProjectile && this.impactSound !== 'splat') this.impactSound = type === 'egg' ? 'armor' : 'block'; if (feedback) { if (type === 'egg') this.deflectFeedback(e, cue); else this.shieldFeedback(e) }; return false }
+    if (e.shield > 0) { if (this.impactProjectile && this.impactSound !== 'splat') this.impactSound = 'block'; if (feedback && this.presentationTime >= e.art.deflectAt) { this.shieldFeedback(e); e.art.deflectAt = this.presentationTime + .3 }; return false }
     if (hero) { this.hero.dealt += Math.min(e.hp, amount); this.hero.addCharge(Math.min(e.hp, amount) * .022) }
     e.hp -= amount
     if (this.impactProjectile && feedback) { if (!deflected) this.impactSound = 'splat'; else if (this.impactSound !== 'splat') this.impactSound = 'armor' }
@@ -1159,7 +1161,7 @@ export class SiegeScene extends Phaser.Scene {
           this.schedule.sort((a, b) => a.time - b.time)
         }
       }
-      this.options.sfx.play('coin'); this.removeEnemy(e)
+      this.removeEnemy(e)
     }
     return true
   }

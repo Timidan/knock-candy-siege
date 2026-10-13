@@ -57,6 +57,7 @@ export class Hud {
   private talentTitle?: Phaser.GameObjects.Text
   private talentLevel = 0
   private talentTimer?: Phaser.Time.TimerEvent
+  private talentTick = 0
   private talentBar?: Phaser.GameObjects.Image
   private health: Phaser.GameObjects.Image
   private pulsing: Button[] = []
@@ -300,7 +301,7 @@ export class Hud {
       if (index < 0) return
       this.rule = this.ruleQueue.splice(index, 1)[0]; this.taughtRules.add(this.rule.key)
       s.art.set(this.ruleIcon, this.rule.icon); this.ruleIcon.setDisplaySize(62, 62)
-      this.ruleText.setText(this.rule.copy); this.ruleRoot.setVisible(true)
+      this.ruleText.setText(this.rule.copy); this.ruleRoot.setVisible(true); s.options.sfx.play('callout')
     }
     const rule = this.rule
     rule.age += dt
@@ -332,6 +333,7 @@ export class Hud {
   }
   candyArrived() {
     const s = this.scene
+    s.options.sfx.play('candy-arrive')
     s.tweens.killTweensOf([this.candyRoot, this.candyPlate])
     this.candyRoot.setScale(1); this.candyPlate.setTint(0xffe39a).setAlpha(1)
     s.tweens.add({ targets: this.candyPlate, alpha: PLATE, duration: 240, onComplete: () => this.candyPlate.clearTint() })
@@ -461,6 +463,7 @@ export class Hud {
     this.talents()
     // refresh() keeps running while paused, so the countdown drains at the HUD's 8 Hz rate.
     if (this.talentTimer && this.talentBar) this.talentBar.scaleX = 1 - this.talentTimer.getProgress()
+    if (this.talentTimer) { const left = Math.ceil(this.talentTimer.getRemainingSeconds()); if (left <= 3 && left !== this.talentTick) { this.talentTick = left; s.options.sfx.play('talent-tick') } }
     this.cooldown(this.rain, s.spellCooldown.rain, SPELLS.rain.cooldown * factor)
     this.cooldown(this.boo, s.spellCooldown.boo, SPELLS.boo.cooldown * factor)
     for (const kind of ['pumpkin', 'bowl', 'gum'] as const) { this.enabled(this.trapButtons[kind], s.candy >= s.trapCost(kind)); this.cost(this.trapButtons[kind], s.trapCost(kind)); if (kind === 'pumpkin' && s.freePumpkin > 0) this.trapButtons[kind].costLabel?.setText('FREE').setFontSize(26); else this.trapButtons[kind].costLabel?.setFontSize(34) }
@@ -619,7 +622,7 @@ export class Hud {
     const choices = level ? hero.choices : null
     if (!choices) return
     // Each card holds its own pause for at most ten seconds; scene.time keeps running while paused.
-    s.setPaused(true)
+    s.setPaused(true); s.options.sfx.play('talent-open'); this.talentTick = 0
     this.talentTimer = s.time.delayedCall(10000, () => this.pickTalent(0, true))
     s.input.keyboard?.on('keydown', this.talentKey, this)
     this.talentCard.add(plate(s, -360, -64, 720, 272, 20, 0x2e203c, .97, 0xffd58b, 3))

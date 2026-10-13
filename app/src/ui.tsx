@@ -33,13 +33,16 @@ export function Share({ to, item, outcome }: { to: number; item: number; outcome
 // Every button in Knock is a sticker: hand-drawn, tilted, and it splashes ink where you press it.
 export function Sticker({ icon, tone = 'paper', round, badge, children, className = '', onPointerDown, ...rest }: StickerProps) {
   const splash = (event: PointerEvent<HTMLButtonElement>) => {
-    const box = event.currentTarget.getBoundingClientRect()
-    const dot = document.createElement('span')
-    dot.className = 'splash'
-    dot.style.left = `${event.clientX - box.left}px`
-    dot.style.top = `${event.clientY - box.top}px`
-    dot.addEventListener('animationend', () => dot.remove())
-    event.currentTarget.append(dot)
+    // No splash under reduced motion; a timeout rather than animationend removes it, so an interrupted animation leaves nothing behind.
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const box = event.currentTarget.getBoundingClientRect()
+      const dot = document.createElement('span')
+      dot.className = 'splash'
+      dot.style.left = `${event.clientX - box.left}px`
+      dot.style.top = `${event.clientY - box.top}px`
+      setTimeout(() => dot.remove(), 600)
+      event.currentTarget.append(dot)
+    }
     onPointerDown?.(event)
   }
   const classes = ['sticker', tone !== 'paper' && `sticker--${tone}`, round && 'sticker--round', className]
