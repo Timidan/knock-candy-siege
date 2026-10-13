@@ -5,7 +5,7 @@ import type { ConsumableKind, Point } from './data/config'
 import { distanceSq } from './world'
 
 export type PlacedItem = Point & { kind: ConsumableKind; life: number; pulse: number; hp: number; image: Phaser.GameObjects.Image }
-export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y: number) {
+export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y: number, hero = s.hero) {
   const c = CONSUMABLES[kind], spot = s.nearestPath(x, y)
   if (s.itemCooldown[kind] > 0 || s.candy < c.cost) return
   if (spot.gap > 90 || x < 50 || x > 1820 || y < 150 || y > 915) { s.hud.toast('Aim beside the road. Candy is spent only on a valid target.'); return }
@@ -14,7 +14,7 @@ export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y:
   // Road blockers snap onto it; the decoy stands just beside it, drawing marchers off to one side.
   const at = kind === 'candy-cane' ? spot : kind === 'scarecrow' ? { x: spot.x, y: spot.y + (spot.y > 820 ? -52 : 52) } : { x, y }
   if (!c.duration) {
-    const flight = s.effect(`item/${kind}/world`, s.hero.x, s.hero.y - 90, .5, 1, 'travel', at.x, at.y - 35)
+    const flight = s.effect(`item/${kind}/world`, hero.x, hero.y - 90, .5, 1, 'travel', at.x, at.y - 35)
     if (flight) flight.simulationStart = s.clock
     s.options.sfx.play('throw', kind === 'holy-water' ? 1.5 : .8, .7)
     s.after(.5, () => {
@@ -25,7 +25,7 @@ export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y:
       }
       s.options.sfx.item(kind)
       if (kind === 'pumpkin-bomb') s.shake(.005)
-    })
+    }, { kind, at })
   } else {
     s.items.push({ x: at.x, y: at.y, kind, life: c.duration, pulse: 0, hp: 240, image: s.art.image(at.x, at.y, `item/${kind}/world`).setOrigin(.5, kind === 'scarecrow' ? 1 : .5).setDepth(kind === 'scarecrow' ? at.y : 7) })
     s.effect(`item/${kind}/fx/0`, at.x, at.y - 20, .7, 1.5); s.options.sfx.item(kind)

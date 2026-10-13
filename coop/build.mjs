@@ -1,3 +1,4 @@
+import react from '../app/node_modules/@vitejs/plugin-react/dist/index.js'
 import { build } from '../app/node_modules/vite/dist/node/index.js'
 import { cp, mkdir, readFile, writeFile, readdir, symlink, lstat } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
@@ -22,13 +23,14 @@ async function inventory(directory, prefix = '') {
 }
 await inventory(join(snapshot, 'app/src'), 'src/'); await inventory(join(snapshot, 'app/public'), 'public/')
 const fingerprint = createHash('sha256').update(JSON.stringify(manifest)).digest('hex')
-const buildId = `phase1-${fingerprint.slice(0, 24)}`
+const buildId = `party-${fingerprint.slice(0, 32)}`
 await mkdir(join(cache, 'evidence'), { recursive: true })
 await writeFile(join(cache, 'evidence/source-manifest.json'), JSON.stringify({ buildId, fingerprint, files: manifest }, null, 2))
-await build({ configFile: false, root: join(snapshot, 'app'), cacheDir: join(cache, 'vite-cache'), publicDir: join(snapshot, 'app/public'),
+await cp(join(project, 'app/index.html'), join(snapshot, 'app/index.html'))
+await build({ plugins: [react()], envDir: join(project, 'app'), configFile: false, root: join(snapshot, 'app'), cacheDir: join(cache, 'vite-cache'), publicDir: join(snapshot, 'app/public'),
   define: { __COOP_BUILD__: JSON.stringify(buildId) },
   build: { outDir: join(cache, 'site'), emptyOutDir: true, copyPublicDir: false,
-    rollupOptions: { input: join(snapshot, 'coop/harness.ts'), output: { entryFileNames: 'assets/harness.js' } } },
+    rollupOptions: { input: { index: join(snapshot, 'app/index.html'), harness: join(snapshot, 'coop/harness.ts') }, output: { entryFileNames: chunk => chunk.name === 'harness' ? 'assets/harness.js' : 'assets/[name]-[hash].js' } } },
 })
-await cp(join(coop, 'harness.html'), join(cache, 'site/index.html'))
+await cp(join(coop, 'harness.html'), join(cache, 'site/harness.html'))
 console.log(`Frozen build ${buildId} in ${cache}/site`)

@@ -1,3 +1,7 @@
+import { createRoom, RoomClient } from './net/RoomClient'
+import type { CoopSession } from './net/session'
+import type { HeroSelection, Roster } from './net/protocol'
+import { prepareParty } from './net/prepare'
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { flushSync } from 'react-dom'
@@ -37,8 +41,11 @@ import { STATS_URL, setStatsEnabled, statsEnabled, track, trackRunEnd } from './
 import type { RunEnd } from './telemetry'
 import './siege.css'
 
-type Run = { id: number; home: boolean; serial: number; level: number; mode: Mode; daily: Daily | null; seed: number; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; assets: AssetPack; street: StreetBonuses; stars: Record<string, number> }
-type Menu = 'title' | 'levels' | 'hero' | 'pause' | 'settings' | 'book' | 'result' | 'intro' | 'shop' | 'street' | null
+declare const __COOP_BUILD__: string
+const COOP_RELAY = import.meta.env.VITE_COOP_RELAY || 'https://knock-coop.timidan-knock.workers.dev'
+
+type Run = { coop?: CoopSession; id: number; home: boolean; serial: number; level: number; mode: Mode; daily: Daily | null; seed: number; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; assets: AssetPack; street: StreetBonuses; stars: Record<string, number> }
+type Menu = 'title' | 'levels' | 'hero' | 'pause' | 'settings' | 'book' | 'result' | 'intro' | 'shop' | 'street' | 'party' | 'party-error' | 'party-leave' | null
 if (import.meta.env.DEV) selfCheck()
 track('session') // once per page load: this module is evaluated once
 // Random picks never land on a Chog with crude cap or shirt text; those stay playable by number.
@@ -155,7 +162,13 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const saveRef = useRef(save)
   const [saveWarning, setSaveWarning] = useState(false)
   const [shareStats, setShareStats] = useState(statsEnabled)
-  const [menu, setMenu] = useState<Menu>(() => reopenShop() ? 'shop' : 'title')
+  const [inviteCode, setInviteCode] = useState(() => new URLSearchParams(location.search).get('room')?.toUpperCase() ?? '')
+  const [menu, setMenu] = useState<Menu>(() => new URLSearchParams(location.search).has('room') ? 'hero' : reopenShop() ? 'shop' : 'title')
+  const [party, setParty] = useState<{ code: string; players: Roster } | null>(null)
+  const [partyStatus, setPartyStatus] = useState(''), [partyError, setPartyError] = useState('')
+  const partyClient = useRef<RoomClient | null>(null), lobbyUnsubscribe = useRef<(() => void) | null>(null)
+  const partyAbort = useRef<AbortController | null>(null)
+  useEffect(() => () => { partyAbort.current?.abort(); lobbyUnsubscribe.current?.(); partyClient.current?.close() }, [])
   const menuNow = useRef(menu); menuNow.current = menu
   const [returnMenu, setReturnMenu] = useState<Menu>('title')
   const [level, setLevel] = useState(1)
@@ -291,18 +304,19 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     // Stats: run_start once the level is playable; one run_end per run, as a win, a loss or a quit (leaving a loaded run before it ends).
     const info = { level: run.mode === 'level' ? String(run.level) : run.mode, hero: run.id }
     let started = false, finished = false
-    const endRun = (end: RunEnd) => { if (started && !finished) { finished = true; trackRunEnd(world, info, end) } }
+    const endRun = (end: RunEnd) => { if (run.coop) return; if (started && !finished) { finished = true; trackRunEnd(world, info, end) } }
     const quit = () => endRun({ won: false, quit: true, stars: 0, score: 0, wave: world.wave, seconds: world.clock })
-    const world = new SiegeScene({ assets: run.assets, level: run.level, mode: run.mode, daily: run.daily, seed: run.seed, stars: run.stars, street: run.street, seen: saveRef.current.seen, onDiscover: keys => persist({ ...saveRef.current, seen: [...new Set([...saveRef.current.seen, ...keys])] }), hero: run.id, home: run.home, tutorial: run.tutorial, costume: run.costume, owned: run.owned, victoryDance: run.victoryDance, settings: saveRef.current.settings, sfx: sfx.current,
-      onShop: () => { setReturnMenu('pause'); setMenu('shop') },
+    const world = new SiegeScene({ coop: run.coop, assets: run.assets, level: run.level, mode: run.mode, daily: run.daily, seed: run.seed, stars: run.stars, street: run.street, seen: saveRef.current.seen, onDiscover: keys => persist({ ...saveRef.current, seen: [...new Set([...saveRef.current.seen, ...keys])] }), hero: run.id, home: run.home, tutorial: run.tutorial, costume: run.costume, owned: run.owned, victoryDance: run.victoryDance, settings: saveRef.current.settings, sfx: sfx.current,
+      onShop: () => { if (run.coop) { world.hud.toast('Visit the shop after this room.'); return }; setReturnMenu('pause'); setMenu('shop') },
       onFullscreen: canFullscreen ? () => { void fullscreen() } : undefined,
-      onPause: () => setMenu('pause'),
+      onPause: () => setMenu(run.coop ? 'party-leave' : 'pause'),
       onIntro: kind => { setIntro(kind); setMenu('intro') },
       onTutorial: () => persist({ ...saveRef.current, tutorial: true }),
-      onReady: () => { setReady(true); if (!started) { started = true; track('run_start', info) } },
+      onReady: () => { setReady(true); if (run.coop) { lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; return }; if (!started) { started = true; track('run_start', info) } },
       onEnd: result => {
         endRun({ ...result, quit: false })
         setOutcome(result); setDefeatTip(result.won ? '' : counterTip(result, world)); setMenu('result')
+        if (run.coop) return
         const now = saveRef.current
         // Each mode keeps its own best: stars and score per level, the best endless wave, and the best score of each daily.
         if (run.mode === 'endless') persist({ ...now, endless: { wave: Math.max(now.endless.wave, result.wave), score: Math.max(now.endless.score, result.score) } })
@@ -323,7 +337,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       fps: { target: 60 }, audio: { noAudio: true }, input: { activePointers: 2 }, scene: world,
       callbacks: { postBoot: game => { game.canvas.setAttribute('aria-label', 'Candy Siege. Tap pads to build; select the hero portrait then tap the ground to move. Space pauses. 1 and 2 select spells. Q uses your ability. R uses your ultimate. Z and X choose a talent. E opens emotes.'); game.canvas.setAttribute('role', 'application'); game.canvas.tabIndex = 0 } },
     })
-    const hide = () => { if (document.hidden && world.ready && !world.paused && !world.ended) world.pauseGame() }
+    const hide = () => { if (run.coop) { world.cancel(); return }; if (document.hidden && world.ready && !world.paused && !world.ended) world.pauseGame() }
     const resize = () => game.scale.refresh()
     const observer = new ResizeObserver(resize); observer.observe(host.current)
     window.addEventListener('orientationchange', resize)
@@ -333,7 +347,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   }, [run, assets])
   useEffect(() => {
     const world = scene.current
-    if (!world || !assets || !ready) return
+    if (!world || !assets || !ready || world.options.coop) return
     const controller = new AbortController()
     // Refresh cosmetic availability without replacing the running level or granting candy mid-run.
     world.options.owned = shop.owned
@@ -352,7 +366,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     closeTimer.current = window.setTimeout(() => { flushSync(() => { setClosing(false); setMenu(null) }); after() }, 120)
   }
   const resume = () => closeMenu(() => { scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() })
-  const leaveLevel = () => { setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
+  const leaveLevel = () => { startToken.current++; setStarting(false); partyAbort.current?.abort(); partyAbort.current = null; lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; partyClient.current?.close(); partyClient.current = null; setParty(null); setPartyStatus(''); setPartyError(''); setInviteCode(''); const url = new URL(location.href); url.searchParams.delete('room'); history.replaceState(null, '', url); setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
   // Retry only the stage that failed: the base pack, the hero and level art, or the scene (a fresh run object rebuilds the game).
   const retry = () => { const stage = failed; setFailed(null); if (stage === 'candy') setLoadAttempt(n => n + 1); else if (stage === 'lanterns') setRun(r => r && { ...r }); else setPrepAttempt(n => n + 1) }
   // A story win with a playable level after it leads on to that night's hero picker, keeping the hero and costume.
@@ -361,6 +375,45 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const launchRun = (next: Run) => {
     closeMenu(() => { setRun(next); pendingRun.current = null; setStreetRead(null); setOutcome(null) })
     void sfx.current?.unlock(); sfx.current?.pause(false)
+  }
+  const startParty = async () => {
+    if (starting || !assets || !valid || mode !== 'level') return
+    setStarting(true); setPartyError('')
+    const token = ++startToken.current, controller = new AbortController()
+    partyAbort.current?.abort(); partyAbort.current = controller
+    try {
+      const account = activeWallet.account, id = Number(hero)
+      const [ownedHero, perks] = await Promise.all([readHomeAdvantage(id, account, activeWallet.sandbox), readHolderBonuses(id, account, activeWallet.sandbox)])
+      if (token !== startToken.current || controller.signal.aborted) return
+      if (!ownedHero) throw new Error('Pick a Chog owned by your connected wallet, or use the holder demo.')
+      if (perks.status === 'unavailable') throw new Error('Could not check your holder perks. Please try again.')
+      const selection: HeroSelection = { id, home: ownedHero, costume, owned: [...shop.owned], victoryDance, stars: { ...saveRef.current.stars }, street: perks.bonuses }
+      const ticket = inviteCode ? null : await createRoom(COOP_RELAY, __COOP_BUILD__, level, controller.signal)
+      const client = await RoomClient.connect(COOP_RELAY, ticket?.room.code ?? inviteCode, __COOP_BUILD__, selection, ticket?.hostToken)
+      if (token !== startToken.current || controller.signal.aborted) { client.close(); return }
+      partyClient.current = client; setLevel(client.room.level); setParty({ code: client.room.code, players: client.roster }); setMenu('party'); setPartyStatus('Waiting for your partner…')
+      let preparing = false
+      const prepare = async () => {
+        if (preparing || !client.roster.every(Boolean)) return
+        preparing = true; setPartyStatus('Preparing both Chogs…')
+        const players = client.roster as [HeroSelection, HeroSelection]
+        try {
+          const pack = await prepareParty(assets, players, client.room.level, controller.signal)
+          if (controller.signal.aborted || token !== startToken.current) return
+          const first = players[0], street = { candy: Math.max(...players.map(p => p.street.candy)), trap: players.some(p => p.street.trap), chog: players.some(p => p.street.chog), crew: 0 as const }
+          launchRun({ id: first.id, home: first.home, costume: first.costume, victoryDance: first.victoryDance, stars: first.stars, owned: [...new Set(players.flatMap(p => p.owned))], street, assets: pack, level: client.room.level, mode: 'level', daily: null, seed: client.room.seed, serial: Date.now(), tutorial: false,
+            coop: { client, players, onStatus: setPartyStatus, onError: message => { setPartyError(message); setMenu('party-error') } } })
+        } catch (error) { if (!controller.signal.aborted) { setPartyError(error instanceof Error ? error.message : 'Could not prepare the room.'); setMenu('party-error'); client.close() } }
+      }
+      lobbyUnsubscribe.current = client.subscribe(message => {
+        if (message.type === 'roster') { setParty({ code: client.room.code, players: message.players }); void prepare() }
+        if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') {
+          controller.abort(); setPartyError(message.type === 'desync' ? 'Out of sync: restart together' : message.type === 'disconnected' ? 'Partner disconnected' : message.reason); setMenu('party-error')
+        }
+      })
+      void prepare()
+    } catch (error) { if (!controller.signal.aborted) { setPartyError(error instanceof Error ? error.message : 'Could not open the room.'); setMenu('party-error') } }
+    finally { if (token === startToken.current) setStarting(false) }
   }
   const start = async (tutorial = level === 1 && !save.tutorial) => {
     if (starting) return
@@ -389,12 +442,14 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     if (menu === 'settings' || menu === 'book' || menu === 'shop') setMenu(returnMenu)
     else if (menu === 'pause' || menu === 'intro') resume()
     else if (menu === 'street') { startToken.current++; pendingRun.current = null; setStreetRead(null); setMenu(run ? 'pause' : 'hero') }
-    else if (menu === 'hero') setMenu('levels')
+    else if (menu === 'hero') { if (inviteCode || partyAbort.current) leaveLevel(); else setMenu('levels') }
     else if (menu === 'levels') setMenu('title')
-    else if (menu === 'result') leaveLevel()
+    else if (menu === 'result' || menu === 'party' || menu === 'party-error') leaveLevel()
+    else if (menu === 'party-leave') setMenu(null)
   }
   return <div ref={shell} className={`siege-shell ${run ? 'siege-shell--playing' : ''}`}>
     <div className="siege-stage" ref={host} />
+    {run?.coop && !menu && partyStatus && <p className="siege-party-status" role="status">{partyStatus}</p>}
     {run && !menu && activeWallet.sandbox && <aside style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', maxWidth: '36%', padding: '4px 10px', borderRadius: 6, background: '#241632e6', color: '#fff1b3', fontSize: 13, textAlign: 'center', pointerEvents: 'none' }}>Sandbox: a demo copy of Monad, nothing is real</aside>}
     <div className="siege-safe-area" aria-hidden="true" />
     {!run && <div className="siege-night" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#24163233, #24163277), url(/siege/levels/level1.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>}
@@ -434,6 +489,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       </>}
       {menu === 'hero' && <>
         <span className="siege-eyebrow">{level === DAILY_LEVEL ? `${levelName(level).toUpperCase()} · ${LEVELS[daily.level - 1].name.toUpperCase()} · ${NIGHTS[daily.theme].name.toUpperCase()}` : level === ENDLESS_LEVEL ? 'ENDLESS · TOWN SQUARE' : `${levelName(level).toUpperCase()} · LEVEL ${level}`}</span><h2>Who’s on porch duty?</h2>
+        {inviteCode && <p className="siege-party-invite">Porch Party invite · choose your own Chog to join.</p>}
         <WalletChoice wallet={activeWallet} disabled={starting || tryingHolder || shop.busy} />
         <div className="siege-hero-pick">
           <div className={`siege-portrait ${home ? 'siege-portrait--home' : ''} ${kit?.legend ? 'siege-portrait--legend' : ''}`}>
@@ -456,8 +512,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
             </div>
             {holderError && <p role="status">{holderError}</p>}
             {failed && failed !== 'lanterns' ? <RetryPanel stage={failed} onRetry={retry} /> : (!assets || (valid && !prepared)) && <StageLabel stage={assets ? loading : 'candy'} />}
-            <div className="row"><Sticker tone="orange" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)} onClick={() => start()}>{starting ? 'Checking your $CHOG perks…' : 'Let’s make mischief →'}</Sticker><Sticker onClick={() => setMenu('levels')}>← Back</Sticker></div>
-            {save.tutorial && level === 1 && <button className="siege-text-button" onClick={() => start(true)} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
+            <div className="row"><Sticker tone="orange" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)} onClick={() => inviteCode ? startParty() : start()}>{starting ? 'Checking your $CHOG perks…' : inviteCode ? 'Join Porch Party →' : 'Let’s make mischief →'}</Sticker><Sticker onClick={() => inviteCode || partyAbort.current ? leaveLevel() : setMenu('levels')}>← Back</Sticker></div>
+            {mode === 'level' && !inviteCode && <Sticker tone="purple" disabled={starting || tryingHolder || !valid || !prepared} onClick={() => void startParty()}>Porch Party · play together</Sticker>}
+            {save.tutorial && level === 1 && !inviteCode && <button className="siege-text-button" onClick={() => start(true)} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
             <p>{home ? 'Home advantage: your own Chog starts one level higher and wears a gold frame.' : 'Borrow any Chog. Its real traits are your perks.'}</p>
             {activeWallet.choice === 'connected' && wallet.account && wallet.loading && <small>Checking your Chogs…</small>}
             {kit && assets && <div className="siege-kit">{(['weapon', 'special', 'ultimate', 'passive', 'headgear', 'trinket'] as const).map(slot => {
@@ -479,6 +536,17 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <Sticker tone="orange" onClick={() => { if (pendingRun.current) launchRun(pendingRun.current) }}>Defend the porch →</Sticker>
         <button className="siege-text-button" onClick={escape}>← Back</button>
       </section>}
+      {menu === 'party' && party && <>
+        <span className="siege-eyebrow">TWO CHOGS · ONE PORCH</span><h2>Porch Party</h2>
+        <p>{LEVELS[level - 1].name} · shared candy and jars</p>
+        <div className="siege-party-heroes">{party.players.map((player, slot) => <figure key={slot}>{player ? <><img src={`/chogs-256/${player.id}.webp`} alt={`Chog #${player.id}`} /><figcaption>Chog #{player.id}</figcaption></> : <><span className="siege-party-empty">?</span><figcaption>Waiting for a friend</figcaption></>}</figure>)}</div>
+        <p role="status">{partyStatus}</p>
+        <label className="siege-party-link">Invite a friend<input readOnly value={`https://knock.timidan.xyz/?room=${party.code}`} onFocus={event => event.target.select()} /></label>
+        <div className="row"><Sticker tone="orange" onClick={() => { void navigator.clipboard.writeText(`https://knock.timidan.xyz/?room=${party.code}`).then(() => setPartyStatus('Invite copied!')).catch(() => setPartyStatus('Select and copy the invite link above.')) }}>Copy invite</Sticker><Sticker onClick={leaveLevel}>Leave room</Sticker></div>
+        <p className="siege-hint">Both players bring their own Chog. The game starts when both are ready.</p>
+      </>}
+      {menu === 'party-error' && <><h2>{partyError || 'Could not continue this room'}</h2><p>Start a new room to play together again.</p><Sticker tone="orange" onClick={leaveLevel}>Return to menu</Sticker></>}
+      {menu === 'party-leave' && <><h2>Leave the porch?</h2><p>Your partner is still playing. Leaving ends this room.</p><div className="row"><Sticker tone="orange" onClick={() => setMenu(null)}>Keep playing</Sticker><Sticker onClick={leaveLevel}>Leave room</Sticker></div></>}
       {menu === 'pause' && <>
         <span className="siege-eyebrow">EVERYONE, FREEZE.</span><h2>Candy break</h2><p>Your jars are safe while you’re here.</p>
         <div className="siege-menu-actions"><Sticker tone="orange" onClick={resume}>Keep playing →</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker disabled={starting} onClick={() => void start(run?.tutorial ?? false)}>{starting ? 'Checking your $CHOG perks…' : 'Restart level'}</Sticker><Sticker onClick={leaveLevel}>Level select</Sticker></div>
@@ -509,13 +577,14 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <Sticker tone="orange" onClick={resume}>{intro.startsWith('boss:') ? 'Bring it on →' : 'Got it. Come on in →'}</Sticker>
       </>}
       {menu === 'result' && outcome && <div className={outcome.won ? 'siege-win' : ''}>
-        <span className="siege-eyebrow">{outcome.mode === 'endless' ? 'ENDLESS · TOWN SQUARE' : outcome.mode === 'daily' ? `DAILY #${outcome.daily} · ${NIGHTS[outcome.theme].name.toUpperCase()}` : outcome.won ? 'THE SWEET TASTE OF' : 'THE NEIGHBOURHOOD SAYS THANKS'}</span>
+        {outcome.party && <div className="siege-party-heroes" aria-label="Porch Party result">{outcome.party.map((player, slot) => <figure key={slot}><img src={`/chogs-256/${player.id}.webp`} alt={`Chog #${player.id}`} /><figcaption>Chog #{player.id} · Lv {player.level}</figcaption></figure>)}</div>}
+        <span className="siege-eyebrow">{outcome.party ? 'PORCH PARTY' : outcome.mode === 'endless' ? 'ENDLESS · TOWN SQUARE' : outcome.mode === 'daily' ? `DAILY #${outcome.daily} · ${NIGHTS[outcome.theme].name.toUpperCase()}` : outcome.won ? 'THE SWEET TASTE OF' : 'THE NEIGHBOURHOOD SAYS THANKS'}</span>
         <h2>{outcome.mode === 'endless' ? `Wave ${outcome.wave}!` : outcome.won ? 'Sweet victory!' : 'They got the candy.'}</h2>
         {outcome.mode !== 'endless' && (outcome.won ? <ResultStars count={outcome.stars} fx={(run?.assets ?? assets)?.atlases.find(a => a.key === 'fx')} shake={save.settings.shake} sfx={sfx} /> : stars(0))}<p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.won ? `${outcome.jars} jars saved. The porch is yours.` : defeatTip}</p>
-        <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
+        <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.party ? 'Team score' : outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span><span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span><span><b>{outcome.heroLevel}</b> hero level</span></div>
-        <div className="row">{nextLevel ? <><Sticker tone="orange" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker onClick={leaveLevel}>Level select</Sticker></div>
-        {run && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} />}
+        <div className="row">{outcome.party ? <Sticker tone="orange" onClick={leaveLevel}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker onClick={leaveLevel}>Level select</Sticker></div>
+        {run && !run.coop && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} />}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
       {menu === 'shop' && !assets && (failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry}><Sticker onClick={() => setMenu(returnMenu)}>← Back</Sticker></RetryPanel> : <StageLabel stage="candy" />)}

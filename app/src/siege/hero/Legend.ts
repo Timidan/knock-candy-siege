@@ -13,7 +13,7 @@ const clamp = (p: Point): Point => ({ x: Math.max(60, Math.min(1850, p.x)), y: M
 export function legendAttack(h: Hero, target: Enemy) {
   const s = h.scene, k = h.kit, id = k.id, talent = h.has('weapon'), range = WEAPONS[k.weapon].range, damage = WEAPONS[k.weapon].damage * h.damageScale * (talent ? 1.25 : 1)
   const shoot = (e: Enemy, name: string, magic: boolean, rider: (t: Enemy) => void, duration = .26, arc = 12, splash = 0) =>
-    s.fire(h.x, h.y - 55, e, damage, 'hero', splash, { frame: frame(h, name), duration, arc, onHit: t => { h.hitEnemy(t, damage, magic, true); if (t.active) rider(t) } })
+    s.fire(h.x, h.y - 55, e, damage, 'hero', splash, { owner: s.heroes.indexOf(h), frame: frame(h, name), duration, arc, onHit: t => { h.hitEnemy(t, damage, magic, true); if (t.active) rider(t) } })
   if (id === 561) shoot(target, 'wpn/proj', true, t => h.dot(t, 'burn', talent ? 6 : 3), .5, 110, 80) // Fireball
   else if (id === 900 || id === 1514) { // Chain of Flames and Ink Slash sweep everything around the hero
     fx(h, 'wpn/hit/0', h, .45, id === 900 ? 3.2 : 4)
@@ -78,16 +78,16 @@ export function legendUltimate(h: Hero, enemies: Enemy[], talent: boolean) {
     fx(h, 'ultimate/0', h, 1.6, 2.2)
   } else if (id === 1481) { // Rare Pepe: golden frogs rain down, each stunning where it lands
     fx(h, 'ultimate/0', { x: 960, y: 300 }, 1.4, 3)
-    enemies.slice(0, 10).forEach((e, i) => s.after(i * .09, () => { if (!e.active) return; fx(h, 'ultimate/1', e, .8, 1.2); h.hitEnemy(e, 70 * power, true); s.status(e, 'stun', 2.5) }))
+    enemies.slice(0, 10).forEach((e, i) => s.after(i * .09, () => { if (!e.active) return; fx(h, 'ultimate/1', e, .8, 1.2); h.hitEnemy(e, 70 * power, true); s.status(e, 'stun', 2.5) }, { id, owner: s.heroes.indexOf(h), target: s.enemies.indexOf(e), power }))
   } else if (id === 1514) { // Final Panel: time stops, then one huge slash
     for (const e of enemies) s.status(e, 'stun', 2.4)
     fx(h, 'ultimate/0', { x: 960, y: 540 }, 1.6, 4.4)
-    s.after(1.1, () => { for (const e of s.enemies) if (e.active && !e.returning) h.hitEnemy(e, 260 * power, true); s.shake(.012) })
-  } else if (id === 1667) enemies.slice(0, 12).forEach((e, i) => s.after(i * .08, () => { if (!e.active) return; fx(h, 'ultimate/0', e, .9, 1.6); h.hitEnemy(e, 120 * power, true) })) // Judgement
+    s.after(1.1, () => { for (const e of s.enemies) if (e.active && !e.returning) h.hitEnemy(e, 260 * power, true); s.shake(.012) }, { id, owner: s.heroes.indexOf(h), power })
+  } else if (id === 1667) enemies.slice(0, 12).forEach((e, i) => s.after(i * .08, () => { if (!e.active) return; fx(h, 'ultimate/0', e, .9, 1.6); h.hitEnemy(e, 120 * power, true) }, { id, owner: s.heroes.indexOf(h), target: s.enemies.indexOf(e), power })) // Judgement
   else if (id === 1798) { // Phalanx: a volley of spears on the busiest stretch of road
     const crowd = enemies.reduce((best, e) => { const n = enemies.filter(o => distanceSq(o, e) < 220 ** 2).length; return n > best.n ? { e, n } : best }, { e: lead, n: -1 }).e
     const near = crowd ? enemies.filter(o => distanceSq(o, crowd) < 260 ** 2) : []
-    for (let i = 0; i < 12 && near.length; i++) s.fire(near[i % near.length].x + (s.random() - .5) * 200, -60, near[i % near.length], 70 * power, 'hero', 90, { frame: frame(h, 'wpn/proj'), duration: .5 + i * .05, arc: 0, onHit: t => h.hitEnemy(t, 70 * power, false, true) })
+    for (let i = 0; i < 12 && near.length; i++) s.fire(near[i % near.length].x + (s.random() - .5) * 200, -60, near[i % near.length], 70 * power, 'hero', 90, { owner: s.heroes.indexOf(h), frame: frame(h, 'wpn/proj'), duration: .5 + i * .05, arc: 0, onHit: t => h.hitEnemy(t, 70 * power, false, true) })
   } else if (id === 1881) { // Midas Rain: gold everywhere, and candy for every hit
     fx(h, 'ultimate/0', { x: 960, y: 480 }, 1.8, 3.6)
     for (const e of enemies) { h.hitEnemy(e, 85 * power, true); s.income(3); s.effect('fx/coin', e.x, e.y - 60, .7, .25, 'coin') }

@@ -1,3 +1,4 @@
+import { simulationSnapshot } from '../app/src/siege/net/snapshot'
 import Phaser from 'phaser'
 import { SiegeScene } from '../app/src/siege/SiegeScene'
 import { loadAssets, loadHeroAssets, loadLevelAssets } from '../app/src/siege/assets'
@@ -7,8 +8,6 @@ import { Sfx } from '../app/src/siege/Sfx'
 
 // This adapter is test-only. The production game does not import it.
 const pick = (object: object, keys: string) => Object.fromEntries(keys.split(' ').filter(key => (object as Record<string, unknown>)[key] !== undefined).map(key => [key, (object as Record<string, unknown>)[key]]))
-const rigState = (rig: object) => ({ ...pick(rig, 'clip time facing walkSpeed size pendingDance'), releasePending: !!(rig as { release?: unknown }).release })
-const guardState = (guard: object) => pick(guard, 'x y hp maxHp respawn cooldown slow life damage')
 
 export async function singleHero(seed: number, lite = false) {
   const signal = new AbortController().signal
@@ -27,9 +26,6 @@ export async function singleHero(seed: number, lite = false) {
     onDiscover() {}, onShop() {}, onPause() {}, onEnd() {}, onIntro() {}, onTutorial() {},
     onReady() { scene.game.loop.sleep(); resolveReady() },
   })
-  let draws = 0
-  const random = scene.random
-  scene.random = () => { draws++; return random() }
   const originalCreate = scene.create.bind(scene)
   scene.create = () => originalCreate().catch(rejectReady)
   const game = new Phaser.Game({ type: Phaser.CANVAS, parent: 'game', width: 1920, height: 1080, banner: false, audio: { noAudio: true }, scale: { mode: Phaser.Scale.FIT }, scene, disablePreFX: true, disablePostFX: true })
@@ -48,25 +44,8 @@ export async function singleHero(seed: number, lite = false) {
     scene.presentationTime += 1 / 45
     internal.drawUnits(lite ? 1 / 30 : 1 / 60)
   }
-  function snapshot() {
-    return {
-      scene: pick(scene, 'seed clock candy jars kills killsByKind bossesDefeated jarsLost earlyCalls wave countdown spellCooldown itemCooldown freePumpkin schedule waveAlive bridgeUp sugarRush bonfire missTime speedScale candyScale shuffle ended'),
-      rng: { seed, draws, state: (seed + Math.imul(draws, 0x6D2B79F5)) >>> 0 },
-      rewarded: internal.rewarded, combos: internal.combos,
-      hero: { ...pick(scene.hero, 'kit x y target level xp hp maxHp cooldown ability respawn hit fear slow charge dealt attackCount specials ultimates revives talents talentLevels offered frogUsed skullUsed shield untargetable devil scare pep smoke streak lastKill waveBuff zones trail oddity'), rig: rigState(scene.hero.rig) },
-      // Pool order and inactive generations matter for reused projectile targets.
-      enemies: scene.enemies.map(enemy => ({ ...pick(enemy, 'active generation wave kind id mods path distance speed hp maxHp candy jars status age hit attack skill lucky revived armour visible slowPower heroDot sigCooldown returning casting poisonStacks shield gold lit'), route: enemy.route ? { length: enemy.route.length, points: enemy.route.points.map(p => [p.x, p.y]) } : null, position: [enemy.x, enemy.y], boss: enemy.boss ? { ...pick(enemy.boss, 'id cast casting phase started intro dash dashSpeed blocks revived trail total stolen child state stateTime roll shared split immune scale'), rig: enemy.boss.rig ? rigState(enemy.boss.rig) : null } : null })),
-      towers: scene.towers.map(tower => tower ? { ...pick(tower, 'x y kind level spec rank spent targeting cooldown stun boost gold'), guards: tower.guards.map(guardState) } : null),
-      projectiles: scene.projectiles.map(projectile => ({ ...pick(projectile, 'active generation life duration x y fromX fromY endX endY damage kind splash arc frame frameCount'), targetSlot: projectile.target ? scene.enemies.indexOf(projectile.target) : -1, onHit: !!projectile.onHit, after: !!projectile.after })),
-      traps: scene.traps.map(trap => pick(trap, 'kind x y life armed')),
-      items: scene.items.map(item => pick(item, 'kind x y life pulse hp')),
-      allies: scene.allies.map(guardState), blockers: scene.blockers.map(blocker => pick(blocker, 'x y life radius')),
-      hazards: scene.hazards, fallen: scene.fallen,
-      props: scene.props.map(prop => ({ data: prop.data, cooldown: prop.cooldown, used: prop.used })),
-      sources: scene.sources.map(light => pick(light, 'x y radius')),
-      deferred: internal.later.map(task => ({ at: task.at, callback: !!task.run })),
-    }
-  }
+  const snapshot = () => simulationSnapshot(scene)
+
   return { scene, step, snapshot, destroy() { sfx.destroy(); game.destroy(true) } }
 }
 

@@ -1,9 +1,10 @@
 import type { Command } from '../SiegeScene'
 import { CONSUMABLES, SPECIALISATIONS, SPELLS, TARGETING, TOWERS, TRAPS } from '../data/config'
 
-export const PROTOCOL = 1
+export const PROTOCOL = 3
 export const TICK_RATE = 45
-export const INPUT_DELAY = 5
+export const INPUT_DELAY = 6
+export const MAX_DELAY = 45
 export const HASH_EVERY = 90
 export const MAX_COMMANDS = 16
 export const MAX_PACKET_BYTES = 4096
@@ -20,20 +21,20 @@ export type RoomInfo = { code: string; seed: number; level: number; build: strin
 export type Roster = [HeroSelection | null, HeroSelection | null]
 export type ClientMessage =
   | { type: 'hello'; version: number; build: string; hero: HeroSelection }
-  | { type: 'ready'; hash: string }
+  | { type: 'ready'; hash: string; delay: number }
   | { type: 'input'; tick: number; commands: CoopCommand[] }
   | { type: 'hash'; tick: number; hash: string }
-  | { type: 'ping' }
+  | { type: 'ping'; at: number }
 export type ServerMessage =
   | { type: 'welcome'; version: number; player: Player; room: RoomInfo; delay: number; hashEvery: number }
   | { type: 'roster'; players: Roster }
-  | { type: 'start' }
+  | { type: 'start'; delay: number }
   | { type: 'input'; player: Player; tick: number; commands: CoopCommand[] }
   | { type: 'verified'; tick: number; hash: string }
   | { type: 'desync'; tick: number }
   | { type: 'disconnected'; player: Player; reason: string }
   | { type: 'error'; reason: string }
-  | { type: 'pong' }
+  | { type: 'pong'; at: number }
 
 export function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
@@ -63,7 +64,7 @@ export function isCommand(value: unknown): value is CoopCommand {
     case 'move': return point()
     case 'ability': case 'ultimate': case 'wave': return true
     case 'emote': return typeof value.name === 'string' && /^[a-z0-9-]{1,40}$/.test(value.name)
-    case 'talent': return integer(value.index, 0, 1)
+    case 'talent': return integer(value.index, 0, 1) && (value.level === undefined || integer(value.level, 2, 5))
     case 'prop': return integer(value.index, 0, 63)
     default: return false // No local pause or speed command in co-op.
   }
@@ -72,10 +73,10 @@ export function isClientMessage(value: unknown): value is ClientMessage {
   if (!record(value)) return false
   switch (value.type) {
     case 'hello': return value.version === PROTOCOL && typeof value.build === 'string' && BUILD.test(value.build) && isHero(value.hero)
-    case 'ready': return typeof value.hash === 'string' && HASH.test(value.hash)
+    case 'ready': return typeof value.hash === 'string' && HASH.test(value.hash) && integer(value.delay, INPUT_DELAY, MAX_DELAY)
     case 'input': return integer(value.tick, 0, 1_000_000) && Array.isArray(value.commands) && value.commands.length <= MAX_COMMANDS && value.commands.every(isCommand)
     case 'hash': return integer(value.tick, HASH_EVERY, 1_000_000) && value.tick % HASH_EVERY === 0 && typeof value.hash === 'string' && HASH.test(value.hash)
-    case 'ping': return true
+    case 'ping': return typeof value.at === 'number' && Number.isFinite(value.at) && value.at >= 0
     default: return false
   }
 }

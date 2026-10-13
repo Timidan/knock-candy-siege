@@ -377,3 +377,18 @@
 /* A launch stage still loading: the boot shell's candy at text size. */
 .siege-modal p.siege-stage-label { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px auto; }
 .siege-stage-label .boot-candy { --size: 20px; }
+
+/* Porch Party uses the existing menu surfaces and leaves the board visible while waiting. */
+.siege-party-heroes { display: flex; justify-content: center; gap: 36px; margin: 18px 0; }
+.siege-party-heroes figure { margin: 0; text-align: center; }
+.siege-party-heroes img, .siege-party-empty { display: block; width: 96px; height: 96px; object-fit: cover; margin: 0 auto 8px; border-radius: 18px; border: 3px solid #352342; }
+.siege-party-empty { background: #d8ceec; font-size: 64px; }
+.siege-party-link { display: grid; gap: 6px; margin: 16px 0; }
+.siege-party-link input { width: 100%; box-sizing: border-box; padding: 12px; color: #352342; background: #fff6df; border: 2px solid #352342; border-radius: 10px; font: inherit; }
+.siege-party-status { position: absolute; top: 17%; left: 50%; transform: translateX(-50%); padding: 8px 18px; border-radius: 12px; background: #241632dd; color: #fff1c6; z-index: 4; pointer-events: none; }
+.siege-party-invite { color: #795cc6; font-weight: bold; }
+.siege-modal--result:has(.siege-party-heroes) { padding-top: 16px; padding-bottom: 16px; }
+.siege-modal--result .siege-party-heroes { margin: 0 0 8px; gap: 24px; }
+.siege-modal--result .siege-party-heroes figure { display: flex; align-items: center; gap: 8px; }
+.siege-modal--result .siege-party-heroes img { width: 48px; height: 48px; margin: 0; border-radius: 12px; }
+@media (max-height: 500px) { .siege-party-heroes { margin: 8px 0; } .siege-party-heroes img, .siege-party-empty { width: 64px; height: 64px; } }

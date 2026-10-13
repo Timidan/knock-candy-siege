@@ -16,8 +16,24 @@ export default {
       const { success } = await env.CREATE_LIMIT.limit({ key: `create:${request.headers.get('CF-Connecting-IP') ?? 'local'}` })
       if (!success) return json({ error: 'Too many rooms' }, 429, { ...headers, 'Retry-After': '60' })
       if (Number(request.headers.get('Content-Length')) > 512) return json({ error: 'Request too large' }, 413, headers)
-      const body = await request.text()
-      if (body.length > 512) return json({ error: 'Request too large' }, 413, headers)
+      const reader = request.body?.getReader(), chunks = []
+      let size = 0
+      if (reader) {
+        try {
+          while (true) {
+            const { value, done } = await reader.read()
+            if (done) break
+            size += value.byteLength
+            if (size > 512) { await reader.cancel(); return json({ error: 'Request too large' }, 413, headers) }
+            chunks.push(value)
+          }
+        } catch { return json({ error: 'Invalid body' }, 400, headers) }
+        finally { reader.releaseLock() }
+      }
+      const bytes = new Uint8Array(size)
+      let offset = 0
+      for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+      const body = new TextDecoder().decode(bytes)
       let data
       try { data = JSON.parse(body) } catch { return json({ error: 'Invalid JSON' }, 400, headers) }
       if (!record(data) || data.version !== PROTOCOL || typeof data.build !== 'string' || !BUILD.test(data.build) || !integer(data.level, 1, 6)) return json({ error: 'Invalid room options' }, 400, headers)
@@ -31,6 +47,8 @@ export default {
     }
     const match = /^\/rooms\/([^/]+)\/ws$/.exec(url.pathname)
     if (match && ROOM_CODE.test(match[1]) && request.method === 'GET' && request.headers.get('Upgrade')?.toLowerCase() === 'websocket') {
+      const { success } = await env.JOIN_LIMIT.limit({ key: `join:${request.headers.get('CF-Connecting-IP') ?? 'local'}` })
+      if (!success) return json({ error: 'Too many join attempts' }, 429, { ...headers, 'Retry-After': '60' })
       return env.ROOMS.getByName(match[1]).fetch(request)
     }
     return json({ error: 'Not found' }, 404, headers)
@@ -95,7 +113,7 @@ export class PorchRoom {
       return
     }
     if (!isClientMessage(message)) { this.reject(ws, 'Invalid packet'); return }
-    if (message.type === 'ping') { ws.serializeAttachment(state); this.send(ws, { type: 'pong' }); return }
+    if (message.type === 'ping') { ws.serializeAttachment(state); this.send(ws, { type: 'pong', at: message.at }); return }
     if (message.type === 'hello') {
       if (state.hero || this.meta.started || message.build !== this.meta.room.build) { this.reject(ws, 'Build differs or already joined'); return }
       state.hero = message.hero; ws.serializeAttachment(state)
@@ -105,17 +123,17 @@ export class PorchRoom {
     if (!state.hero || !peer?.state.hero) { this.reject(ws, 'Wait for both players'); return }
     if (message.type === 'ready') {
       if (this.meta.started || state.ready) { this.reject(ws, 'Already ready'); return }
-      state.ready = message.hash; ws.serializeAttachment(state)
+      state.ready = message.hash; state.delay = message.delay; ws.serializeAttachment(state)
       if (peer.state.ready) {
         if (peer.state.ready !== state.ready) { await this.end({ type: 'desync', tick: 0 }); return }
-        this.meta.started = true; await this.ctx.storage.put('room', this.meta)
-        this.broadcast({ type: 'start' })
+        this.meta.delay = Math.max(state.delay, peer.state.delay); this.meta.started = true; await this.ctx.storage.put('room', this.meta)
+        this.broadcast({ type: 'start', delay: this.meta.delay })
       }
       return
     }
     if (!this.meta.started) { this.reject(ws, 'Not started'); return }
     if (message.type === 'input') {
-      if (message.tick !== state.nextTick || message.tick > peer.state.nextTick + INPUT_DELAY || message.tick >= state.hashTick + HASH_EVERY + INPUT_DELAY) { this.reject(ws, 'Invalid input sequence'); return }
+      if (message.tick !== state.nextTick || message.tick > peer.state.nextTick + this.meta.delay || message.tick >= state.hashTick + HASH_EVERY + this.meta.delay) { this.reject(ws, 'Invalid input sequence'); return }
       state.nextTick++; ws.serializeAttachment(state)
       this.broadcast({ type: 'input', player: state.player, tick: message.tick, commands: message.commands })
     } else if (message.type === 'hash') {
@@ -127,11 +145,12 @@ export class PorchRoom {
       }
     }
   }
-  async webSocketClose(ws) {
+  async webSocketClose(ws, code, reason) {
     const state = ws.deserializeAttachment()
-    if (state?.player === 0 || state?.player === 1) await this.end({ type: 'disconnected', player: state.player, reason: 'Partner left' })
+    const detail = code === 1000 && reason === 'Left room' ? 'Partner left' : `Partner connection closed (${code ?? 'unknown'}${reason ? `: ${reason.slice(0, 100)}` : ''})`
+    if (state?.player === 0 || state?.player === 1) await this.end({ type: 'disconnected', player: state.player, reason: detail })
   }
-  async webSocketError(ws) { await this.webSocketClose(ws) }
+  async webSocketError(ws) { await this.webSocketClose(ws, 1011, 'Relay socket error') }
   async alarm() {
     const now = Date.now()
     if (!this.meta || this.meta.closed) { await this.ctx.storage.deleteAll(); return }

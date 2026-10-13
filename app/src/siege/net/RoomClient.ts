@@ -1,4 +1,4 @@
-import { PROTOCOL, INPUT_DELAY, HASH_EVERY, ROOM_CODE, BUILD, MAX_PACKET_BYTES } from './protocol'
+import { PROTOCOL, INPUT_DELAY, MAX_DELAY, TICK_RATE, HASH_EVERY, ROOM_CODE, BUILD, MAX_PACKET_BYTES } from './protocol'
 import type { ClientMessage, HeroSelection, Player, RoomInfo, Roster, ServerMessage } from './protocol'
 
 export type RoomTicket = { room: RoomInfo; hostToken: string; invite: string }
@@ -17,7 +17,13 @@ export class RoomClient {
   roster: Roster = [null, null]
   private socket: WebSocket
   private listeners = new Set<(message: ServerMessage) => void>()
-  private heartbeat?: ReturnType<typeof setInterval>
+  private heartbeat?: Worker
+  private pingAt = 0
+  private samples: number[] = []
+  private sampleAfter = 0
+  private readyHash = ''
+  delay = INPUT_DELAY
+  get rtt() { return this.samples.length ? Math.max(...this.samples) : 0 }
   private lastSeen = Date.now()
   private closed = false
   private terminal: ServerMessage | null = null
@@ -44,12 +50,20 @@ export class RoomClient {
           welcomed = true; clearTimeout(timeout)
           client.player = message.player; client.room = message.room
           client.send({ type: 'hello', version: PROTOCOL, build, hero })
-          client.heartbeat = setInterval(() => {
-            if (Date.now() - client.lastSeen > 12000) client.disconnect('Connection timed out')
-            else client.send({ type: 'ping' })
-          }, 3000)
+          client.heartbeat = new Worker(new URL('./clock.worker.ts', import.meta.url), { type: 'module' })
+          client.heartbeat.onmessage = () => {
+            const now = performance.now()
+            if (now - client.pingAt < (client.samples.length < 8 ? 350 : 3000)) return
+            client.pingAt = now
+            if (Date.now() - client.lastSeen > 15000) client.disconnect('No relay messages for 15 seconds')
+            else client.send({ type: 'ping', at: now })
+          }
           resolve(client)
         } else if (message.type === 'roster') client.roster = message.players
+        else if (message.type === 'pong' && Number.isFinite(message.at)) {
+          if (message.at >= client.sampleAfter && client.samples.length < 8) client.samples.push(performance.now() - message.at)
+          client.tryReady()
+        } else if (message.type === 'start') client.delay = message.delay
         if (message.type === 'error' && !welcomed) { clearTimeout(timeout); reject(new Error(message.reason)) }
         if (message.type === 'error' || message.type === 'desync' || message.type === 'disconnected') client.terminal = message
         client.emit(message)
@@ -67,9 +81,19 @@ export class RoomClient {
   send(message: ClientMessage) {
     if (!this.closed && this.socket.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message))
   }
-  ready(hash: string) { this.send({ type: 'ready', hash }) }
+  ready(hash: string) {
+    // Measure after asset preparation; loading stalls are not network latency.
+    this.readyHash = hash; this.samples = []; this.sampleAfter = performance.now(); this.pingAt = 0
+  }
+  private tryReady() {
+    if (!this.readyHash || this.samples.length < 8 || this.closed) return
+    // Fixed for the entire match, agreed by the room from the slower peer's lobby samples.
+    // Leave one sampled RTT of headroom for relay/peer scheduling jitter.
+    const delay = Math.min(MAX_DELAY, Math.max(INPUT_DELAY, Math.ceil((this.rtt * 2 + 30) * TICK_RATE / 1000)))
+    this.send({ type: 'ready', hash: this.readyHash, delay }); this.readyHash = ''
+  }
   close() {
-    this.closed = true; clearInterval(this.heartbeat)
+    this.closed = true; this.heartbeat?.terminate()
     if (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING) this.socket.close(1000, 'Left room')
   }
   private emit(message: ServerMessage) { for (const listener of this.listeners) listener(message) }

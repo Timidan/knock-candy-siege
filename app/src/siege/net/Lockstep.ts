@@ -1,4 +1,4 @@
-import { HASH_EVERY, INPUT_DELAY, MAX_COMMANDS, TICK_RATE, isCommand } from './protocol'
+import { HASH_EVERY, INPUT_DELAY, MAX_DELAY, MAX_COMMANDS, TICK_RATE, isCommand } from './protocol'
 import type { ClientMessage, CoopCommand, Player, ServerMessage } from './protocol'
 import { hashState } from './hash'
 
@@ -23,10 +23,11 @@ export class Lockstep {
   state: 'waiting' | 'running' | StopReason = 'waiting'
   verifiedTick = 0
   detail = ''
+  delay = INPUT_DELAY
   private packets: [Map<number, CoopCommand[]>, Map<number, CoopCommand[]>] = [new Map(), new Map()]
   private nextReceived = [0, 0]
   private pending: CoopCommand[] = []
-  private awaitingHash: { tick: number; hash: string } | null = null
+  private hashes = new Map<number, string>()
   private simulation: Simulation
   private options: Options
   constructor(simulation: Simulation, options: Options) { this.simulation = simulation; this.options = options }
@@ -38,25 +39,26 @@ export class Lockstep {
   receive(message: ServerMessage) {
     if (this.state !== 'waiting' && this.state !== 'running') return
     if (message.type === 'start') {
-      if (this.state !== 'waiting') { this.stop('error'); return }
+      if (this.state !== 'waiting' || !Number.isInteger(message.delay) || message.delay < INPUT_DELAY || message.delay > MAX_DELAY) { this.stop('error'); return }
+      this.delay = message.delay
       this.state = 'running'
-      for (let tick = 0; tick < INPUT_DELAY; tick++) this.options.send({ type: 'input', tick, commands: [] })
+      for (let tick = 0; tick < this.delay; tick++) this.options.send({ type: 'input', tick, commands: [] })
     } else if (message.type === 'input') {
       const { player, tick, commands } = message
       // A peer may consume our primed window before our next render frame.
-      if (this.state !== 'running' || (player !== 0 && player !== 1) || tick !== this.nextReceived[player] || tick > this.tick + 2 * INPUT_DELAY || !Array.isArray(commands) || commands.length > MAX_COMMANDS || !commands.every(isCommand)) { this.stop('error'); return }
+      if (this.state !== 'running' || (player !== 0 && player !== 1) || tick !== this.nextReceived[player] || tick > this.tick + 2 * this.delay || !Array.isArray(commands) || commands.length > MAX_COMMANDS || !commands.every(isCommand)) { this.stop('error'); return }
       this.nextReceived[player]++; this.packets[player].set(tick, commands)
     } else if (message.type === 'verified') {
-      if (!this.awaitingHash || message.tick !== this.awaitingHash.tick || message.hash !== this.awaitingHash.hash) { this.stop('desync'); return }
-      this.verifiedTick = message.tick; this.awaitingHash = null
+      if (message.tick !== this.verifiedTick + HASH_EVERY || message.hash !== this.hashes.get(message.tick)) { this.stop('desync'); return }
+      this.verifiedTick = message.tick; this.hashes.delete(message.tick)
     } else if (message.type === 'desync') this.stop('desync')
-    else if (message.type === 'disconnected') this.stop('disconnected')
-    else if (message.type === 'error') this.stop('error')
+    else if (message.type === 'disconnected') { this.detail = message.reason; this.stop('disconnected') }
+    else if (message.type === 'error') { this.detail = message.reason; this.stop('error') }
   }
 
   /** Call at 45 Hz. false means keep rendering, but do not advance simulation. */
   advance(): boolean {
-    if (this.state !== 'running' || this.awaitingHash) return false
+    if (this.state !== 'running' || this.tick - this.verifiedTick >= HASH_EVERY * 2) return false
     const a = this.packets[0].get(this.tick), b = this.packets[1].get(this.tick)
     if (!a || !b) return false
     try {
@@ -64,13 +66,13 @@ export class Lockstep {
       for (const command of b) this.simulation.command(1, command)
       this.simulation.step(1 / TICK_RATE, this.tick)
       this.packets[0].delete(this.tick); this.packets[1].delete(this.tick)
-      const future = this.tick + INPUT_DELAY
+      const future = this.tick + this.delay
       this.tick++
       const commands = this.pending; this.pending = []
       this.options.send({ type: 'input', tick: future, commands })
       if (this.tick % HASH_EVERY === 0) {
         const hash = hashState(this.simulation.snapshot())
-        this.awaitingHash = { tick: this.tick, hash }
+        this.hashes.set(this.tick, hash)
         this.options.onHash?.(this.tick, hash)
         this.options.send({ type: 'hash', tick: this.tick, hash })
       }

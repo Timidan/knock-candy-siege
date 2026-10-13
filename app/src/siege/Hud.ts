@@ -76,6 +76,7 @@ export class Hud {
   private suppliesOpen = false
   private suppliesButton: Button
   private calls: (Button & { early: Phaser.GameObjects.Text; bounty: Phaser.GameObjects.Image })[] = []
+  private partner?: Phaser.GameObjects.Text
   private speed: Button
   private tutorialCard: Phaser.GameObjects.Container
   private tutorialText: Phaser.GameObjects.Text
@@ -161,15 +162,22 @@ export class Hud {
     const pause = this.button(this.topRight, 1832, 88, 'ui/pause', 128, () => { scene.cancel(); scene.pauseGame() }, false, false, '#7A6699')
     for (const b of [this.speed, pause]) { b.face.setVisible(false); b.lip.setVisible(false) }
     pause.root.setData('tutorialSkip', true)
-    this.portrait = this.button(bottom, 100, 984, `hero/frame/${scene.options.home ? 'home' : 'guest'}`, 152, () => scene.selectHero(), false, false, '#FFD23F')
-    const heads = scene.heads, ref = heads.head(scene.options.hero)
+    if (scene.options.coop) {
+      this.speed.root.setVisible(false); pause.icon.setVisible(false); pause.label.setText('LEAVE').setFontSize(28)
+      const partner = scene.heroes[1 - scene.options.coop.client.player], ref = scene.heads.head(partner.kit.id)
+      const face = scene.add.image(1696, 70, ref.key, ref.frame).setDisplaySize(60, 75)
+      this.partner = this.text(1696, 124, '', 23).setOrigin(.5)
+      this.topRight.add([face, this.partner])
+    }
+    this.portrait = this.button(bottom, 100, 984, `hero/frame/${scene.localSelection.home ? 'home' : 'guest'}`, 152, () => scene.selectHero(), false, false, '#FFD23F')
+    const heads = scene.heads, ref = heads.head(scene.localSelection.id)
     this.portrait.icon.setTexture(ref.key, ref.frame).setOrigin(heads.pivot.x / 256, heads.pivot.y / 320).setPosition(0, -3).setDisplaySize(145, 181.25)
     this.portrait.root.add(plate(scene, -68, 80, 136, 22, 9, 0x171020, 1, 0xffdf9a, 3))
     this.health = plate(scene, -63, 85, 126, 12, 5, 0xffffff); this.portrait.root.add(this.health)
     // A legend's special and ultimate icons come from its own atlas.
-    const legendArt = scene.hero.kit.legend ? `hero-${scene.hero.kit.costume}:` : ''
-    this.ability = this.button(bottom, 266, 984, legendArt ? `${legendArt}special/2` : `kit/special/${scene.hero.kit.special}`, 132, () => { scene.cancel(); scene.heroAbility(); this.toast(scene.abilityName()) }, false, false, '#FFD23F')
-    this.ultimate = this.button(bottom, 266, 830, legendArt ? `${legendArt}ultimate/3` : `kit/ultimate/${scene.hero.kit.ultimate}`, 132, () => { scene.cancel(); scene.command({ type: 'ultimate' }) }, false, false, '#FFD23F')
+    const legendArt = scene.localHero.kit.legend ? `hero-${scene.localHero.kit.costume}:` : ''
+    this.ability = this.button(bottom, 266, 984, legendArt ? `${legendArt}special/2` : `kit/special/${scene.localHero.kit.special}`, 132, () => { scene.cancel(); scene.heroAbility(); this.toast(scene.abilityName()) }, false, false, '#FFD23F')
+    this.ultimate = this.button(bottom, 266, 830, legendArt ? `${legendArt}ultimate/3` : `kit/ultimate/${scene.localHero.kit.ultimate}`, 132, () => { scene.cancel(); scene.command({ type: 'ultimate' }) }, false, false, '#FFD23F')
     this.ultimateRing = scene.art.image(0, 0, 'combat/ring/0').setTint(0xffd477).setVisible(false)
     this.ultimateKey = this.text(0, -47, 'R', 24).setOrigin(.5).setStroke('#241b30', 4).setVisible(this.keyHints)
     this.ultimate.root.addAt(this.ultimateRing, 0); this.ultimate.root.add(this.ultimateKey)
@@ -185,7 +193,7 @@ export class Hud {
     scene.hudLayer.add(this.perkRoot)
     if (revealedLevels.has(scene.options.level)) this.perkAge = 3.7
     this.perkRoot.add(hudPlate(scene, 920, 274, '#836EF9', true))
-    this.perkRoot.add(this.text(30, 40, `CHOG #${scene.options.hero} · TRAITS ACTIVE`, 32, '#FFD23F'))
+    this.perkRoot.add(this.text(30, 40, `CHOG #${scene.localSelection.id} · TRAITS ACTIVE`, 32, '#FFD23F'))
     // Compact copy describes the resolved kit, never a made-up NFT bonus.
     const shortEffects: Record<string, string> = {
       'rainbow-trail': 'Trail slows + hurts', 'sweet-tooth': 'Candy heals', honk: 'Every 10th hit confuses',
@@ -196,7 +204,7 @@ export class Hud {
       heart: 'Regenerate health', multi: 'Random buff / wave', 'rare-tone': 'One status resistance', common: 'Your Chog’s colour',
     }
     for (const [i, slot] of (['passive', 'headgear', 'trinket', 'skin'] as const).entries()) {
-      const family = scene.hero.kit[slot], info = scene.options.assets.kits.slots[slot][family]
+      const family = scene.localHero.kit[slot], info = scene.options.assets.kits.slots[slot][family]
       if (family === 'none') continue
       const button = this.button(top, 96 + i * 138, 180, `kit/${slot}/${family}`, 84, () => this.toast(`${info.name} · ${info.effect || 'Your portrait’s own colour'}`), false, false, '#836EF9')
       button.icon.setDisplaySize(48, 48); button.root.setVisible(this.perkAge >= 3.7)
@@ -334,6 +342,7 @@ export class Hud {
   candyTargetPosition() { const p = this.candyRoot.getWorldTransformMatrix(); return { x: p.tx, y: p.ty } }
   private animatePerks(dt: number) {
     const s = this.scene
+    if (s.talentWaiting) { this.perkRoot.setVisible(false); return }
     if (this.perkAge >= 3.7) return
     if (this.perkAge < 0) {
       if (s.focus.active || this.tutorialCard.visible || s.paused || this.talentCard.visible || this.bossBannerRoot) return
@@ -457,7 +466,8 @@ export class Hud {
     this.scene.tweens.add({ targets: panel, y: panel.y + 18, alpha: 0, duration: 120, onComplete: () => panel.setVisible(false) })
   }
   refresh() {
-    const s = this.scene, factor = s.hero.spellFactor
+    const s = this.scene, factor = s.localHero.spellFactor
+    if (this.partner && s.options.coop) { const hero = s.heroes[1 - s.options.coop.client.player]; this.partner.setText(`#${hero.kit.id} · Lv ${hero.level} · ${Math.ceil(hero.hp)} HP`) }
     if (s.ended) return
     if (this.candyTarget !== s.candy) {
       const first = this.candyTarget < 0; this.candyTarget = s.candy
@@ -469,17 +479,17 @@ export class Hud {
     this.candy.setScale(Math.min(1, 150 / this.candy.getTextBounds().local.width))
     this.jars.setText(String(s.jars)); this.wave.setText(s.level.endless ? String(s.wave) : `${s.wave}/${s.waveCount}`)
     s.art.set(this.speed.icon, `ui/speed-${s.speed}`)
-    this.enabled(this.portrait, s.hero.hp > 0)
-    this.portrait.label.setText(`Lv ${s.hero.level}`).setPosition(0, 57).setFontSize(34).setStroke('#241b30', 5)
+    this.enabled(this.portrait, s.localHero.hp > 0)
+    this.portrait.label.setText(`Lv ${s.localHero.level}`).setPosition(0, 57).setFontSize(34).setStroke('#241b30', 5)
     if (this.portrait.label.style.color !== '#fff0d5') this.portrait.label.setColor('#fff0d5')
-    this.cooldown(this.ability, s.hero.hp <= 0 ? s.hero.respawn : s.hero.ability, s.hero.hp <= 0 ? 12 : s.hero.abilityTotal)
-    this.cooldown(this.ultimate, 100 - s.hero.charge, 100)
-    const ready = s.hero.charge >= 100
+    this.cooldown(this.ability, s.localHero.hp <= 0 ? s.localHero.respawn : s.localHero.ability, s.localHero.hp <= 0 ? 12 : s.localHero.abilityTotal)
+    this.cooldown(this.ultimate, 100 - s.localHero.charge, 100)
+    const ready = s.localHero.charge >= 100
     if (ready && !this.ultimateReady) this.ultimateBurst = 0
     this.ultimateReady = ready
-    this.ultimate.label.setText(ready ? 'READY' : `${Math.floor(s.hero.charge)}%`).setFontSize(ready ? 30 : 34).setPosition(0, ready ? 32 : 0)
-    this.enabled(this.ultimate, s.hero.charge >= 100 && s.hero.hp > 0)
-    const health = Phaser.Math.Clamp(s.hero.hp / s.hero.maxHp, 0, 1)
+    this.ultimate.label.setText(ready ? 'READY' : `${Math.floor(s.localHero.charge)}%`).setFontSize(ready ? 30 : 34).setPosition(0, ready ? 32 : 0)
+    this.enabled(this.ultimate, s.localHero.charge >= 100 && s.localHero.hp > 0)
+    const health = Phaser.Math.Clamp(s.localHero.hp / s.localHero.maxHp, 0, 1)
     this.health.setScale(health, 1).setTint(health < .3 ? 0xff876e : 0xa7d987).setVisible(health > 0)
     this.talents()
     // refresh() keeps running while paused, so the countdown drains at the HUD's 8 Hz rate.
@@ -602,17 +612,17 @@ export class Hud {
     this.dancePreviews = []
     if (!s.emoteOpen) { this.close(this.wheel); return }
     this.wheel.removeAll(true)
-    const hero = s.worldToView(s.hero), v = s.view
+    const hero = s.worldToView(s.localHero), v = s.view
     this.wheel.setPosition(Phaser.Math.Clamp(hero.x, v.left + 310, v.right - 310), Phaser.Math.Clamp(hero.y - 80, v.top + 350, v.bottom - 460))
     this.wheel.add(circle(s, 280, 0x2e203c, .97, 0xf3d3e1, 4))
-    const ownedDances = SHOP_ITEMS.filter(i => i.kind === 'dance' && s.options.owned.includes(i.id)).map(i => i.key)
-    const pages: string[][] = [[...EMOTES], ownedDances, s.options.owned.includes(22) ? CRYPTO_EMOTES : []]
+    const ownedDances = SHOP_ITEMS.filter(i => i.kind === 'dance' && s.localSelection.owned.includes(i.id)).map(i => i.key)
+    const pages: string[][] = [[...EMOTES], ownedDances, s.localSelection.owned.includes(22) ? CRYPTO_EMOTES : []]
     const names = pages[this.emotePage]
     names.forEach((name, i) => {
       const angle = i * Math.PI / 4 - Math.PI / 2, dance = s.options.assets.dances[name]
       const b = this.button(this.wheel, Math.cos(angle) * 198, Math.sin(angle) * 198, dance ? '' : `emote/${name}/0`, 128, () => s.command({ type: 'emote', name }))
       if (dance) {
-        const rig = new Rig(s, s.art, s.options.assets, s.hero.kit, () => {}, s.options.costume || s.hero.kit.costume)
+        const rig = new Rig(s, s.art, s.options.assets, s.localHero.kit, () => {}, s.localSelection.costume || s.localHero.kit.costume)
         rig.play('idle'); rig.dance(name); b.root.add(rig.root); rig.root.setPosition(0, 37).setScale(.78)
         this.dancePreviews.push({ rig, scale: .78, clip: dance.clip })
         b.root.add(s.art.image(39, -40, `emote/${dance.emote ?? 'gg'}/0`).setDisplaySize(53, 40))
@@ -621,9 +631,9 @@ export class Hud {
     })
     if (!names.length) this.wheel.add(this.text(0, -175, 'Find your next move\nin the shop', 32).setOrigin(.5).setAlign('center'))
     const signature = this.button(this.wheel, 0, 0, '', 160, () => s.command({ type: 'emote', name: 'signature' }))
-    const rig = new Rig(s, s.art, s.options.assets, s.hero.kit, () => {}, s.options.costume || s.hero.kit.costume)
+    const rig = new Rig(s, s.art, s.options.assets, s.localHero.kit, () => {}, s.localSelection.costume || s.localHero.kit.costume)
     rig.play('idle'); rig.emote(); signature.root.add(rig.root); rig.root.setPosition(0, 36).setScale(.9)
-    this.dancePreviews.push({ rig, scale: .9, clip: s.options.assets.dances[s.hero.kit.emote].clip })
+    this.dancePreviews.push({ rig, scale: .9, clip: s.options.assets.dances[s.localHero.kit.emote].clip })
     signature.label.setText('Signature').setFontFamily(BODY).setFontSize(30).setPosition(0, 57).setColor('#ffe3ae').setStroke('#241b30', 4)
     signature.front.remove(signature.label); signature.root.add(signature.label)
     const page = this.button(this.wheel, -90, 370, '', 128, () => { this.emotePage = (this.emotePage + 1) % 3; this.emotes() })
@@ -633,19 +643,32 @@ export class Hud {
     this.open(this.wheel)
   }
   private talents() {
-    const s = this.scene, hero = s.hero, level = s.tutorialStep < TUTORIAL.length ? 0 : hero.talentLevels[0] ?? 0
+    const s = this.scene, hero = s.localHero, level = s.tutorialStep < TUTORIAL.length ? 0 : hero.talentLevels[0] ?? (s.talentWaiting ? -2 : 0)
+    if (s.options.coop && this.talentBar?.active) {
+      const deadline = Math.max(...s.talentDeadlines)
+      this.talentBar.scaleX = Math.max(0, Math.min(1, (deadline - (s.net?.tick ?? 0)) / 450))
+    }
     // While a menu, an enemy intro or the shop holds the pause, a new card waits, so its countdown never resumes play behind them.
     // It also waits for the finished tutorial's card and spotlight to clear; pausing would freeze them on screen.
     if (level === this.talentLevel || level && (s.paused || this.tutorialCard.visible) && !this.talentTimer) return
     this.talentLevel = level; this.talentCard.removeAll(true); this.talentCard.setVisible(!!level)
     this.talentTimer?.remove(); this.talentTimer = undefined
     s.input.keyboard?.off('keydown', this.talentKey, this)
+    if (level === -2) {
+      this.talentCard.add(plate(s, -360, -40, 720, 140, 20, 0x2e203c, .97, 0xffd58b, 3))
+      this.talentCard.add(this.text(0, 15, 'Partner is choosing…', 36).setOrigin(.5))
+      this.talentBar = plate(s, -330, 70, 660, 14, 7, 0xffd58b); this.talentCard.add(this.talentBar)
+      return
+    }
     const choices = level ? hero.choices : null
     if (!choices) return
     // Each card holds its own pause for at most ten seconds; scene.time keeps running while paused.
-    s.setPaused(true); s.options.sfx.play('talent-open'); this.talentTick = 0
-    this.talentTimer = s.time.delayedCall(10000, () => this.pickTalent(0, true))
-    s.input.keyboard?.on('keydown', this.talentKey, this)
+    s.options.sfx.play('talent-open'); this.talentTick = 0
+    if (!s.options.coop) {
+      s.setPaused(true)
+      this.talentTimer = s.time.delayedCall(10000, () => this.pickTalent(0, true))
+      s.input.keyboard?.on('keydown', this.talentKey, this)
+    }
     this.talentCard.add(plate(s, -360, -64, 720, 272, 20, 0x2e203c, .97, 0xffd58b, 3))
     this.talentTitle = this.text(0, -34, `LEVEL ${level} · PICK A TALENT${this.keyHints ? ' [Z / X]' : ''}`, 34).setOrigin(.5)
     this.talentCard.add(this.talentTitle)
@@ -667,7 +690,8 @@ export class Hud {
   // The scene ignores commands while paused, so resume first. Resetting talentLevel makes the refresh
   // open the next card, or close this one, even if the choice was somehow refused.
   private pickTalent(index: number, auto = false) {
-    const s = this.scene, choice = s.hero.choices?.[index]
+    const s = this.scene, choice = s.localHero.choices?.[index]
+    if (s.options.coop) { if (choice) s.command({ type: 'talent', index }); return }
     if (!this.talentTimer || !choice) return
     this.talentTimer.remove(); this.talentTimer = undefined
     s.setPaused(false); s.command({ type: 'talent', index })
@@ -771,7 +795,7 @@ export class Hud {
     }
     const b = target === 'wave' ? this.calls.find(b => b.root.visible) : target === 'trap' ? this.trapButtons.pumpkin : target === 'rain' ? this.rain : target === 'emote' ? this.emoteButton : target === 'hero' && !s.heroSelected ? this.portrait : null
     if (b) { const p = b.root.getWorldTransformMatrix(); return { x: p.tx, y: p.ty, radius: b.size / 2 + 6, world: false } }
-    if (target === 'hero') return { x: Math.min(1800, s.hero.x + 160), y: Math.min(875, s.hero.y), radius: 65, world: true }
+    if (target === 'hero') return { x: Math.min(1800, s.localHero.x + 160), y: Math.min(875, s.localHero.y), radius: 65, world: true }
     return null
   }
   animate(time: number, dt = 1 / 60) {
@@ -794,7 +818,7 @@ export class Hud {
     for (const preview of this.dancePreviews) {
       if (!preview.rig.root.active || !this.wheel.visible) continue
       const clip = s.options.assets.rig.clips[preview.clip]
-      if (preview.rig.time >= clip.ms) { preview.rig.time = 0; preview.rig.play(preview.clip); if (preview.clip === s.options.assets.dances[s.hero.kit.emote].clip) preview.rig.emote() }
+      if (preview.rig.time >= clip.ms) { preview.rig.time = 0; preview.rig.play(preview.clip); if (preview.clip === s.options.assets.dances[s.localHero.kit.emote].clip) preview.rig.emote() }
       preview.rig.update(dt); preview.rig.root.setScale(preview.scale)
     }
   }

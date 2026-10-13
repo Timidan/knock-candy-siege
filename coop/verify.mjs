@@ -18,9 +18,16 @@ try {
     const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome-stable', headless: true })
     browsers.push(browser)
     const page = await browser.newPage({ viewport: { width: 1000, height: 700 }, reducedMotion: player ? 'reduce' : 'no-preference' })
+    if (modes.includes('pace')) await page.routeWebSocket(/\/rooms\/.*\/ws/, socket => {
+      const server = socket.connectToServer()
+      socket.onMessage(message => setTimeout(() => server.send(message), 50))
+      server.onMessage(message => setTimeout(() => socket.send(message), 50))
+      socket.onClose((code, reason) => setTimeout(() => server.close({ code, reason }), 50))
+      server.onClose((code, reason) => setTimeout(() => socket.close({ code, reason }), 50))
+    })
     page.on('pageerror', error => errors.push({ player, error: String(error) }))
     pages.push(page)
-    await page.goto('http://localhost:5200'); await page.waitForFunction(() => window.coopHarness)
+    await page.goto('http://localhost:5200/harness.html'); await page.waitForFunction(() => window.coopHarness)
     assert.equal(await page.evaluate(() => navigator.webdriver), true)
   }
   for (const mode of modes) {
@@ -59,8 +66,12 @@ try {
       assert.deepEqual(offline.hashes, results[0].hashes, 'Relay replay must equal direct offline simulation')
       assert.equal(offline.consumed, results[0].applied.length)
       console.log(`replay: 1800 ticks, 20 matching hashes and canonical states; offline replay identical; ${results[0].applied.length} commands; withheld heartbeat gated at tick 180`)
+    } else if (mode === 'pace') {
+      for (const r of results) { assert.equal(r.tick, 1800); assert.equal(r.stop, ''); assert.ok(r.elapsedMs < 42106, `Pacing too slow: ${r.elapsedMs} ms`); assert.ok(r.stallMs / r.elapsedMs < .05, `Stall fraction too high: ${r.stallMs / r.elapsedMs}`) }
+      assert.deepEqual(results[0].hashes, results[1].hashes)
+      console.log('pace:', results.map(r => ({ elapsedMs: r.elapsedMs, seconds: r.seconds, stalls: r.stalls })))
     } else if (mode === 'desync') {
-      for (const result of results) { assert.equal(result.stop, 'Out of sync: restart together'); assert.equal(result.tick, 180) }
+      for (const result of results) { assert.equal(result.stop, 'Out of sync: restart together'); assert.ok(result.tick >= 180 && result.tick <= 180 + 2 * result.delay); assert.equal(result.verified, 90) }
       console.log('desync: both clients stopped at checkpoint 180 after one candy was changed at tick 135')
     } else if (mode === 'disconnect') {
       assert.equal(results[0].stop, 'Partner disconnected')

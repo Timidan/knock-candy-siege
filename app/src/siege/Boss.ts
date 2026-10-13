@@ -27,6 +27,8 @@ const START = 760 // route distance where a boss walks on: clear of the edge con
 // texture; the 15.7 MB sheet itself is uploaded only for the Pumpkin fight and dropped afterwards.
 function load(s: SiegeScene, state: string, atlas: string, done: (atlas: AssetPack['atlases'][number]) => void) {
   if (s.bossArt.has(state)) return
+  const prepared = s.options.coop && s.options.assets.atlases.find(a => a.key === atlas)
+  if (prepared) { done(prepared); s.bossArt.set(state, 'ready'); return }
   s.bossArt.set(state, 'loading')
   void loadAtlas(atlas).then(loaded => { if (s.gone) return; done(loaded); s.bossArt.set(state, 'ready') }).catch(() => { s.bossArt.set(state, 'failed') })
 }
@@ -94,7 +96,7 @@ export function spawnBoss(s: SiegeScene, spec: BossSpawn, wave: number): boolean
   // The first meeting of each boss gets a card; the cinematic starts when play resumes.
   const fresh = !s.discovered.has(`boss/${spec.id}`)
   s.discover([`boss/${spec.id}`])
-  if (fresh && !s.focus.active) { s.setPaused(true); s.options.onIntro(`boss:${spec.id}`) }
+  if (fresh && !s.focus.active && !s.options.coop) { s.setPaused(true); s.options.onIntro(`boss:${spec.id}`) }
   return true
 }
 
@@ -156,7 +158,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
   if (id === 561) { // Wildfire: a ring of flame scorches guards and the hero
     fx('special/0', e.x, e.y - 20, 1.2, 3)
     guardsNear(s, e.x, e.y, 290, g => { g.hp -= 70; s.effect('status/burn/0', g.x, g.y - 40, .8, 1.4) })
-    if (s.hero.alive && distanceSq(e, s.hero) < 290 ** 2) s.hero.hurt(22, e)
+    for (const hero of s.heroes) if (hero.alive && distanceSq(e, hero) < 290 ** 2) hero.hurt(22, e)
   } else if (id === 900) { b.dash = .8; b.dashSpeed = 480; fx('ultimate/0', e.x, e.y - 40, .9, 1.6) } // Hell Ride
   else if (id === 942) { s.missTime = 4; fx('ultimate/0', e.x, e.y - 100, 1.4, 3); s.warp(); s.hud.toast('The Scream! Your towers will miss half their shots.') }
   else if (id === 1002) { // Rise Again

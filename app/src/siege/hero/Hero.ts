@@ -1,3 +1,4 @@
+import type { HeroSelection } from '../net/protocol'
 import type { SiegeScene } from '../SiegeScene'
 import type { Enemy, Tower } from '../world'
 import { distanceSq, reaction } from '../world'
@@ -40,6 +41,7 @@ export class Hero {
   talents = new Set<string>()
   talentLevels: number[] = []
   private offered = new Set<number>()
+  attackTarget: { slot: number; generation: number; range: number } | null = null
   private frogUsed = false
   private skullUsed = false
   private shield = 0
@@ -55,10 +57,12 @@ export class Hero {
   private trail = 0
   private oddity = 0
   scene: SiegeScene
-  constructor(scene: SiegeScene, spawn: Point) {
+  selection: HeroSelection
+  constructor(scene: SiegeScene, spawn: Point, selection: HeroSelection = { id: scene.options.hero, home: scene.options.home, costume: scene.options.costume, get owned() { return scene.options.owned }, victoryDance: scene.options.victoryDance, stars: scene.options.stars, street: scene.options.street }) {
+    this.selection = selection
     this.scene = scene
     const a = scene.options.assets
-    this.kit = resolveKit(a.kits, a.traits, a.chogs, scene.options.hero, scene.options.home)
+    this.kit = resolveKit(a.kits, a.traits, a.chogs, selection.id, selection.home)
     this.level = this.kit.level
     this.maxHp = (180 + this.level * 30) * (this.kit.passive === 'tough' ? 1.2 : 1)
     this.hp = this.maxHp
@@ -66,12 +70,12 @@ export class Hero {
     this.rig = new Rig(scene, scene.art, a, this.kit, event => {
       if (event === 'step') scene.options.sfx.play('hero-step')
       if (event === 'land') { scene.options.sfx.play('hit'); scene.effect('fx/poof/0', this.x, this.y, .35, .7) }
-    }, scene.options.costume || this.kit.costume)
-    if (this.kit.trinket === 'lucky-coin') scene.candy += 50
+    }, selection.costume || this.kit.costume)
+    if (!scene.options.coop && this.kit.trinket === 'lucky-coin') scene.candy += 50
     this.offerTalents()
   }
   has(slot: 'weapon' | 'special' | 'ultimate' | 'passive' | 'headgear') { return this.talents.has(`${slot}:${this.kit[slot]}`) }
-  get spellFactor() { return (this.kit.headgear === 'spellcraft' ? this.has('headgear') ? .7 : .8 : 1) * (this.scene.crew === 2 ? .85 : 1) }
+  get spellFactor() { return (this.kit.headgear === 'spellcraft' ? this.has('headgear') ? .7 : .8 : 1) * (this.selection.street.crew === 2 ? .85 : 1) }
   get abilityTotal() { return SPECIAL_COOLDOWNS[this.kit.special] * this.spellFactor * (this.talents.has('generic:cooldown') ? .8 : 1) }
   get alive() { return this.hp > 0 }
   get damageScale() { return (1 + (this.level - 1) * .12) * (this.talents.has('generic:power') ? 1.15 : 1) * (this.waveBuff === 'power' ? 1.2 : 1) * (this.devil > 0 ? 2 : 1) }
@@ -134,7 +138,7 @@ export class Hero {
       if (amount >= 1 && s.clock < this.boneShieldUntil && s.presentationTime >= this.shieldPopAt) { s.shieldFeedback(this); this.shieldPopAt = s.presentationTime + .35 }
       return
     }
-    if (s.crew === 1 && amount >= 1 && s.random() < .1) { s.dodgeFeedback(this); this.reaction.dodge = .26; return }
+    if (this.selection.street.crew === 1 && amount >= 1 && s.random() < .1) { s.dodgeFeedback(this); this.reaction.dodge = .26; return }
     if (this.shield && amount >= 1) { this.shield--; s.shieldFeedback(this); return }
     const armor = (this.kit.headgear === 'armored' ? this.has('headgear') ? .45 : .3 : 0) + (this.kit.skin === 'metal' ? .2 : 0) + (this.waveBuff === 'guard' ? .15 : 0)
     this.hp -= amount * (1 - Math.min(.65, armor))
@@ -186,6 +190,7 @@ export class Hero {
         if (target && this.cooldown <= 0 && !this.fear) {
           this.rig.facing = target.x < this.x ? -1 : 1
           const generation = target.generation
+          this.attackTarget = { slot: s.enemies.indexOf(target), generation, range }
           if (this.kit.weapon === 'anime') s.effect(`hero-${this.kit.costume}:wpn/charge/0`, this.x + this.rig.facing * 28, this.y - 52, .8, 1.2)
           this.rig.play(`attack-${s.options.assets.rig.costumes[this.kit.costume].attack}`, () => this.attack(target.active && target.generation === generation ? target : s.target(this, range, 'first')))
           this.cooldown = config.interval / (1 + this.streak * .08) / (this.waveBuff === 'haste' ? 1.2 : 1) / (this.kit.weapon === 'slingshot' && this.has('weapon') ? 1.25 : 1)
@@ -211,7 +216,7 @@ export class Hero {
       critical = this.scene.random() < chance
       if (critical) damage *= 2
     }
-    const landed = s.damage(e, damage, magic ? 'magic' : this.kit.weapon === 'egg-lob' && basic ? 'egg' : 'physical', true, true, { from: this, crit: critical })
+    const landed = s.damage(e, damage, magic ? 'magic' : this.kit.weapon === 'egg-lob' && basic ? 'egg' : 'physical', true, this, { from: this, crit: critical })
     if (basic && landed && s.textures.get(`hero-${this.kit.costume}`).has('wpn/hit/0')) s.effect(`hero-${this.kit.costume}:wpn/hit/0`, e.x, e.y - 45, .3, .7)
     if (!landed || !basic || !e.active) return
     if (this.kit.weaponMod === 'fire' || this.kit.headgear === 'hellfire') this.dot(e, 'burn', this.has('headgear') && this.kit.headgear === 'hellfire' ? 6 : 3)
@@ -219,9 +224,9 @@ export class Hero {
     if (this.kit.passive === 'sticky') { s.status(e, 'slow', 2.2); e.slowPower = this.has('passive') ? .65 : .8 }
     if (this.kit.passive === 'honk' && this.attackCount % (this.has('passive') ? 5 : 10) === 0) { s.status(e, 'confuse', 3); s.options.sfx.play('emote') }
   }
-  dot(e: Enemy, status: Status, duration: number) { this.scene.status(e, status, duration); e.heroDot = true }
+  dot(e: Enemy, status: Status, duration: number) { this.scene.status(e, status, duration); e.heroDot = true; e.heroOwner = this.scene.heroes.indexOf(this) }
   projectile(e: Enemy, damage: number, frame: string, magic = false, splash = 0, after?: () => void, duration = .26) {
-    this.scene.fire(this.x, this.y - 55, e, damage, 'hero', splash, { frame: `hero-${this.kit.costume}:${frame}`, duration, arc: this.kit.weapon === 'egg-lob' || this.kit.weapon === 'junk' ? 115 : 12, onHit: target => this.hitEnemy(target, damage, magic, true), after })
+    this.scene.fire(this.x, this.y - 55, e, damage, 'hero', splash, { owner: this.scene.heroes.indexOf(this), frame: `hero-${this.kit.costume}:${frame}`, duration, arc: this.kit.weapon === 'egg-lob' || this.kit.weapon === 'junk' ? 115 : 12, onHit: target => this.hitEnemy(target, damage, magic, true), after })
   }
   private attack(target: Enemy | null) {
     if (!target || !this.alive) return
@@ -358,7 +363,7 @@ export class Hero {
       this.fx('ult', 'storm/0', { x: 960, y: 330 }, 2, 3)
       for (let i = 0; i < (talent ? 14 : 10) && enemies.length; i++) {
         const e = enemies[i % enemies.length]
-        s.fire(960, 200, e, 75, 'hero', 0, { frame: 'ult-arcane:bolt/0', duration: .35 + i * .08, arc: 0, onHit: target => { this.hitEnemy(target, 75, true); this.fx('ult', 'hit/0', target) } })
+        s.fire(960, 200, e, 75, 'hero', 0, { owner: s.heroes.indexOf(this), frame: 'ult-arcane:bolt/0', duration: .35 + i * .08, arc: 0, onHit: target => { this.hitEnemy(target, 75, true); this.fx('ult', 'hit/0', target) } })
       }
     } else if (family === 'bloom') {
       this.fx('ult', 'bloom/0', this, 2, 3); this.fx('ult', 'jar/0', s.options.assets.geometry.porch, 1.5, 1.5)
