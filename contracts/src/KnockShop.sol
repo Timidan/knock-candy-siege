@@ -47,10 +47,11 @@ contract KnockShop is Ownable {
     }
 
     /// @notice Buy with an EIP-2612 permit signed by `buyer` for exactly the item's price, so the buyer needs no
-    /// separate approval. Anyone may submit it; the permit only lets this shop take that price from `buyer`.
-    /// The permit doesn't name the item, so whoever submits it picks which item at that price the buyer receives.
+    /// separate approval. Only the buyer may submit it: the permit doesn't name the item, so anyone else holding the
+    /// signature, or relying on an allowance the buyer left here, could otherwise pick purchases the buyer never chose.
     function buyFor(address buyer, uint256 item, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external {
-        // A permit already used (for example, front-run by another submitter) reverts; the allowance it set still
+        require(msg.sender == buyer, "not buyer");
+        // A permit already used (for example, front-run straight to the token) reverts; the allowance it set still
         // works, so carry on and let transferFrom decide.
         try IERC20Permit(address(knock)).permit(buyer, address(this), price[item], deadline, v, r, s) {} catch {}
         _buy(buyer, item);

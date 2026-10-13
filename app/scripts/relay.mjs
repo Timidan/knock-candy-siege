@@ -2,7 +2,7 @@
 // DRY=1 requires DRY_ADDRESS; it never reads RELAY_KEY or broadcasts transactions.
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { createPublicClient, createWalletClient, defineChain, encodeFunctionData, http, keccak256, parseAbi, parseAbiItem, parseEther } from 'viem'
+import { createPublicClient, createWalletClient, defineChain, encodeFunctionData, http, keccak256, parseAbi, parseAbiItem, parseEther, parseGwei } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 
 const { BANK_URL, BANK_TOKEN, RELAY_STATE } = process.env
@@ -16,6 +16,9 @@ const RELAY = '0xF86700Fe4ea98658558893f468A1BcdCDa6b76f7'
 const CANDY = '0x2Ae41145A6acB58d4457c49df27ab6BFEF618492'
 const CANDY_DEPLOY_BLOCK = 133099671n // verified factory creation receipt on chain 46630
 const AMOUNT = parseEther('300'), GAS_GIFT = parseEther('0.0005')
+// The gift is a plain transfer with an explicit gas limit and fee ceiling: at most 0.000021 ETH in fees.
+const GIFT_GAS = 21_000n, MAX_FEE = parseGwei('1')
+const HOURLY_CAP = 60, DAILY_CAP = 200 // new grants per rolling hour and per rolling 24 hours, kept in the state file
 const chain = defineChain({ id: 46630, name: 'Robinhood Chain Testnet', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://rpc.testnet.chain.robinhood.com'] } } })
 const rpc = createPublicClient({ chain, transport: http() })
 let payer = null
@@ -46,13 +49,13 @@ async function bank(path, body) {
 const balance = address => rpc.readContract({ address: CANDY, abi: erc20, functionName: 'balanceOf', args: [address] })
 
 async function alreadyReceived(address) {
-  if (await balance(address) < AMOUNT) return null
-  // Balance alone is insufficient: prove the funds came from this relay.
-  // If history cannot be read, fail closed instead of risking a second grant.
+  // Always read this relay's payment history, whatever the address holds now: lost local state
+  // must never allow a second grant. If history cannot be read, fail closed (this throws).
+  // 1M-block ranges: the public RPC allows 10M per request, and the chain adds ~600k blocks a day.
   const latest = await rpc.getBlockNumber()
   let received = 0n
-  for (let fromBlock = CANDY_DEPLOY_BLOCK; fromBlock <= latest; fromBlock += 100_000n) {
-    const toBlock = fromBlock + 99_999n < latest ? fromBlock + 99_999n : latest
+  for (let fromBlock = CANDY_DEPLOY_BLOCK; fromBlock <= latest; fromBlock += 1_000_000n) {
+    const toBlock = fromBlock + 999_999n < latest ? fromBlock + 999_999n : latest
     const logs = await rpc.getLogs({ address: CANDY, event: transferEvent, args: { from: RELAY, to: address }, fromBlock, toBlock, strict: true })
     for (const log of logs) {
       received += log.args.value
@@ -64,7 +67,7 @@ async function alreadyReceived(address) {
 async function transact(record, part, request) {
   if (!record[part]) {
     const prepared = await payer.prepareTransactionRequest({ ...request, account: payer.account })
-    const raw = await payer.signTransaction(prepared)
+    const raw = await payer.signTransaction({ ...prepared, ...request }) // explicit fields (the gift's gas and fees) always win
     // Persist the exact signed transaction before any broadcast. Restart can only
     // rebroadcast the same hash/nonce, never create a second payment for this part.
     record[part] = { hash: keccak256(raw), raw }
@@ -98,9 +101,33 @@ async function transact(record, part, request) {
   save()
 }
 
+const paused = reason => { console.warn(`Candy Bank paused (${reason}); claims remain queued`); return null }
+// Read-only checks before anything is signed, so a grant is either affordable in full or not started:
+// no partial payouts. Returns { gift, data } to go ahead, or null to leave the claims queued.
+async function preflight(address, record) {
+  // Addresses with code (contracts, delegated EOAs) get the KNOCK but no ETH gift, so their code never runs on our gas.
+  // A gift already signed must still complete.
+  const gift = Boolean(record?.gas) || !(await rpc.getCode({ address }))
+  const data = encodeFunctionData({ abi: erc20, functionName: 'transfer', args: [address, AMOUNT] })
+  const candyDone = record?.candy?.confirmed
+  if (!candyDone && await balance(RELAY) < AMOUNT) return paused('need 300 KNOCK')
+  const gasPrice = await rpc.getGasPrice()
+  if (gasPrice > MAX_FEE) return paused('gas price is above the 1 gwei fee ceiling')
+  const tokenGas = candyDone ? 0n : await rpc.estimateGas({ account: RELAY, to: CANDY, data })
+  const minimumEth = (gift && !record?.gas?.confirmed ? GAS_GIFT + GIFT_GAS * MAX_FEE : 0n) + tokenGas * gasPrice * 2n
+  if (await rpc.getBalance({ address: RELAY }) < minimumEth) return paused('need 0.0005 ETH plus gas')
+  return { gift, data }
+}
+
 async function pay(address) {
   let record = state.grants[address]
   if (!record) {
+    const now = Date.now()
+    state.starts = state.starts.filter(time => time > now - 86_400_000)
+    if (state.starts.filter(time => time > now - 3_600_000).length >= HOURLY_CAP || state.starts.length >= DAILY_CAP) {
+      console.warn('Candy Bank hourly or daily grant cap reached; leaving claims queued')
+      return false
+    }
     const existingTx = await alreadyReceived(address)
     if (existingTx) {
       state.grants[address] = record = { address, paid: true, tx: existingTx }
@@ -111,39 +138,26 @@ async function pay(address) {
     await bank('/done', { address, ...(record.paid ? { tx: record.tx } : { error: record.error }) })
     return true
   }
-  state.starts = state.starts.filter(time => time > Date.now() - 3600_000)
-  if (!record && state.starts.length >= 60) {
-    console.warn('Candy Bank hourly cap reached; leaving claims queued')
-    return false
-  }
-  const data = encodeFunctionData({ abi: erc20, functionName: 'transfer', args: [address, AMOUNT] })
-  if ((!record?.candy?.confirmed && await balance(RELAY) < AMOUNT) || await rpc.getBalance({ address: RELAY }) < GAS_GIFT) {
-    console.warn('Candy Bank funds low; payments paused, claims remain queued')
-    return false
-  }
-  const tokenGas = record?.candy?.confirmed ? 0n : await rpc.estimateGas({ account: RELAY, to: CANDY, data })
-  const minimumEth = GAS_GIFT + (tokenGas + 21_000n) * (await rpc.getGasPrice()) * 2n
-  if ((!record?.candy?.confirmed && await balance(RELAY) < AMOUNT) || await rpc.getBalance({ address: RELAY }) < minimumEth) {
-    console.warn('Candy Bank funds low; payments paused, claims remain queued (need 300 KNOCK and 0.0005 ETH plus gas)')
-    return false
-  }
+  const plan = await preflight(address, record)
+  if (!plan) return false
   if (!record) {
+    // Persisted before signing, so the caps count this grant even if the process stops mid-payment.
     state.starts.push(Date.now())
     state.grants[address] = record = { address }
     save()
   }
-  await transact(record, 'candy', { to: CANDY, data })
-  await transact(record, 'gas', { to: address, value: GAS_GIFT })
+  await transact(record, 'candy', { to: CANDY, data: plan.data })
+  if (plan.gift) await transact(record, 'gas', { to: address, value: GAS_GIFT, gas: GIFT_GAS, maxFeePerGas: MAX_FEE, maxPriorityFeePerGas: 0n })
   record.paid = true
   record.tx = record.candy.hash
   save()
   await bank('/done', { address, tx: record.tx })
-  console.log(`paid 300 KNOCK + 0.0005 ETH to ${address}: ${record.tx}`)
+  console.log(`paid 300 KNOCK${plan.gift ? ' + 0.0005 ETH' : ' (address has code: no ETH gift)'} to ${address}: ${record.tx}`)
   return true
 }
 
 if (!DRY && await rpc.getChainId() !== 46630) throw new Error('Unexpected payout chain')
-console.log(`Candy Bank ${DRY ? 'DRY RUN (no signing or chain writes)' : 'payer ready; maximum 60 grants/hour'}`)
+console.log(`Candy Bank ${DRY ? 'DRY RUN (no signing or chain writes)' : `payer ready; maximum ${HOURLY_CAP} grants/hour and ${DAILY_CAP}/day`}`)
 do {
   // Check before reading the next queue, including after a process restart.
   const uncertain = Object.values(state.grants).filter(r => r.error && (r.candy && !r.candy.settled || r.gas && !r.gas.settled))
@@ -161,7 +175,12 @@ do {
     if (DRY) {
       const claim = claims.find(claim => claim.address.toLowerCase() === dryAddress)
       if (!claim) throw new Error('Test claim is not in the first 20 queued claims')
-      console.log(`would send 300 KNOCK then 0.0005 ETH to ${dryAddress}`)
+      // The same read-only checks as a payment: history, recipient code, balances and the fee ceiling (the caps live in the state file).
+      const paidTx = await alreadyReceived(dryAddress)
+      const plan = !paidTx && await preflight(dryAddress)
+      console.log(paidTx ? `${dryAddress} was already paid in ${paidTx}; would close the claim as paid`
+        : plan ? `would send 300 KNOCK${plan.gift ? ' then 0.0005 ETH (21,000 gas, 1 gwei fee ceiling)' : ' and no ETH gift (the address has code)'} to ${dryAddress}`
+        : 'would leave the claim queued')
       const result = await bank('/done', { address: dryAddress, error: 'DRY_RUN: no funds sent; test claim permanently closed' })
       if (result.state !== 'failed') throw new Error('Test claim did not close')
       console.log('dry-run test claim marked failed; no funds sent')
@@ -170,7 +189,12 @@ do {
         const address = String(claim.address).toLowerCase()
         if (!/^0x[0-9a-f]{40}$/.test(address)) throw new Error('Invalid queue address')
         try { if (!await pay(address)) break } catch {
-          const record = state.grants[address] ??= { address }
+          const record = state.grants[address]
+          if (!record?.paid && !record?.candy && !record?.gas) {
+            // Nothing was signed, so nothing was paid: keep the claim queued and retry on the next poll.
+            console.warn(`claim ${address}: a check failed before any payment; claim left queued`)
+            break
+          }
           // A completed payout whose acknowledgement failed remains paid locally.
           // Uncertain/partial payouts are never automatically granted a second time.
           if (!record.paid) {

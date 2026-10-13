@@ -33,10 +33,10 @@ contract KnockShopTest is Test {
         (v, r, s) = vm.sign(buyerKey, digest);
     }
 
-    function testBuyWithPermitFromAnySubmitter() public {
+    function testBuyWithPermit() public {
         uint256 treasuryBefore = KNOCK.balanceOf(TREASURY);
         (uint8 v, bytes32 r, bytes32 s) = _permit(250 ether, block.timestamp + 1 hours);
-        vm.prank(address(0xBEEF)); // a relayer pays the gas; the buyer only signed
+        vm.startPrank(buyer); // one transaction, sent by the buyer who signed the permit
         shop.buyFor(buyer, 1, block.timestamp + 1 hours, v, r, s);
         assertTrue(shop.owned(buyer, 1));
         assertEq(KNOCK.balanceOf(buyer), 750 ether);
@@ -45,6 +45,24 @@ contract KnockShopTest is Test {
         // The same item can't be bought twice, and the used permit can't take more.
         vm.expectRevert("already owned");
         shop.buyFor(buyer, 1, block.timestamp + 1 hours, v, r, s);
+        vm.stopPrank();
+    }
+
+    function testOnlyTheBuyerSubmitsPermitPurchases() public {
+        // Someone holding the buyer's valid permit can't choose an item for them...
+        (uint8 v, bytes32 r, bytes32 s) = _permit(250 ether, block.timestamp + 1 hours);
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("not buyer");
+        shop.buyFor(buyer, 1, block.timestamp + 1 hours, v, r, s);
+        // ...or spend an allowance the buyer left with the shop.
+        vm.prank(buyer);
+        KNOCK.approve(address(shop), 500 ether);
+        vm.prank(address(0xBEEF));
+        vm.expectRevert("not buyer");
+        shop.buyFor(buyer, 2, 0, 0, bytes32(0), bytes32(0));
+        assertFalse(shop.owned(buyer, 1));
+        assertFalse(shop.owned(buyer, 2));
+        assertEq(KNOCK.balanceOf(buyer), 1000 ether);
     }
 
     function testBuyWithApproval() public {
@@ -58,11 +76,13 @@ contract KnockShopTest is Test {
 
     function testRejectsUnpricedItemsAndWrongPermits() public {
         (uint8 v, bytes32 r, bytes32 s) = _permit(250 ether, block.timestamp + 1 hours);
+        vm.startPrank(buyer);
         vm.expectRevert("not for sale");
         shop.buyFor(buyer, 99, block.timestamp + 1 hours, v, r, s);
         // A permit for 250 can't pay for the 500 item: the permit fails and there is no allowance.
         vm.expectRevert();
         shop.buyFor(buyer, 2, block.timestamp + 1 hours, v, r, s);
+        vm.stopPrank();
         assertFalse(shop.owned(buyer, 2));
     }
 
