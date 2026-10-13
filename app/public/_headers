@@ -1,7 +1,7 @@
 # Security headers for every response. The policy must stay on one line. connect-src lists every service the app calls.
 # index.html has no inline script, so script-src needs no hash. Its inline <style> is allowed by 'unsafe-inline'.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://candy-bank.timidan-knock.workers.dev https://siege-stats.timidan-knock.workers.dev https://sandbox-rpc.timidan.xyz https://rpc.monad.xyz https://rpc.testnet.chain.robinhood.com https://cloudflareinsights.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://candy-bank.timidan-knock.workers.dev https://siege-stats.timidan-knock.workers.dev https://sandbox-rpc.timidan.xyz https://rpc.monad.xyz https://rpc.testnet.chain.robinhood.com https://cloudflareinsights.com https://knock-coop.timidan-knock.workers.dev wss://knock-coop.timidan-knock.workers.dev; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
 # No long cache rules. A path that is missing from a deployment (a deploy race or an omitted file) is answered with index.html.

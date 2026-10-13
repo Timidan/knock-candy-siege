@@ -11,6 +11,7 @@ async function requestClaim(address: Address, post: boolean, signal: AbortSignal
     ...(post ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address }) } : {}),
   })
   const body = await response.json().catch(() => null)
+  if (body?.state === 'capped') throw new Error("Today's starter grants are gone. Try again tomorrow.")
   if (!response.ok) throw new Error(bankError(`${body?.error ?? ''} ${body?.message ?? ''} ${response.status === 429 ? 'limit' : ''}`))
   if (!body || !['none', 'queued', 'paid', 'failed'].includes(body.state)) throw new Error('The Candy Bank returned an unreadable status. Please check again.')
   return { state: body.state, ...(/^0x[0-9a-f]{64}$/i.test(body.tx ?? '') ? { tx: body.tx } : {}) }

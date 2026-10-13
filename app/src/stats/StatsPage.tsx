@@ -198,6 +198,6 @@ export default function StatsPage() {
         {stats.purchases.total > 0 && <section className="board" aria-labelledby="stats-shop"><h2 id="stats-shop">Shop favourites</h2><Bars rows={itemRows(stats)} empty="" /></section>}
       </div>
     </>}
-    <p className="stats-privacy">Anonymous by design: each browser gets a random id. No wallet or IP address is stored; a salted IP hash is kept for one day only to stop spam. Opt out any time in the game’s Settings.</p>
+    <p className="stats-privacy">These numbers are reported anonymously by players’ browsers, so treat them as a community tally, not an audit. Anonymous by design: each browser gets a random id. No wallet or IP address is stored; a salted IP hash is kept for one day only to stop spam. Opt out any time in the game’s Settings.</p>
   </main>
 }
