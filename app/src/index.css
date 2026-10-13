@@ -100,14 +100,13 @@ button:focus-visible { outline: 3px solid var(--cream); outline-offset: 2px; }
 
 body { touch-action: manipulation; }
 .view-switch { position: fixed; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 20; }
-.start-screen, .loading-screen { min-height: 100svh; align-items: center; justify-content: center; padding: 90px max(16px, env(safe-area-inset-left)) max(32px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 30%, #4b2c62, #180e27 75%); }
+.start-screen { min-height: 100svh; align-items: center; justify-content: center; padding: 90px max(16px, env(safe-area-inset-left)) max(32px, env(safe-area-inset-bottom)); background: radial-gradient(ellipse at 50% 30%, #4b2c62, #180e27 75%); }
 .start-logo { width: min(370px, 70vw); filter: drop-shadow(4px 6px 0 #141414); }
 .start-screen > p { margin: -10px 0 0; font: 1.4rem var(--font-hand); }
 .start-card { width: min(430px, 100%); display: grid; gap: 1rem; }
 .start-card h1 { font: 1.8rem/1.15 var(--font-display); color: #ffc93c; }
 .start-card .plaque-input { justify-content: center; }
 .start-card .row { justify-content: center; }
-.loading-screen img { width: 64px; }
 .simple { padding-top: max(80px, calc(env(safe-area-inset-top) + 70px)); padding-bottom: max(24px, env(safe-area-inset-bottom)); }
 @media (max-width: 720px) {
   .view-switch .sticker { font-size: .7rem; padding: .3rem .5rem; }

@@ -12,6 +12,7 @@
 .sticker {
   --tilt: -1.5deg;
   --fill: var(--paper);
+  --lip: #c9b48a; /* the fill's dark side */
   position: relative;
   overflow: hidden;
   display: inline-flex;
@@ -24,21 +25,24 @@
   color: var(--ink);
   font: 400 1.05rem/1 var(--font-display);
   letter-spacing: 0.03em;
-  box-shadow: 3px 4px 0 var(--ink);
+  /* An extruded lip, 5 px deep: 3 px of the dark side over a 2 px ink rim. */
+  box-shadow: 0 5px 0 -2px var(--lip), 0 5px 0 var(--ink);
   transform: rotate(var(--tilt));
   cursor: pointer;
-  transition: transform 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition: transform 0.05s ease-out, box-shadow 0.05s ease-out;
   -webkit-tap-highlight-color: transparent;
 }
 .sticker:nth-of-type(even) { --tilt: 1.2deg; }
-.sticker:hover:not(:disabled) { animation: jiggle 0.35s ease-in-out; transform: rotate(0deg) scale(1.06); }
-.sticker:active:not(:disabled) { transform: translate(3px, 4px) rotate(0deg); box-shadow: 0 0 0 var(--ink); }
+/* Touch screens hover on tap, so the jiggle is for mice only; it would also hide the press below. */
+@media (hover: hover) { .sticker:hover:not(:disabled) { animation: jiggle 0.35s ease-in-out; transform: rotate(0deg) scale(1.06); } }
+/* Held like the HUD's buttons: the face sinks 4 px into its lip until release. */
+.sticker:active:not(:disabled) { animation: none; transform: translateY(4px) rotate(0deg); box-shadow: 0 1px 0 var(--ink); }
 .sticker:focus-visible { outline: 3px dashed var(--orange, #ff7a1a); outline-offset: 4px; }
 .sticker:disabled { filter: grayscale(0.85); opacity: 0.55; cursor: not-allowed; }
 .sticker img { width: 28px; height: 28px; flex: none; }
-.sticker--orange { --fill: #ff7a1a; }
-.sticker--purple { --fill: #836ef9; color: var(--paper); }
-.sticker--gold { --fill: #ffc93c; }
+.sticker--orange { --fill: #ff7a1a; --lip: #b84e00; }
+.sticker--purple { --fill: #836ef9; --lip: #5438dc; color: var(--paper); }
+.sticker--gold { --fill: #ffc93c; --lip: #c48a0c; }
 .sticker--round { padding: 0.35rem; border-radius: 50% 46% 52% 48% / 48% 52% 46% 50%; }
 .sticker--round img { width: 40px; height: 40px; }
 .sticker .badge {

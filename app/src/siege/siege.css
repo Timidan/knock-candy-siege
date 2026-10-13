@@ -27,23 +27,12 @@
 .siege-modal .row { justify-content: center; margin: 20px 0 12px; }
 .siege-modal .sticker { font-size: 1rem; min-height: 48px; padding: 12px 19px; }
 .siege-eyebrow { font: bold 12px/1.5 system-ui, sans-serif; letter-spacing: .2em; color: #dec1d2; }
-.siege-title h1 { position: relative; width: fit-content; margin: 20px auto 24px; font: 400 clamp(65px, 10vw, 106px)/.85 var(--font-display); text-transform: uppercase; color: #ffe2a5; letter-spacing: -.025em; transform: rotate(-4deg); text-shadow: 4px 6px 0 #20162e; -webkit-text-stroke: 1px #20162e; }
-.siege-title h1 span { color: #ff965c; }
-.siege-title h1 i { position: absolute; font-style: normal; font-size: 58px; right: -50px; top: -7px; color: #b8a1e3; }
-.siege-title .siege-title-play { min-width: 250px; font-size: 1.3rem; padding: 17px 26px; }
-.siege-title small { display: block; margin-top: 24px; color: #c5afc9; font-size: 17px; }
-.siege-levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; padding: 12px 0; }
-.siege-level.sticker { display: flex; flex-direction: column; gap: 8px; min-height: 160px; white-space: normal; padding: 15px 8px; }
-.siege-level strong { font-size: 30px; }
-.siege-level small { font: 16px var(--font-hand); }
-.siege-start-here { border-radius: 6px; padding: 4px 12px; background: #39263f; color: #ffe2a5; }
 .siege-install-tip { padding: 16px; margin-bottom: 18px; border: 2px solid #baa1db; border-radius: 14px 7px; background: #261a35; text-align: left; }
 .siege-install-tip strong { color: #ffe2a5; font-size: 23px; }
 .siege-install-tip p { margin: 10px 0; font-size: 18px; }
 .siege-install-tip .siege-text-button { margin-top: 6px; }
 .siege-stars { display: inline-flex; gap: 9px; color: #8d7399; font: 55px/1.3 system-ui, sans-serif; text-shadow: 2px 3px 0 #201628; }
 .siege-stars .earned-star { color: #ffd477; }
-.siege-level .siege-stars { font-size: 25px; }
 .siege-hint { color: #d5bbdb; font-size: 17px !important; }
 .siege-hero-pick { display: grid; grid-template-columns: 210px 1fr; gap: 28px; text-align: left; margin: 22px 0; align-items: start; }
 .siege-hero-pick .row { justify-content: flex-start; margin: 16px 0; }
@@ -87,8 +76,8 @@
 @keyframes siege-slam { from { transform: scale(2.5); opacity: 0; } 35% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
 @keyframes siege-confetti { from { transform: translate(-50%, -100%) rotate(0); } 85% { opacity: 1; } to { transform: translate(-50%, 100cqh) rotate(var(--spin)); opacity: 0; } }
 @media (orientation: portrait) and (max-width: 900px) { .siege-shell--playing .siege-rotate { display: block; }.siege-shell--playing .siege-back { bottom: 12px; transform: none; }.siege-shell--playing .siege-back .sticker { font-size: 15px; min-height: 44px; }.siege-hero-pick { grid-template-columns: 140px 1fr; gap: 17px; }.siege-portrait { width: 140px; }.siege-portrait > span { height: 130px; } }
-@media (max-width: 520px) { .siege-levels { grid-template-columns: 1fr 1fr; gap: 13px; }.siege-level.sticker { min-height: 130px; }.siege-hero-pick { display: flex; flex-direction: column; align-items: center; text-align: center; }.siege-hero-pick .row { justify-content: center; }.siege-perks { justify-content: center; }.siege-guide { grid-template-columns: 1fr; }.siege-modal { padding: 25px 18px; }.siege-title h1 i { right: -30px; font-size: 36px; } }
-@media (max-height: 600px) and (orientation: landscape) { .siege-modal { padding: 22px 30px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 20px); }.siege-title h1 { font-size: 62px; margin: 12px auto; }.siege-title p { margin: 14px auto; }.siege-title small { display: none; }.siege-title .row { margin: 14px 0 0; }.siege-hero-pick { margin: 15px 0; }.siege-portrait { width: 150px; }.siege-hero-pick { grid-template-columns: 150px 1fr; }.siege-modal h2 { margin-bottom: 12px; }.siege-menu-actions { grid-template-columns: 1fr 1fr; max-width: 600px; } }
+@media (max-width: 520px) { .siege-hero-pick { display: flex; flex-direction: column; align-items: center; text-align: center; }.siege-hero-pick .row { justify-content: center; }.siege-perks { justify-content: center; }.siege-guide { grid-template-columns: 1fr; }.siege-modal { padding: 25px 18px; } }
+@media (max-height: 600px) and (orientation: landscape) { .siege-modal { padding: 22px 30px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 20px); }.siege-hero-pick { margin: 15px 0; }.siege-portrait { width: 150px; }.siege-hero-pick { grid-template-columns: 150px 1fr; }.siege-modal h2 { margin-bottom: 12px; }.siege-menu-actions { grid-template-columns: 1fr 1fr; max-width: 600px; } }
 @media (prefers-reduced-motion: reduce) { .siege-win .earned-star::after { animation: none; } .siege-confetti { display: none; } }
 
 .siege-hero-pick .plaque-input input { width: 7ch; min-width: 100px; padding-inline: 10px; font-variant-numeric: tabular-nums; }
@@ -113,6 +102,14 @@
 .siege-rig-preview { background: radial-gradient(ellipse at 50% 70%, #76547966, transparent 64%), #2c2038; }
 .siege-dance-select { display: grid; gap: 5px; padding: 10px 14px; text-align: left; font-size: 16px; color: #ffe1a8; }
 .siege-dance-select select { width: 100%; min-height: 44px; background: #ffe9c9; color: #35253d; border: 2px solid #171121; border-radius: 9px; padding: 8px; font: 18px var(--font-hand); }
+/* Dance chips: one row that scrolls sideways (its bottom padding leaves room for the lips). */
+.siege-dance-pick { display: flex; align-items: center; gap: 8px; padding: 6px 10px 0; font-size: 16px; color: #ffe1a8; white-space: nowrap; }
+.siege-dance-chips { display: flex; flex: 1; min-width: 0; gap: 6px; padding: 2px 2px 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: thin; }
+.siege-chip { flex: none; min-height: 36px; padding: 5px 12px; border: 2px solid var(--ink); border-radius: 999px; background: #3a2551; color: var(--paper); font: 400 13px/1 var(--font-display); letter-spacing: .03em; box-shadow: 0 3px 0 var(--ink); scroll-snap-align: start; transition: translate .05s ease-out, box-shadow .05s ease-out; }
+.siege-chip[aria-pressed=true] { background: #ffc93c; color: var(--ink); }
+.siege-chip:active { translate: 0 2px; box-shadow: 0 1px 0 var(--ink); }
+.siege-chip:focus-visible { outline: 3px solid #ffd477; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .siege-chip { transition: none; } }
 .siege-costumes { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; margin: 18px 0; }
 .siege-costumes .sticker[aria-pressed=true] { outline: 3px solid #ffce75; outline-offset: 3px; }
 .siege-modal--result { width: min(640px, 50vw); margin-left: auto; margin-right: 4vw; animation: siege-result-in .38s ease-out both; }
@@ -185,9 +182,6 @@
 .siege-boss-art > span { font-size: 130px; line-height: 1; }
 .siege-boss-moves { list-style: none; padding: 0; margin: 12px auto; max-width: 500px; text-align: left; display: grid; gap: 8px; font-size: 20px; }
 .siege-boss-moves li::before { content: '✦ '; color: #ffd477; }
-.siege-daily small, .siege-level small { display: block; }
-.siege-daily { min-height: 190px; }
-.siege-level .siege-atlas-sprite { vertical-align: middle; }
 .siege-guide-portrait { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #ffd477; }
 .siege-guide-unseen .siege-guide-portrait { filter: brightness(0); }
 
@@ -273,55 +267,82 @@
   .siege-modal--result .sticker { min-height: 44px; padding: 10px 14px; font-size: 15px; }
 }
 
-/* Title: tonight's Chog beside the card, over a lightly dimmed map. The dialog itself is see-through. */
+/* Title: the wordmark on top, tonight's Chog front and centre in a Monad glow, the big play button right under it, then small tiles and links. The dialog itself is see-through over the lightly dimmed map. */
 .siege-modal--title { width: min(1040px, calc(100vw - 24px)); padding: 14px; background: none; border: 0; box-shadow: none; }
 .siege-modal--title::before, .siege-modal--title::after { display: none; }
 .siege-modal--title::backdrop { background: #160f2022; }
 .siege-modal--title > p { padding: 8px 14px; border-radius: 12px; background: #2a1d38f0; }
-.siege-title { display: flex; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 52px); }
-.siege-title-chog { flex: none; margin: 0; }
-.siege-title-chog img { display: block; width: clamp(160px, 30vw, 330px); aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 8px 10px 0 #120d1a; rotate: -3deg; animation: siege-bob 3.4s ease-in-out infinite; }
-.siege-title-chog figcaption { width: fit-content; margin: 18px auto 0; padding: 4px 14px; border: 2px solid var(--ink); border-radius: 999px; background: #241632f0; color: #ffe1a8; font-size: 18px; }
-.siege-title-card { flex: 0 1 580px; min-width: 0; padding: clamp(18px, 3vw, 34px); background-color: #3a2848; border-width: 4px; box-shadow: 8px 10px 0 #120d1a; }
-.siege-wordmark { display: block; width: clamp(130px, 18vw, 220px); height: auto; margin: 0 auto 4px; rotate: -3deg; }
-.siege-title .siege-title-play { animation: siege-pulse 1.8s ease-in-out infinite; }
+.siege-title { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.siege-title-mark { display: flex; flex-direction: column; align-items: center; }
+.siege-wordmark { display: block; width: clamp(150px, 22vw, 250px); height: auto; rotate: -3deg; filter: drop-shadow(3px 4px 0 #1b0f2b); }
+.siege-title h1 { margin: -2px 0 0; font: 400 clamp(42px, 7vw, 72px)/.95 var(--font-display); text-transform: uppercase; letter-spacing: .01em; color: #ffe2a5; -webkit-text-stroke: 1px #1b0f2b; text-shadow: 3px 4px 0 #1b0f2b, 0 0 26px #836ef9; rotate: -2deg; }
+.siege-title h1 span { color: #ff7a00; }
+.siege-modal .siege-title-mark p { margin: 8px 0 0; padding: 2px 12px; border-radius: 999px; background: #1b0f2bcc; font-size: 18px; }
+.siege-title-chog { position: relative; margin: 0; animation: siege-bob 3.2s ease-in-out infinite; }
+/* The Monad glow is a shadow, not a pseudo-element, so it never makes the dialog scroll. */
+.siege-title-chog img { display: block; width: min(72vw, 330px, calc(100dvh - 440px)); min-width: 160px; aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 0 0 0 4px #836ef9, 0 9px 0 4px #1b0f2b, 0 0 70px 24px #836ef9aa; }
+.siege-title-chog figcaption { width: fit-content; margin: 14px auto 0; padding: 3px 14px; border: 2px solid var(--ink); border-radius: 999px; background: #241632; color: #ffe1a8; font-size: 17px; white-space: nowrap; }
+.siege-modal .siege-title .siege-title-play { min-width: 270px; min-height: 58px; padding: 12px 30px; font-size: 1.45rem; animation: siege-pulse 2s ease-in-out infinite; }
+/* Secondary actions: small icon tiles, labelled underneath the icon. */
+.siege-title-more { display: flex; justify-content: center; gap: 10px; }
+.siege-modal .siege-title-more .sticker { --tilt: 0deg; flex-direction: column; gap: 2px; min-width: 64px; min-height: 0; padding: 5px 8px 4px; border-radius: 16px 12px 16px 12px; font-size: 13px; }
+.siege-title-more .sticker img, .siege-title-more .sticker svg { width: 28px; height: 28px; }
 .siege-title-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 22px; }
-.siege-title-links .siege-text-button { margin: 0; }
-@keyframes siege-bob { 50% { translate: 0 -9px; } }
-@keyframes siege-pulse { 50% { scale: 1.05; } }
-@media (orientation: portrait) {
-  .siege-title { flex-direction: column; gap: 10px; }
-  .siege-title-chog img { width: min(36vw, 210px); }
-  .siege-title-chog figcaption { margin-top: 10px; font-size: 16px; }
-  .siege-title-card { padding: 20px 18px 12px; }
-  .siege-title h1 { margin: 8px auto 12px; font-size: clamp(52px, 15vw, 96px); }
-  .siege-title p { margin: 10px auto 16px; }
-  .siege-title .siege-title-play { padding: 13px 24px; }
-  .siege-title .row { margin: 14px 0 8px; }
-  .siege-title small { margin-top: 10px; }
-}
-/* Landscape phones (844 x 390, 740 x 360): everything fits without scrolling. */
+.siege-title-links .siege-text-button { display: inline-flex; align-items: center; margin: 0; min-height: 36px; font-size: 16px; }
+@keyframes siege-bob { 50% { translate: 0 -8px; } }
+@keyframes siege-pulse { 50% { scale: 1.03; } }
+/* Landscape phones (844 x 390, 740 x 360): one line of wordmark, the Chog as tall as the rest allows, and the play row with the links on its left and the tiles on its right. Nothing scrolls. */
 @media (orientation: landscape) and (max-height: 500px) {
-  .siege-modal--title { padding: 4px 12px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 8px); }
-  .siege-title-chog img { width: min(30vw, calc(100dvh - 110px)); }
-  .siege-title-chog figcaption { margin-top: 12px; font-size: 16px; }
-  .siege-title-card { padding: 10px 18px 6px; }
-  .siege-wordmark { width: clamp(86px, 14vw, 124px); margin-bottom: 0; }
-  .siege-title .siege-eyebrow { display: none; }
-  .siege-title h1 { font-size: clamp(38px, 12.5dvh, 54px); margin: 2px auto 6px; }
-  .siege-title p { font-size: 15px; line-height: 1.3; margin: 4px auto 10px; }
-  .siege-title .siege-title-play { min-height: 48px; padding: 10px 24px; font-size: 1.1rem; }
-  .siege-title .row { margin: 10px 0 2px; gap: 8px 10px; }
-  .siege-title .row .sticker { min-height: 40px; padding: 8px 12px; font-size: 14px; }
-  .siege-title-links .siege-text-button { min-height: 36px; font-size: 15px; line-height: 36px !important; }
+  .siege-modal--title { padding: 6px 12px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 8px); }
+  .siege-title { display: grid; grid-template-columns: 1fr auto 1fr; grid-template-areas: 'mark mark mark' 'chog chog chog' 'links play more'; align-items: center; gap: 4px 12px; }
+  .siege-title-mark { grid-area: mark; flex-direction: row; justify-content: center; gap: 14px; }
+  .siege-wordmark { width: 96px; }
+  .siege-title h1 { margin: 0; font-size: 34px; }
+  .siege-title-mark p { display: none; }
+  .siege-title-chog { grid-area: chog; justify-self: center; margin-bottom: 6px; }
+  /* The same safe-area insets the dialog's max-height subtracts (a notched phone's home bar), or the title would scroll there. */
+  .siege-title-chog img { width: calc(100dvh - 134px - var(--siege-safe-top) - var(--siege-safe-bottom)); min-width: 0; }
+  /* The caption becomes a tag on the portrait's corner, so it costs no height. */
+  .siege-title-chog figcaption { position: absolute; left: calc(100% - 22px); bottom: 16px; margin: 0; rotate: -5deg; font-size: 15px; }
+  /* The play row (links, play, tiles) fits a notched mini's 620 px between its side insets. */
+  .siege-modal .siege-title .siege-title-play { grid-area: play; min-width: 220px; min-height: 52px; padding: 10px 20px; font-size: 1.15rem; }
+  .siege-title-more { grid-area: more; justify-self: start; gap: 6px; }
+  .siege-modal .siege-title-more .sticker { min-width: 50px; padding: 4px 4px 3px; font-size: 11px; }
+  .siege-title-more .sticker img, .siege-title-more .sticker svg { width: 24px; height: 24px; }
+  .siege-title-links { grid-area: links; justify-self: end; flex-direction: column; align-items: flex-end; }
+  /* Two stacked 26 px links stay inside the 52 px play row. */
+  .siege-title-links .siege-text-button { min-height: 26px; padding: 0 2px; font-size: 14px; white-space: nowrap; }
 }
-@media (prefers-reduced-motion: reduce) { .siege-title-chog img, .siege-title .siege-title-play { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .siege-title-chog, .siege-modal .siege-title .siege-title-play { animation: none; } }
 
-/* Level cards: a cover crop of each map, with the level's last legend boss on the corner. */
-.siege-level-map { position: relative; display: block; width: 100%; aspect-ratio: 16 / 7; border: 2px solid var(--ink); border-radius: 10px 5px 12px 6px; background: #261a35 center / cover no-repeat; }
+/* Level cards are night tablets. Each is one button: a pumpkin NIGHT header, the map in a thin frame with the level's last legend boss on its corner, star sockets, and a green PLAY that sinks while the tablet is held. */
+.siege-levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 14px; padding: 8px 4px 14px; }
+.siege-modal .siege-level.sticker { --fill: #25183a; --lip: #4a37a0; display: flex; flex-direction: column; align-items: center; gap: 6px; min-height: 0; padding: 10px 10px 14px; border-color: #836ef9; border-radius: 20px 12px 20px 12px; color: var(--paper); font-size: 1rem; white-space: normal; }
+.siege-modal .siege-level.sticker:active:not(:disabled) { transform: rotate(var(--tilt)); box-shadow: 0 5px 0 -2px var(--lip), 0 5px 0 var(--ink); }
+.siege-level-night { display: inline-flex; align-items: center; gap: 5px; color: #ff7a00; font: 400 15px/1 var(--font-display); letter-spacing: .12em; text-transform: uppercase; text-shadow: 1px 2px 0 #120a1e; }
+.siege-level-map { position: relative; display: block; width: 100%; aspect-ratio: 16 / 8; border: 2px solid #533877; border-radius: 10px 5px 12px 6px; background: #1b0f2b center / cover no-repeat; box-shadow: inset 0 0 16px 3px #0c0616cc; }
 .siege-level .siege-level-map img { position: absolute; right: -8px; bottom: -10px; width: 40px; height: 40px; border: 2px solid var(--ink); border-radius: 50%; background: #ffd477; }
+.siege-level strong { font: 400 17px/1.05 var(--font-display); letter-spacing: .02em; color: #ffe1a8; }
+.siege-level small { display: block; font: 14px/1.15 var(--font-hand); color: #d5bbdb; }
+/* Glowing gold when earned, dim sockets when not; scoped here so the result screen's star slam keeps its look. */
+.siege-level .siege-stars { gap: 6px; font-size: 24px; line-height: 1; color: #190e28; text-shadow: none; -webkit-text-stroke: 1.5px #533877; }
+.siege-level .siege-stars .earned-star { color: #ffc800; -webkit-text-stroke: 1.5px #6b3d00; text-shadow: 0 0 9px #ffc800cc; }
+.siege-level-play { margin-top: auto; padding: 6px 20px 5px; border: 3px solid var(--ink); border-radius: 999px; background: #22c55e; color: var(--ink); font: 400 15px/1 var(--font-display); letter-spacing: .08em; text-transform: uppercase; box-shadow: 0 5px 0 -2px #15803d, 0 5px 0 var(--ink); transition: translate .05s ease-out, box-shadow .05s ease-out; }
+.siege-level:active .siege-level-play { translate: 0 4px; box-shadow: 0 1px 0 var(--ink); }
+.siege-levels-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 18px; }
+.siege-modal .siege-levels-foot p { margin: 0; }
+@media (prefers-reduced-motion: reduce) { .siege-level-play { transition: none; } }
 @media (orientation: landscape) and (max-height: 500px) {
-  .siege-level-map { aspect-ratio: auto; height: 64px; }
+  /* Landscape phones (844 x 390, 740 x 360): a one-line header, the tablets in one row that scrolls sideways, and Back beside the star key, so nothing scrolls up and down. */
+  .siege-modal--levels { padding: 8px 18px 10px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 12px); }
+  .siege-modal--levels > .siege-eyebrow, .siege-modal--levels > h2 { display: inline-block; vertical-align: middle; }
+  .siege-modal--levels > .siege-eyebrow { margin-right: 14px; font-size: 11px; }
+  .siege-modal--levels > h2 { margin: 0; font-size: 24px; }
+  .siege-levels { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 176px; gap: 14px; padding: 6px 6px 12px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; }
+  .siege-level { scroll-snap-align: start; }
+  .siege-level-map { aspect-ratio: auto; height: clamp(52px, calc(100dvh - 300px - var(--siege-safe-top) - var(--siege-safe-bottom)), 96px); }
+  .siege-modal--levels .siege-levels-foot .sticker { min-height: 40px; padding: 8px 14px; font-size: 14px; }
+  .siege-modal--levels .siege-hint { font-size: 15px !important; }
   /* Three result actions after a story win stay on one row, so the share button stays in view. */
   .siege-modal--result { width: max(49vw, 410px); }
   .siege-modal--result .row { gap: 6px 8px; }

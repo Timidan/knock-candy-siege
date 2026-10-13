@@ -22,12 +22,14 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, po
   for (let i = 0; i < points * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / points, d = i % 2 ? r * inner : r; ctx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d) }
   ctx.closePath()
 }
-// Only what the Outcome proves: it records no boss kills or jars lost (perks refill jars), so the flex is a full porch at the end.
-function accolade(result: Outcome) {
-  return result.won && result.jars === 20 ? 'PERFECT DEFENSE · ALL 20 JARS SAVED' : `${result.kills.toLocaleString('en-US')} ${result.kills === 1 ? 'CHOG' : 'CHOGS'} STOPPED`
+// The name of the run's last defeated boss: 'pumpkin' is the Great Pumpkin, any other id is a legend's Chog number.
+const bossName = (assets: AssetPack, id?: string) => !id ? '' : id === 'pumpkin' ? assets.legends.greatPumpkin.name : assets.legends.legends[id]?.name ?? ''
+// Only what the run proves: a boss the scene recorded as defeated on a won level, else a full porch at the end (perks refill jars, so not "no jars lost"), else the kill count.
+function accolade(result: Outcome, boss: string) {
+  return result.won && boss ? `BOSS SLAYER · ${boss.toUpperCase()}` : result.won && result.jars === 20 ? 'PERFECT DEFENSE · ALL 20 JARS SAVED' : `${result.kills.toLocaleString('en-US')} ${result.kills === 1 ? 'CHOG' : 'CHOGS'} STOPPED`
 }
 // A trophy for the NFT: the Chog cheers out of a Monad-purple burst on the right, the result sits on the left. Defeats get a quieter card.
-export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome) {
+export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome, boss = '') {
   const [portrait, heads] = await Promise.all([loadImage(`/chogs-256/${kit.id}.webp`), loadPreviewHeads(), document.fonts.ready])
   const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350
   const ctx = canvas.getContext('2d')!
@@ -84,12 +86,13 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   }
   bold(result.score.toLocaleString('en-US'), 66, 648, 168, proud ? '#fff4d6' : '#d9c8e6', proud ? PUMPKIN : DUSK, 500)
   text('POINTS', 74, 708, 38, '#d7c1e3', 'Patrick Hand')
-  const award = accolade(result), perfect = result.won && result.jars === 20
+  // The pill's colour names the accolade: Monad purple for a boss slayer, slime green for a perfect porch, pumpkin otherwise.
+  const award = accolade(result, boss), [face, lip] = !proud ? [DUSK, '#140a22'] : result.won && boss ? [MONAD, '#5438dc'] : result.won && result.jars === 20 ? [SLIME, '#15803d'] : [PUMPKIN, '#b84e00']
   ctx.font = '28px "Luckiest Guy", sans-serif'
   const aw = Math.min(ctx.measureText(award).width + 100, 560)
   ctx.lineWidth = 5; ctx.strokeStyle = NIGHT
-  ctx.beginPath(); ctx.roundRect(70, 762, aw, 66, 33); ctx.fillStyle = !proud ? '#140a22' : perfect ? '#15803d' : '#b84e00'; ctx.fill(); ctx.stroke()
-  ctx.beginPath(); ctx.roundRect(70, 754, aw, 66, 33); ctx.fillStyle = !proud ? DUSK : perfect ? SLIME : PUMPKIN; ctx.fill(); ctx.stroke()
+  ctx.beginPath(); ctx.roundRect(70, 762, aw, 66, 33); ctx.fillStyle = lip; ctx.fill(); ctx.stroke()
+  ctx.beginPath(); ctx.roundRect(70, 754, aw, 66, 33); ctx.fillStyle = face; ctx.fill(); ctx.stroke()
   star(ctx, 110, 786, 19); ctx.fillStyle = proud ? NIGHT : '#d7c1e3'; ctx.fill()
   text(award, 142, 798, 28, proud ? NIGHT : '#eadff2', 'Luckiest Guy', aw - 100)
   // Footer: the original NFT stays identifiable beside its number.
@@ -101,19 +104,20 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   return new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The image could not be created.')), 'image/png'))
 }
 
-export function ShareCard({ assets, kit, costume, result }: { assets: AssetPack; kit: Kit; costume: string; dance: string; result: Outcome }) {
+// `bosses` is the scene's runStats().bossesDefeated; only its last entry's name reaches the effect, so a fresh array each render can't redraw the card.
+export function ShareCard({ assets, kit, costume, result, bosses }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[] }) {
   const [file, setFile] = useState<File | null>(null), [url, setUrl] = useState(''), [open, setOpen] = useState(false), [status, setStatus] = useState(''), [attempt, setAttempt] = useState(0)
-  const text = shareText(result, kit.id), link = gameLink()
+  const text = shareText(result, kit.id), link = gameLink(), boss = result.won ? bossName(assets, bosses?.at(-1)) : ''
   useEffect(() => {
     let active = true, objectUrl = ''
     setFile(null); setStatus('')
     // Drawing the card blocks the main thread for a moment (a 1200 × 1200 pixel scan), so wait until the result fanfare has landed.
-    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, result).then(blob => {
+    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, result, boss).then(blob => {
       if (!active) return
       const file = new File([blob], `candy-siege-chog-${kit.id}.png`, { type: 'image/png' }); objectUrl = URL.createObjectURL(file); setFile(file); setUrl(objectUrl)
     }).catch(() => { if (active) setStatus('Could not make the share image. Check your connection and try again.') }), attempt ? 0 : 1400)
     return () => { active = false; clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [assets, kit.id, costume, result, attempt])
+  }, [assets, kit.id, costume, result, boss, attempt])
   const share = async () => {
     if (!file) return
     if (navigator.canShare?.({ files: [file] }) && navigator.share) {

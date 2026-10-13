@@ -81,6 +81,8 @@ function RetryPanel({ stage, onRetry, children }: { stage: Stage; onRetry: () =>
   return <p className="siege-retry" role="alert">{STAGES[stage][1]} Check your connection and try again.<Sticker tone="orange" onClick={onRetry}>Retry</Sticker>{children}</p>
 }
 const stars = (count: number) => <span className="siege-stars" aria-label={`${count} of 3 stars`}>{[1, 2, 3].map(n => <span key={n} className={n <= count ? 'earned-star' : ''} aria-hidden="true">★</span>)}</span>
+// The title's Settings cog, inked like the /art/icons set: an ink rim under cream teeth (dashes on a ring), then the hub.
+const GEAR = <svg viewBox="-12 -12 24 24" width="28" height="28" aria-hidden="true"><circle r="8.4" fill="none" stroke="#141414" strokeWidth="6.6" strokeDasharray="4.6 1.997" strokeDashoffset=".6" /><circle r="8.4" fill="none" stroke="#f4eedd" strokeWidth="4.6" strokeDasharray="3.4 3.197" /><circle r="6.6" fill="#f4eedd" stroke="#141414" strokeWidth="2" /><circle r="2.4" fill="#836ef9" stroke="#141414" strokeWidth="1.6" /></svg>
 // The win fanfare: earned stars start slamming in at these times (ms; siege.css uses the same delays) and land IMPACT ms later.
 const SLAMS = [300, 650, 1000], IMPACT = 200
 const SHAKE: Keyframe[] = [{ translate: '0 0' }, { translate: '-5px 2px' }, { translate: '4px -2px' }, { translate: '-2px 1px' }, { translate: '0 0' }]
@@ -92,6 +94,7 @@ function ResultStars({ count, fx, shake, sfx }: { count: number; fx?: AssetPack[
   // With reduced motion the stars appear at once, so no cue.
   useEffect(() => {
     if (!reducedMotion()) SLAMS.slice(0, count).forEach((at, i) => sfx.current?.play('star', 1 + i * .12, 1, true, (at + IMPACT) / 1000))
+    return () => sfx.current?.stop('star')
   }, [count, sfx])
   // The final star's impact also buzzes when Vibration is on; haptics.ts checks the other gates.
   useEffect(() => { if (!count) return; const timer = setTimeout(() => haptic('star'), SLAMS[count - 1] + IMPACT); return () => clearTimeout(timer) }, [count])
@@ -398,7 +401,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     {onBack && <div className="siege-back"><Sticker onClick={onBack}>← Knock</Sticker></div>}
     <div className="siege-rotate bubble">Turn your phone sideways for the best view</div>
     {run && !ready && <div className="boot"><img className="boot-logo" src="/art/ui/logo.svg" alt="" width="240" height="80" />{failed === 'lanterns' ? <RetryPanel stage="lanterns" onRetry={retry}><Sticker onClick={() => { setFailed(null); leaveLevel() }}>Level select</Sticker></RetryPanel> : <><span className="boot-candy" aria-hidden="true" /><p role="status">{STAGES.lanterns[0]}</p></>}</div>}
-    {menu && <Modal key={menu} closing={closing} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={menu === 'result' ? 'siege-modal--result' : menu === 'shop' ? 'siege-modal--shop' : menu === 'hero' ? 'siege-modal--hero' : menu === 'title' ? 'siege-modal--title' : ''}>
+    {menu && <Modal key={menu} closing={closing} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={['result', 'shop', 'hero', 'title', 'levels'].includes(menu) ? `siege-modal--${menu}` : ''}>
       {installTip && <aside className="siege-install-tip" aria-label="Play full screen on iPhone">
         <strong>Add Knock to your Home Screen to play full screen</strong>
         <p>In Safari, tap Share (the square with an arrow). Scroll down and tap “Add to Home Screen”, then “Add”. Open Knock from its new icon.</p>
@@ -407,33 +410,27 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       {displayNotice && <p role="status">{displayNotice}</p>}
       {perksFailed === menu && pendingRun.current && <p className="siege-perks-failed" role="alert">Couldn’t check your $CHOG perks.<Sticker disabled={starting} onClick={() => void start(pendingRun.current?.tutorial)}>Retry</Sticker><Sticker tone="orange" onClick={() => { const next = pendingRun.current; setPerksFailed(null); if (next) launchRun(next) }}>Continue</Sticker></p>}
       {menu === 'title' && <div className="siege-title">
+        <header className="siege-title-mark"><img className="siege-wordmark" src="/art/ui/logo.svg" alt="Knock" /><h1>Candy <span>Siege</span></h1><p>The whole neighbourhood wants your candy.</p></header>
         {/* Tonight's hero, the same Chog the hero picker opens on. */}
         {valid && <figure className="siege-title-chog"><img src={`/chogs-256/${Number(hero)}.webp`} alt="" /><figcaption>Chog #{Number(hero)} · on porch duty</figcaption></figure>}
-        <div className="siege-title-card board">
-          <img className="siege-wordmark" src="/art/ui/logo.svg" alt="Knock" />
-          <span className="siege-eyebrow">A LITTLE MISCHIEF. A LOT OF CANDY.</span>
-          <h1>Candy<br /><span>Siege</span><i aria-hidden="true">✦</i></h1>
-          <p>The whole neighbourhood wants your candy.<br />Give them a Halloween to remember.</p>
-          <Sticker tone="orange" className="siege-title-play" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Hold the porch →</Sticker>
-          <div className="row"><Sticker tone="gold" onClick={() => subMenu('shop')}>Shop · $KNOCK</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker></div>
-          <small>20 jars. Your Chog. One very long night.</small>
-          <div className="siege-title-links">
-            {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK available</button>}
-            {STATS_URL && <a className="siege-text-button" href="/stats" style={{ width: 'fit-content', lineHeight: '44px' }}>Live stats</a>}
-          </div>
+        <Sticker tone="orange" className="siege-title-play" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Hold the porch →</Sticker>
+        <nav className="siege-title-more" aria-label="More"><Sticker tone="purple" icon="coin-pile" onClick={() => subMenu('shop')}>Shop</Sticker><Sticker tone="purple" icon="ghost-sheet" aria-label="Field guide" onClick={() => subMenu('book')}>Guide</Sticker><Sticker tone="purple" onClick={() => subMenu('settings')}>{GEAR}Settings</Sticker></nav>
+        <div className="siege-title-links">
+          {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK</button>}
+          {STATS_URL && <a className="siege-text-button" href="/stats">Live stats</a>}
         </div>
       </div>}
       {menu === 'levels' && <>
         <span className="siege-eyebrow">CHOG TOWN · AFTER DARK</span><h2>Pick your porch</h2>
-        <div className="siege-levels">{LEVELS.map((item, index) => { const playable = item.waves.length > 0 || !!item.endless, best = item.endless ? save.endless.wave : save.stars[item.id] ?? 0, boss = item.waves.map(wave => wave.boss?.id).filter(id => typeof id === 'number').pop(); return <Sticker key={item.id} aria-label={`${item.endless ? 'Endless mode' : item.name}, ${playable ? item.endless ? `best wave ${best}` : `${best} stars${item.id === 1 ? ', Start here' : ''}` : 'Coming soon'}`} tone={item.endless ? 'orange' : playable ? 'gold' : 'paper'} className="siege-level" disabled={!playable} onClick={() => { setLevel(item.id); setMenu('hero') }}>
-          <span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/${mapFile(item.id)}.webp)` }}>{boss && <img src={`/chogs-256/${boss}.webp`} alt="" />}</span><strong>{item.endless ? '∞' : String(index + 1).padStart(2, '0')}</strong><span>{item.endless ? 'Endless · Town Square' : item.name}</span>{item.endless ? <small>{save.endless.wave ? `Best: wave ${save.endless.wave}` : 'Waves never stop'}</small> : stars(best)}{item.id === 1 && <small className="siege-start-here">Start here</small>}{!playable && <small>Coming soon</small>}
+        {/* Night tablets: every level is open. The green PLAY is part of the card, so the whole tablet stays one big tap target. */}
+        <div className="siege-levels">{LEVELS.map((item, index) => { const night = String(index + 1).padStart(2, '0'), best = item.endless ? save.endless.wave : save.stars[item.id] ?? 0, fresh = item.id === 1 && !best, boss = item.waves.map(wave => wave.boss?.id).filter(id => typeof id === 'number').pop(); return <Sticker key={item.id} aria-label={item.endless ? `Endless mode, Town Square, best wave ${best}` : `${item.name}, night ${night}, ${best} of 3 stars${fresh ? ', start here' : ''}`} className="siege-level" data-initial-focus={index ? undefined : ''} onClick={() => { setLevel(item.id); setMenu('hero') }}>
+          <span className="siege-level-night">{item.endless ? 'Endless' : `Night ${night}`}</span><span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/${mapFile(item.id)}.webp)` }}>{boss && <img src={`/chogs-256/${boss}.webp`} alt="" />}</span><strong>{item.endless ? 'Town Square' : item.name}</strong>{item.endless ? <small>{best ? `Best: wave ${best}` : 'Waves never stop'}</small> : stars(best)}<span className="siege-level-play">{fresh ? 'Start here' : 'Play'}</span>
         </Sticker> })}
-          <Sticker aria-label={`Daily challenge number ${daily.number}: ${LEVELS[daily.level - 1].name}, ${NIGHTS[daily.theme].name}`} tone="gold" className="siege-level siege-daily" onClick={() => { setLevel(DAILY_LEVEL); setMenu('hero') }}>
-            <span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/level${daily.level}.webp)` }} /><strong>{icons ? <AtlasSprite atlas={icons} name={NIGHTS[daily.theme].icon} size={46} /> : '☾'}</strong><span>Daily #{daily.number}</span><small>{LEVELS[daily.level - 1].name} · {NIGHTS[daily.theme].name}</small><small>{save.daily[daily.day] ? `Best today: ${save.daily[daily.day].toLocaleString()}` : NIGHTS[daily.theme].text}</small>
+          <Sticker aria-label={`Daily challenge number ${daily.number}: ${LEVELS[daily.level - 1].name}, ${NIGHTS[daily.theme].name}. ${NIGHTS[daily.theme].text}`} className="siege-level siege-daily" onClick={() => { setLevel(DAILY_LEVEL); setMenu('hero') }}>
+            <span className="siege-level-night">{icons ? <AtlasSprite atlas={icons} name={NIGHTS[daily.theme].icon} size={24} /> : '☾'} Daily #{daily.number}</span><span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/level${daily.level}.webp)` }} /><strong>{NIGHTS[daily.theme].name}</strong><small>{LEVELS[daily.level - 1].name} · {save.daily[daily.day] ? `best today ${save.daily[daily.day].toLocaleString()}` : NIGHTS[daily.theme].text}</small><span className="siege-level-play">Play</span>
           </Sticker>
         </div>
-        <p className="siege-hint">3 stars: 18–20 jars · 2 stars: 10–17 · 1 star: 1–9</p>
-        <Sticker onClick={() => setMenu('title')}>← Back</Sticker>
+        <div className="siege-levels-foot"><Sticker onClick={() => setMenu('title')}>← Back</Sticker><p className="siege-hint">3 stars: 18–20 jars · 2 stars: 10–17 · 1 star: 1–9</p></div>
       </>}
       {menu === 'hero' && <>
         <span className="siege-eyebrow">{level === DAILY_LEVEL ? `${levelName(level).toUpperCase()} · ${LEVELS[daily.level - 1].name.toUpperCase()} · ${NIGHTS[daily.theme].name.toUpperCase()}` : level === ENDLESS_LEVEL ? 'ENDLESS · TOWN SQUARE' : `${levelName(level).toUpperCase()} · LEVEL ${level}`}</span><h2>Who’s on porch duty?</h2>
@@ -447,7 +444,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
               <figure className="siege-nft"><figcaption>{home ? "Your Chog" : "Chog portrait"}</figcaption><img key={hero} src={`/chogs-256/${Number(hero)}.webp`} alt={`Original portrait of Chog #${Number(hero)}`} /><small>Chog #{Number(hero)}</small></figure>
               <figure className="siege-in-game"><figcaption>In Siege</figcaption>{prepared && kit && prepared.id === kit.id && prepared.costume === costume ? <HeroPreview lite={save.settings.lite} assets={prepared.assets} kit={kit} costume={costume || kit.costume} dance={previewDance === 'idle' || canDance(previewDance, kit.emote, shop.owned, prepared.assets.dances) ? previewDance : 'idle'} /> : <span className="siege-character-loading" role="status">Dressing your Chog…</span>}</figure>
             </div>}
-            {kit && assets && <label className="siege-dance-select">Try a dance<select aria-label="Preview dance" value={previewDance === 'idle' || canDance(previewDance, kit.emote, shop.owned, assets.dances) ? previewDance : 'idle'} onChange={event => setPreviewDance(event.target.value)}><option value="idle">Idle · On porch duty</option>{Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => <option value={name} key={name}>{dance.name}{name === kit.emote ? ' · Signature' : ''}</option>)}</select></label>}
+            {/* One tap previews a dance; the row scrolls sideways. The ★ marks this Chog's signature. */}
+            {kit && assets && <div className="siege-dance-pick"><span aria-hidden="true">Try a dance</span><div className="siege-dance-chips" role="group" aria-label="Try a dance">{[['idle', 'Idle'], ...Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => [name, dance.name])].map(([name, label]) => <button key={name} className="siege-chip" aria-pressed={(canDance(previewDance, kit.emote, shop.owned, assets.dances) ? previewDance : 'idle') === name} aria-label={name === kit.emote ? `${label}, signature` : undefined} onClick={() => setPreviewDance(name)}>{label}{name === kit.emote && ' ★'}</button>)}</div></div>}
             <label className="siege-dance-select">Victory dance<select aria-label="Victory dance" value={victoryDance} onChange={event => persist({ ...save, victoryDance: event.target.value })}>{assets && kit && Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => <option value={name} key={name}>{dance.name}</option>)}</select></label>
           </div>
           {/* The start button sits right under the Chog choice so a landscape phone never scrolls to play. */}
@@ -490,7 +488,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <h2>Set the mood</h2>
         <div className="siege-settings">
           {(['music', 'effects'] as const).map(key => <label key={key}><span>{key === 'music' ? 'Music' : 'Effects'} <b>{Math.round(save.settings[key] * 100)}%</b></span><input type="range" min="0" max="1" step="0.05" value={save.settings[key]} onChange={event => updateSettings({ ...save.settings, [key]: Number(event.target.value) })} /></label>)}
-          <label className="siege-toggle"><input type="checkbox" checked={save.settings.lite} onChange={event => updateSettings({ ...save.settings, lite: event.target.checked })} /><span>Lite mode<small>No ambience, half-size portraits and fewer effects. Restart to resize portraits.</small></span></label>
+          <label className="siege-toggle"><input type="checkbox" checked={save.settings.lite} onChange={event => updateSettings({ ...save.settings, lite: event.target.checked })} /><span>Lite mode<small>No ambience, fewer effects and less idle animation, for slower phones.</small></span></label>
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.shake} onChange={event => updateSettings({ ...save.settings, shake: event.target.checked })} /><span>Screen shake<small>Reduced-motion preferences always take priority.</small></span></label>
           <label className="siege-toggle"><input type="checkbox" disabled={!canVibrate} checked={save.settings.vibration && canVibrate} onChange={event => { updateSettings({ ...save.settings, vibration: event.target.checked }); if (event.target.checked) { setHaptics(true); haptic('jar') } }} /><span>Vibration<small>{canVibrate ? 'A short buzz when a jar is stolen, a boss falls or the last star lands. Reduced-motion preferences always take priority.' : 'This browser can’t vibrate.'}</small></span></label>
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.autoFullscreen} onChange={event => updateSettings({ ...save.settings, autoFullscreen: event.target.checked })} /><span>Full screen on Play<small>On phones, enter full screen and request landscape. On iPhone, show Home Screen steps once.</small></span></label>
@@ -506,7 +504,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       </>}
       {menu === 'intro' && <>
         {intro.startsWith('boss:') ? assets && <BossCard assets={assets} id={intro.slice(5)} sheet={scene.current?.bossSheet} /> : <>
-          <span className="siege-eyebrow">LOOK WHO’S AT THE DOOR</span><h2>{ENEMIES[intro as EnemyKind].name}</h2>{assets && <EnemyPortrait assets={run?.assets ?? assets} kind={intro as EnemyKind} id={scene.current?.enemies.find(enemy => enemy.active && enemy.kind === intro)?.id ?? Number(hero)} />}<p>{ENEMIES[intro as EnemyKind].description}</p>
+          <span className="siege-eyebrow">LOOK WHO’S AT THE DOOR</span><h2>{ENEMIES[intro as EnemyKind].name}</h2>{assets && <EnemyPortrait assets={run?.assets ?? assets} kind={intro as EnemyKind} id={scene.current?.enemies.find(enemy => enemy.active && enemy.kind === intro && !CRUDE_TEXT_CHOGS.has(enemy.id))?.id ?? Number(hero)} />}<p>{ENEMIES[intro as EnemyKind].description}</p>
         </>}
         <Sticker tone="orange" onClick={resume}>{intro.startsWith('boss:') ? 'Bring it on →' : 'Got it. Come on in →'}</Sticker>
       </>}
@@ -517,7 +515,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span><span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span><span><b>{outcome.heroLevel}</b> hero level</span></div>
         <div className="row">{nextLevel ? <><Sticker tone="orange" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker onClick={leaveLevel}>Level select</Sticker></div>
-        {run && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} dance={run.victoryDance} result={outcome} />}
+        {run && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} />}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
       {menu === 'shop' && !assets && (failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry}><Sticker onClick={() => setMenu(returnMenu)}>← Back</Sticker></RetryPanel> : <StageLabel stage="candy" />)}
