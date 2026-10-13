@@ -38,8 +38,7 @@ export function Shop({ assets, kit, shop, wallet, bank, onBack, inLevel }: { ass
   const short = shop.account ? `${shop.account.slice(0, 6)}…${shop.account.slice(-4)}` : ''
   const insufficient = price !== null && shop.balance !== null && shop.balance < price
   return <div className="siege-shop">
-    <span className="siege-eyebrow">THE AFTER-DARK OUTFITTER</span><h2>A little extra mischief</h2>
-    <p className="siege-shop-disclosure">$KNOCK is a testnet token with no real value.<br />Siege only spends it. Playing Siege never pays out $KNOCK.</p>
+    <h2>Candy Shop · dress your Chog</h2>
     <WalletChoice wallet={wallet} disabled={shop.busy || inLevel} />
     <StarterGrant bank={bank} hasWallet={!!shop.account} />
     <div className="siege-shop-wallet">
@@ -68,5 +67,6 @@ export function Shop({ assets, kit, shop, wallet, bank, onBack, inLevel }: { ass
     <div className="row siege-shop-links"><a href={`https://testnet.vibevibe.fun/token/${CANDY_TOKEN}`} target="_blank" rel="noreferrer">Get it on vibe/vibe ↗</a><a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">Get test ETH for gas ↗</a></div>
     <p className="siege-hint">One permit for the exact price, then one purchase transaction from your wallet. Guest wallets sign and send locally in this browser. If you already approved enough, only the transaction is needed. Test ETH pays gas.</p>
     <div className="row"><Sticker onClick={onBack}>← Back</Sticker><Sticker disabled={shop.busy} onClick={() => { void shop.refresh(); setAttempt(n => n + 1) }}>Refresh shop</Sticker></div>
+    <p className="siege-shop-disclosure">$KNOCK is a testnet token with no real value. Siege only spends it. Playing Siege never pays out $KNOCK.</p>
   </div>
 }

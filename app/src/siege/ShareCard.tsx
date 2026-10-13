@@ -79,11 +79,12 @@ export function ShareCard({ assets, kit, costume, dance, result }: { assets: Ass
   useEffect(() => {
     let active = true, objectUrl = ''
     setFile(null); setStatus('')
-    void renderShareCard(assets, kit, costume, dance, result).then(blob => {
+    // Drawing the card blocks the main thread for a moment (a 1200 × 1200 pixel scan), so wait until the result fanfare has landed.
+    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, dance, result).then(blob => {
       if (!active) return
       const file = new File([blob], `candy-siege-chog-${kit.id}.png`, { type: 'image/png' }); objectUrl = URL.createObjectURL(file); setFile(file); setUrl(objectUrl)
-    }).catch(() => { if (active) setStatus('Could not make the share image. Check your connection and try again.') })
-    return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl) }
+    }).catch(() => { if (active) setStatus('Could not make the share image. Check your connection and try again.') }), attempt ? 0 : 1400)
+    return () => { active = false; clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl) }
   }, [assets, kit.id, costume, dance, result, attempt])
   const share = async () => {
     if (!file) return
