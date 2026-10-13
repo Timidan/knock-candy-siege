@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import type { SiegeScene } from './SiegeScene'
-import { EMOTES, SPELLS, TARGETING, TOWERS, SPECIALISATIONS, SPEC_COST, rankCost, CONSUMABLES } from './data/config'
+import { EMOTES, SPELLS, TARGETING, TOWERS, TRAPS, SPECIALISATIONS, SPEC_COST, rankCost, CONSUMABLES } from './data/config'
 import type { TowerKind, TrapKind, Specialisation, ConsumableKind } from './data/config'
 import type { FocusTarget } from './TutorialFocus'
 import { Rig } from './hero/Rig'
@@ -13,12 +13,14 @@ import type { BossState } from './Boss'
 import type { Enemy } from './world'
 import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner } from './renderShapes'
 
-type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; hot?: boolean }
+type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; costRed?: Phaser.GameObjects.Image; hot?: boolean }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
 // icons and numbers at .85 so they stay readable.
 const REST = .85, PLATE = .75
+// Prices use the candy counter's own gold, and turn red while unaffordable.
+const PRICE = '#FFD23F', SHORT = '#FF8A8A'
 const candyFormat = new Intl.NumberFormat('en-US')
 // One reveal per level in this page session, including scene teardown/restarts; never touches the player's save.
 const revealedLevels = new Set<number>()
@@ -40,6 +42,11 @@ export class Hud {
   private jars: Phaser.GameObjects.BitmapText
   private jarRoot: Phaser.GameObjects.Container
   private jarLoss: Phaser.GameObjects.Text
+  private candyLoss: Phaser.GameObjects.Text
+  private candySeen = -1
+  private spendAge = 1
+  private spendValue = 0
+  private costTaught = new Set<string>()
   private alarm: Phaser.GameObjects.Image
   private alarmAge = 1
   private wave: Phaser.GameObjects.Text
@@ -216,12 +223,18 @@ export class Hud {
       if (effect.width > 326) effect.setScale(326 / effect.width, 1)
       pill.add(effect); this.perkRoot.add(pill); this.perks.push(button)
     }
+    // Added after the perk buttons so a falling −N draws over them.
+    this.candyLoss = this.text(367, 124, '', 44, '#EF4444').setOrigin(.5).setStroke('#241b30', 5).setVisible(false); top.add(this.candyLoss)
     this.rain = this.button(bottom, 416, 984, 'fx/candy-rain/1', 132, () => scene.selectSpell('rain'), false, false, '#836EF9')
     this.boo = this.button(bottom, 566, 984, 'fx/boo/2', 132, () => scene.selectSpell('boo'), false, false, '#836EF9')
     this.emoteButton = this.button(bottom, 100, 830, 'emote/lol/0', 124, () => scene.toggleEmotes(), false, false, '#FFD23F')
     this.trapButtons = {} as Record<TrapKind, Button>
     for (const [i, kind] of (['pumpkin', 'bowl', 'gum'] as const).entries()) {
-      const b = this.button(this.bottomRight, 1488 + i * 152, 984, `trap/${kind}/0`, 132, p => scene.selectTrap(kind, scene.viewToWorld(p)))
+      const b = this.button(this.bottomRight, 1488 + i * 152, 984, `trap/${kind}/0`, 132, p => {
+        scene.selectTrap(kind, scene.viewToWorld(p))
+        const cost = scene.trapCost(kind)
+        if (this.firstCost(kind, cost)) this.toast(`${TRAPS[kind].name} · Drag onto the path\nCosts ${cost} candy each use`)
+      })
       this.cost(b, scene.trapCost(kind)); this.trapButtons[kind] = b
     }
     this.suppliesButton = this.button(this.bottomRight, 1792, 824, 'item/pumpkin-bomb', 120, () => {
@@ -231,7 +244,11 @@ export class Hud {
     this.suppliesButton.root.add(this.text(0, -82, 'SUPPLIES', 30).setOrigin(.5).setStroke('#241b30', 5))
     this.supplies.add(plate(scene, -380, -80, 760, 172, 24, 0x241b30, .97, 0xc7a2cb, 3).setAlpha(PLATE))
     for (const [i, kind] of (Object.keys(CONSUMABLES) as ConsumableKind[]).entries()) {
-      const b = this.button(this.supplies, (i - 2) * 146, 0, `item/${kind}`, 124, p => scene.selectConsumable(kind, scene.viewToWorld(p)), false, false, '#22C55E')
+      const b = this.button(this.supplies, (i - 2) * 146, 0, `item/${kind}`, 124, p => {
+        scene.selectConsumable(kind, scene.viewToWorld(p))
+        const c = CONSUMABLES[kind]
+        if (this.firstCost(kind, c.cost)) this.toast(`${c.name} · ${c.description}\nDrag or tap the road · Costs ${c.cost} candy each use`)
+      }, false, false, '#22C55E')
       this.cost(b, CONSUMABLES[kind].cost); this.itemButtons[kind] = b
     }
     this.preview = scene.add.container(0, 0).setDepth(3250).setVisible(false)
@@ -367,6 +384,29 @@ export class Hud {
     s.tweens.add({ targets: this.candyPlate, alpha: PLATE, duration: 240, onComplete: () => this.candyPlate.clearTint() })
     if (!reducedMotion()) s.tweens.add({ targets: this.candyRoot, scaleX: 1.12, scaleY: .88, duration: 90, yoyo: true, ease: 'Sine.Out' })
   }
+  // Candy only falls when it is spent: towers, upgrades, specialisations, traps, supplies and the Sugar Rush prop.
+  // ponytail: income and a spend inside one check window net out (a kill in that frame shrinks the −N); exact amounts need a scene hook.
+  private watchSpend() {
+    const s = this.scene, drop = this.candySeen - s.candy
+    this.candySeen = s.candy
+    if (drop <= 0 || s.ended) return
+    this.spendValue = this.spendAge < .25 ? this.spendValue + drop : drop; this.spendAge = 0
+    this.candyLoss.setText(`−${this.spendValue}`)
+    s.tweens.killTweensOf(this.candyPlate)
+    this.candyPlate.setTint(0xff7a6b).setAlpha(1)
+    s.tweens.add({ targets: this.candyPlate, alpha: PLATE, duration: 240, onComplete: () => this.candyPlate.clearTint() })
+  }
+  private animateSpend(dt: number) {
+    if (this.spendAge >= 1) return
+    const motion = !reducedMotion(), t = this.spendAge = Math.min(1, this.spendAge + dt)
+    this.candyRoot.y = 82 + (motion ? Math.sin(Math.min(1, t / .24) * Math.PI) * 8 : 0)
+    this.candyLoss.setVisible(t < .9).setAlpha(Math.min(1, (.9 - t) / .3)).setY(124 + (motion ? 28 * t : 0)).setScale(motion ? Math.max(1, 1.35 - t / .15 * .35) : 1)
+  }
+  // The first selection of each trap or supply says its badge is a price, not a stock count.
+  private firstCost(kind: TrapKind | ConsumableKind, cost: number) {
+    if (this.scene.mode !== kind || cost <= 0 || this.costTaught.has(kind)) return false
+    this.costTaught.add(kind); return true
+  }
   hide() { this.scene.hudLayer.setVisible(false) }
   coversControl(x: number, y: number, radius: number) {
     for (const b of this.buttons) {
@@ -447,11 +487,16 @@ export class Hud {
   }
   private cost(b: Button, value: number, refund = false) {
     if (b.costLabel) { b.costLabel.setText(`${refund ? '+' : ''}${value}`); return }
-    const y = b.size / 2 - 8, width = refund ? 136 : 114
-    b.root.add(plate(this.scene, -width / 2, y - 22, width, 44, 16, 0xffdf95, 1, 0x34233b, 3))
-    b.root.add(this.scene.art.image(-width / 2 + 22, y, 'ui/candy').setDisplaySize(28, 28))
-    b.costLabel = this.text(16, y, `${refund ? '+' : ''}${value}`, 34, '#35253d').setResolution(2).setOrigin(.5)
+    const s = this.scene, y = b.size / 2 - 8, width = refund ? 140 : 120, left = -width / 2
+    b.costRed = plate(s, left, y - 22, width, 44, 22, 0x4a1420, 1, 0xff6b6b, 3).setVisible(false)
+    b.root.add([plate(s, left, y - 22, width, 44, 22, 0x2a1838, 1, 0xffc83d, 3), b.costRed, s.art.image(left + 24, y, 'ui/candy').setDisplaySize(34, 34)])
+    b.costLabel = this.text(18, y, `${refund ? '+' : ''}${value}`, 34, PRICE).setResolution(2).setOrigin(.5)
     b.root.add(b.costLabel)
+  }
+  // Only on change: setColor redraws the label.
+  private afford(b: Button, ok: boolean) {
+    if (!b.costRed || b.costRed.visible !== ok) return
+    b.costRed.setVisible(!ok); b.costLabel?.setColor(ok ? PRICE : SHORT)
   }
   private open(panel: Phaser.GameObjects.Container) {
     this.scene.tweens.killTweensOf(panel); panel.setVisible(true).setAlpha(1)
@@ -469,6 +514,7 @@ export class Hud {
     const s = this.scene, factor = s.localHero.spellFactor
     if (this.partner && s.options.coop) { const hero = s.heroes[1 - s.options.coop.client.player]; this.partner.setText(`#${hero.kit.id} · Lv ${hero.level} · ${Math.ceil(hero.hp)} HP`) }
     if (s.ended) return
+    this.watchSpend()
     if (this.candyTarget !== s.candy) {
       const first = this.candyTarget < 0; this.candyTarget = s.candy
       s.tweens.killTweensOf(this.candyRoll)
@@ -497,7 +543,11 @@ export class Hud {
     if (this.talentTimer) { const left = Math.ceil(this.talentTimer.getRemainingSeconds()); if (left <= 3 && left !== this.talentTick) { this.talentTick = left; s.options.sfx.play('talent-tick') } }
     this.cooldown(this.rain, s.spellCooldown.rain, SPELLS.rain.cooldown * factor)
     this.cooldown(this.boo, s.spellCooldown.boo, SPELLS.boo.cooldown * factor)
-    for (const kind of ['pumpkin', 'bowl', 'gum'] as const) { this.enabled(this.trapButtons[kind], s.candy >= s.trapCost(kind)); this.cost(this.trapButtons[kind], s.trapCost(kind)); if (kind === 'pumpkin' && s.freePumpkin > 0) this.trapButtons[kind].costLabel?.setText('FREE').setFontSize(26); else this.trapButtons[kind].costLabel?.setFontSize(34) }
+    for (const kind of ['pumpkin', 'bowl', 'gum'] as const) {
+      const b = this.trapButtons[kind], cost = s.trapCost(kind), free = kind === 'pumpkin' && s.freePumpkin > 0
+      this.enabled(b, s.candy >= cost); this.afford(b, s.candy >= cost)
+      b.costLabel?.setText(free ? 'FREE' : String(cost)).setFontSize(free ? 26 : 34)
+    }
     this.calls.forEach((b, path) => {
       const wave = s.waveAt(s.wave)
       b.root.setVisible(!this.bossBannerRoot && !!wave && wave.groups.some(g => !g.edge && s.entrancePath(g.type, g.path ?? 0) === path))
@@ -515,8 +565,8 @@ export class Hud {
       this.tutorialCard.setVisible(true); this.tutorialText.setText(`${s.tutorialStep + 1}/7  ${copy}`)
     }
     else if (this.tutorialCard.visible && this.tutorialCard.alpha === 1) this.close(this.tutorialCard)
-    for (const item of this.radialButtons) this.enabled(item.button, s.candy >= item.cost && (!item.kind || !s.towerLock(item.kind)))
-    for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown); this.enabled(b, s.itemCooldown[kind] <= 0 && s.candy >= CONSUMABLES[kind].cost) }
+    for (const item of this.radialButtons) { this.enabled(item.button, s.candy >= item.cost && (!item.kind || !s.towerLock(item.kind))); this.afford(item.button, s.candy >= item.cost) }
+    for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown); this.enabled(b, s.itemCooldown[kind] <= 0 && s.candy >= CONSUMABLES[kind].cost); this.afford(b, s.candy >= CONSUMABLES[kind].cost) }
     this.suppliesButton.root.setVisible(!s.focus?.active)
     this.suppliesButton.glow.setVisible(this.suppliesOpen)
     for (const button of this.buttons) this.shade(button)
@@ -800,8 +850,11 @@ export class Hud {
   }
   animate(time: number, dt = 1 / 60) {
     const motion = !reducedMotion(), s = this.scene
+    // Checked each frame too, so a spend is measured against the previous frame rather than the last 8 Hz refresh.
+    this.watchSpend()
+    this.animateSpend(dt)
     const value = candyFormat.format(Math.round(this.candyRoll.value))
-    if (this.candy.text !== value) { this.candy.setText(value).setScale(1); this.candy.setScale(Math.min(1, 150 / this.candy.getTextBounds().local.width)); if (motion) this.candy.y = -6 }
+    if (this.candy.text !== value) { this.candy.setText(value).setScale(1); this.candy.setScale(Math.min(1, 150 / this.candy.getTextBounds().local.width)); if (motion) this.candy.y = this.candyRoll.value > this.candyTarget ? 6 : -6 }
     this.candy.y = motion ? this.candy.y * Math.exp(-17.26 * dt) : 0
     this.toastText.setVisible(time < this.toastUntil)
     if (this.toastText.visible) this.toastText.setText(this.toastPages[Math.floor((time - this.toastStart) / this.toastSeconds)] ?? '')
