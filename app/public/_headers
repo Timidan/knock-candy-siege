@@ -1,9 +1,8 @@
-# Cloudflare Pages cache rules. Portraits never change and Vite hashes its bundles, so both can be cached for a year.
-/chogs/*
-  Cache-Control: public, max-age=31536000, immutable
-/chogs-256/*
-  Cache-Control: public, max-age=31536000, immutable
-/assets/*
-  Cache-Control: public, max-age=31536000, immutable
-/art/*
-  Cache-Control: public, max-age=86400
+# Security headers for every response. The policy must stay on one line. connect-src lists every service the app calls.
+# index.html has no inline script, so script-src needs no hash. Its inline <style> is allowed by 'unsafe-inline'.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' https://candy-bank.timidan-knock.workers.dev https://siege-stats.timidan-knock.workers.dev https://sandbox-rpc.timidan.xyz https://rpc.monad.xyz https://rpc.testnet.chain.robinhood.com https://cloudflareinsights.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+# No long cache rules. A path that is missing from a deployment (a deploy race or an omitted file) is answered with index.html.
+# A long Cache-Control on that path would keep the HTML under the asset URL. Pages' default (max-age=0, must-revalidate, ETag) applies.
