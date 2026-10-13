@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/neet/front</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M43 123 Q45 76 71 58 Q128 33 185 58 Q211 76 213 123 Q128 147 43 133Z" fill="#eeeadd" stroke="#181323" stroke-width="4.5"/><path d="M43 123 Q45 76 71 58 L83 125 47 134Z" fill="#d0cbd1" stroke="none" stroke-width="0"/><path d="M185 58 Q211 76 213 123 L177 131 Q178 84 185 58Z" fill="#d4d0d5" stroke="none" stroke-width="0"/><path d="M71 60 Q77 90 83 122 M185 60 Q179 90 177 122" fill="none" stroke="#8b8693" stroke-width="2.5"/><path d="M49 128 Q85 111 132 112 Q183 110 215 130 L219 137 Q176 131 139 141 Q83 149 42 137Z" fill="#2a339b" stroke="#181323" stroke-width="4.5"/><path d="M56 133 Q91 119 134 120 Q180 116 210 132" fill="none" stroke="#535ed3" stroke-width="2.5"/></g></svg>

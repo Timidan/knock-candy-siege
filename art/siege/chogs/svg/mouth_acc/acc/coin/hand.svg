@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>acc/coin/hand</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><g transform="translate(-9 0)"><ellipse cx="205" cy="257" rx="18" ry="21" fill="#efa922" stroke="#181323" stroke-width="4" transform="rotate(0 205 257)"/><ellipse cx="204" cy="256" rx="13" ry="16" fill="#f6c84a" stroke="#cd831b" stroke-width="2.5" transform="rotate(0 204 256)"/><path d="M195 247 Q198 242 204 241" fill="none" stroke="#ffeaa5" stroke-width="3"/></g></g></svg>

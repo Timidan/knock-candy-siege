@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>skin/multi/stripes</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><g opacity="0.9"><path d="M32 133 62 116 82 115 96 125 49 153 36 163Z M22 179 36 165 50 177 42 192 58 205 36 212Z M112 92 123 79 135 89 139 104 127 115 116 106Z M160 125 174 115 194 116 224 133 220 147 207 153Z M206 177 220 165 234 179 220 212 198 205 214 192Z M96 240 160 256 164 269 93 251Z M90 269 166 283 165 291 142 290 93 282Z" fill="#999999" stroke="none" stroke-width="0"/></g></g></svg>

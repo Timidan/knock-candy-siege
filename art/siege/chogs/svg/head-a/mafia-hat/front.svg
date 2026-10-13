@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/mafia-hat/front</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M57 108 69 38 Q94 21 128 37 Q160 21 187 38 L199 108Z" fill="#383644" stroke="#181323" stroke-width="4.5"/><path d="M75 43 Q98 33 128 48 Q156 33 181 43" fill="none" stroke="#575263" stroke-width="3"/><path d="M60 89 Q128 104 196 89 L200 109 Q128 127 56 109Z" fill="#dedbd3" stroke="#181323" stroke-width="3"/><path d="M57 105 Q29 101 24 121 Q44 143 128 143 Q212 143 232 121 Q227 101 199 105 Q128 124 57 105Z" fill="#383644" stroke="#181323" stroke-width="4.5"/><path d="M38 124 Q128 151 220 123" fill="none" stroke="#55505f" stroke-width="2.5"/></g></svg>

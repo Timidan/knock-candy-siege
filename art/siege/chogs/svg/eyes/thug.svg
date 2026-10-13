@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>eyes/thug</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M50 148H206V159H198V173H191V182H184V188H149V182H142V175H136V164 H120V175H114V182H107V188H72V182H65V173H58V159H50Z" fill="#111215" stroke="none" stroke-width="4"/><path d="M99 155h7v7h-7Z" fill="#f6f7ed" stroke="none" stroke-width="4"/><path d="M92 162h7v7h-7Z" fill="#f6f7ed" stroke="none" stroke-width="4"/><path d="M85 169h7v7h-7Z" fill="#f6f7ed" stroke="none" stroke-width="4"/><path d="M171 155h7v7h-7Z" fill="#f6f7ed" stroke="none" stroke-width="4"/><path d="M164 162h7v7h-7Z" fill="#f6f7ed" stroke="none" stroke-width="4"/><path d="M157 169h7v7h-7Z" fill="#f6f7ed" stroke="none" stroke-width="4"/></g></svg>

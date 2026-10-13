@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>mouth/lip-bite</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M100 204 Q128 201 156 204" fill="none" stroke="#181323" stroke-width="4"/><path d="M118 203 122 210 128 204 132 210 136 203" fill="#f4eedd" stroke="#181323" stroke-width="2.3"/><path d="M111 205 107 209M117 210 115 213M145 205 149 209" fill="none" stroke="#181323" stroke-width="2.3"/></g></svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>acc/sb/hand</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><g transform="translate(-9 0)"><path d="M185 244 224 244 219 288 Q204 294 191 287Z" fill="#fffdf4" stroke="#181323" stroke-width="4"/><path d="M217 249 222 249 218 286 211 288Z" fill="#d9d5c5" stroke="none" stroke-width="0"/><path d="M184 242 188 237 222 237 226 242 226 248 183 248Z" fill="#fffdf4" stroke="#181323" stroke-width="3.5"/><path d="M187 242 223 242" fill="none" stroke="#c3c6bb" stroke-width="2"/></g></g></svg>

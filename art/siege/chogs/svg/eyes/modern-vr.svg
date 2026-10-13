@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>eyes/modern-vr</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M47 151H66V184H47ZM190 151H209V184H190Z" fill="#343444" stroke="#181323" stroke-width="4"/><path d="M70 140Q128 123 186 140Q199 144 199 158V180 Q199 196 182 196Q158 196 142 183Q128 173 114 183 Q98 196 74 196Q57 196 57 180V158Q57 144 70 140Z" fill="#424355" stroke="#181323" stroke-width="4.5"/><path d="M74 147Q128 131 182 147Q191 150 191 160V179 Q191 188 181 188Q158 188 141 176Q128 168 115 176 Q98 188 75 188Q65 188 65 179V160Q65 150 74 147Z" fill="#0a121b" stroke="#0875ae" stroke-width="5"/><path d="M74 148Q128 133 182 148Q190 151 190 160M65 169V178" fill="none" stroke="#26c9ef" stroke-width="2.4"/><path d="M80 174V163Q80 153 100 151" fill="none" stroke="#e5f5f4" stroke-width="4"/><ellipse cx="80" cy="181" rx="2" ry="2.4" fill="#e5f5f4" stroke="none" stroke-width="0" transform="rotate(0 80 181)"/><path d="M59 158V176" fill="none" stroke="#9694ad" stroke-width="2"/></g></svg>

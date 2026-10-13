@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/spartan-helmet/front</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M44 140 Q40 99 66 77 Q94 56 128 59 Q162 56 190 77 Q216 99 212 140 L200 162 204 185 218 208 198 217 L183 200 189 169 182 143 145 148 142 172 128 181 L114 172 111 148 74 143 67 169 73 200 58 217 L38 208 52 185 56 162Z" fill="#dba650" stroke="#181323" stroke-width="4.5"/><path d="M194 85 Q215 113 207 139 L195 162 200 187 212 206 200 211 L189 199 195 169 187 141 Q203 119 194 85Z" fill="#ad7838" stroke="none" stroke-width="0"/><path d="M50 135 Q48 102 71 82 Q96 64 119 67 M44 205 56 209 66 198 M205 149 199 165 204 185 M120 153 119 169 128 173" fill="none" stroke="#f6d38b" stroke-width="3"/><path d="M62 125 Q128 147 194 125" fill="none" stroke="#ad7838" stroke-width="3"/><path d="M111 60 117 96 128 104 139 96 145 60" fill="#d7282f" stroke="#181323" stroke-width="4"/></g></svg>

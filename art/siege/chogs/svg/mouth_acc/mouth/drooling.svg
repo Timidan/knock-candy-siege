@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>mouth/drooling</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M110 213 C108 190 140 190 146 207 L146 220 Q128 216 110 222Z" fill="#52202d" stroke="#181323" stroke-width="4"/><path d="M113 211 Q128 203 140 211 L143 217 113 219Z" fill="#d9579a" stroke="none" stroke-width="0"/><path d="M111 218 Q124 214 139 217 L138 222 118 222 118 265 Q117 273 112 267Z" fill="#6bd8ee" stroke="#181323" stroke-width="2.5"/><path d="M115 222 115 258M120 218 124 218" fill="none" stroke="#d9faff" stroke-width="2.3"/></g></svg>

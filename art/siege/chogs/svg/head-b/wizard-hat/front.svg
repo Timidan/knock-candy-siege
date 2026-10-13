@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/wizard-hat/front</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M60 117 Q84 70 107 25 Q118 7 143 8 Q170 9 190 34 L150 27 Q146 71 196 117Z" fill="#26378f" stroke="#181323" stroke-width="4.5"/><path d="M137 14 150 27 Q146 71 196 117 L177 121 Q134 76 137 14Z" fill="#182265" stroke="none" stroke-width="0"/><path d="M35 123 Q65 108 128 108 Q191 108 221 123 L224 131 Q128 151 32 131Z" fill="#2c3f9d" stroke="#181323" stroke-width="4.5"/><path d="M40 129 Q128 145 216 129" fill="none" stroke="#101b59" stroke-width="3"/></g></svg>

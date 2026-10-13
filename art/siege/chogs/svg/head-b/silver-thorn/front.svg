@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/silver-thorn/front</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M40 117 Q128 139 216 117" fill="none" stroke="#181323" stroke-width="10"/><path d="M40 117 Q128 139 216 117" fill="none" stroke="#a9aaa6" stroke-width="5"/><path d="M40 111 54 114 58 100 67 117 82 119 91 106 95 120 L116 119 128 105 132 119 153 120 161 106 168 119 L187 117 197 100 202 114 216 111 220 124 L204 126 203 140 190 129 174 130 169 143 160 133 L138 134 128 145 120 134 99 133 87 143 83 130 L67 129 53 140 54 126 37 124Z" fill="#a9aaa6" stroke="#181323" stroke-width="3"/><path d="M38 110 Q43 132 64 122 Q82 110 103 128 Q128 142 153 128 Q174 110 192 122 Q213 132 218 110" fill="none" stroke="#181323" stroke-width="8"/><path d="M38 110 Q43 132 64 122 Q82 110 103 128 Q128 142 153 128 Q174 110 192 122 Q213 132 218 110" fill="none" stroke="#a9aaa6" stroke-width="4"/><path d="M61 122 76 121 M112 132 126 135 M157 127 169 121 M196 125 208 124" fill="none" stroke="#e0dfd4" stroke-width="2"/></g></svg>

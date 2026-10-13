@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/wizard-hat/decal</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M121.00,25.00 124.03,32.83 132.41,33.29 125.91,38.59 128.05,46.71 121.00,42.16 113.95,46.71 116.09,38.59 109.59,33.29 117.97,32.83Z" fill="#f5c236" stroke="none" stroke-width="0"/><path d="M109.00,66.00 112.79,75.78 123.27,76.36 115.13,82.99 117.82,93.14 109.00,87.45 100.18,93.14 102.87,82.99 94.73,76.36 105.21,75.78Z" fill="#f5c236" stroke="none" stroke-width="0"/><path d="M162.00,82.00 165.29,90.48 174.36,90.98 167.32,96.73 169.64,105.52 162.00,100.59 154.36,105.52 156.68,96.73 149.64,90.98 158.71,90.48Z" fill="#f5c236" stroke="none" stroke-width="0"/><path d="M82.00,108.00 84.02,113.22 89.61,113.53 85.27,117.06 86.70,122.47 82.00,119.44 77.30,122.47 78.73,117.06 74.39,113.53 79.98,113.22Z" fill="#f5c236" stroke="none" stroke-width="0"/></g></svg>

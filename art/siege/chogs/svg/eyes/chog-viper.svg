@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>eyes/chog-viper</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><defs><linearGradient id="lens" x1="0" y1="0" x2="1" y2="0"><stop offset="0.000" stop-color="#152286"/><stop offset="0.200" stop-color="#193bed"/><stop offset="0.400" stop-color="#22dce4"/><stop offset="0.600" stop-color="#66f8e7"/><stop offset="0.800" stop-color="#1649df"/><stop offset="1.000" stop-color="#152286"/></linearGradient></defs><path d="M48 149H66V185H48ZM190 149H208V185H190Z" fill="#e8e6d9" stroke="#181323" stroke-width="3"/><path d="M60 142Q128 134 196 142L198 177Q198 197 178 197 Q150 197 139 177Q128 159 117 177Q106 197 78 197Q58 197 58 177Z" fill="#dddace" stroke="#181323" stroke-width="4.5"/><path d="M67 149Q128 141 189 149L191 176Q191 190 178 190 Q153 190 144 173Q128 149 112 173Q103 190 78 190Q65 190 65 176Z" fill="url(#lens)" stroke="#181323" stroke-width="3"/></g></svg>

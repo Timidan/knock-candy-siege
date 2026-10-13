@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>eyes/placeholder</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M77 153 Q94 154 109 163 L108 176 Q105 187 93 187 Q78 187 77 176 Q74 163 77 153Z" fill="#121216" stroke="none" stroke-width="0"/><g transform="translate(256 0) scale(-1 1)"><path d="M77 153 Q94 154 109 163 L108 176 Q105 187 93 187 Q78 187 77 176 Q74 163 77 153Z" fill="#121216" stroke="none" stroke-width="0"/></g><path d="M74 149 Q90 155 109 158M182 149 Q166 155 147 158" fill="none" stroke="#181323" stroke-width="3.5"/><ellipse cx="86" cy="163" rx="5" ry="7" fill="#fffdf4" stroke="none" stroke-width="0" transform="rotate(20 86 163)"/><ellipse cx="165" cy="163" rx="5" ry="7" fill="#fffdf4" stroke="none" stroke-width="0" transform="rotate(20 165 163)"/><ellipse cx="97" cy="179" rx="2" ry="2.4" fill="#fffdf4" stroke="none" stroke-width="0" transform="rotate(0 97 179)"/><ellipse cx="174" cy="179" rx="2" ry="2.4" fill="#fffdf4" stroke="none" stroke-width="0" transform="rotate(0 174 179)"/></g></svg>

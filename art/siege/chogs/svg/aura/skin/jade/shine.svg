@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>skin/jade/shine</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><g opacity="0.48"><path d="M61 150 Q61 132 79 127 L91 131 Q70 136 72 151Z M165 131 177 127 Q195 132 195 150 L184 151 Q186 136 165 131Z" fill="#f0fff1" stroke="none" stroke-width="0"/></g><path d="M77 129 81 134 M175 134 179 129 M64 206 75 216 M181 216 192 206" fill="none" stroke="#eaffd9" stroke-width="2.5"/><g opacity="0.55"><path d="M107 138 117 130 125 136 M131 136 139 130 149 138 M58 179 64 187 60 198 M198 179 192 187 196 198" fill="none" stroke="#468363" stroke-width="2"/></g></g></svg>

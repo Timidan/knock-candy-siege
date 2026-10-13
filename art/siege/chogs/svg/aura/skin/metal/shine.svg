@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>skin/metal/shine</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><g opacity="0.56"><path d="M62 151 69 135 86 125 98 130 74 159Z M88 152 113 123 124 132 104 156Z M149 143 164 126 175 130 160 147Z M172 210 193 181 202 185 187 213Z" fill="#fafcff" stroke="none" stroke-width="0"/></g><g opacity="0.4"><path d="M62 163 98 127 104 132 68 170Z M162 213 198 170 201 180 173 216Z" fill="#384556" stroke="none" stroke-width="0"/></g><path d="M75 136 84 132 M174 136 182 140 M179 218 190 214" fill="none" stroke="#ffffff" stroke-width="2.5"/></g></svg>

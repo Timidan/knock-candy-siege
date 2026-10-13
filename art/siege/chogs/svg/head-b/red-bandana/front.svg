@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/red-bandana/front</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M45 121 Q128 102 211 121 L207 147 Q128 128 49 147Z" fill="#bb5e47" stroke="#181323" stroke-width="4.5"/><path d="M48 138 Q128 121 208 138 L207 147 Q128 128 49 147Z" fill="#95453e" stroke="none" stroke-width="0"/><path d="M118 122 Q94 111 79 82 Q112 80 129 113 Q137 80 156 69 Q171 95 140 122Z" fill="#bf6852" stroke="#181323" stroke-width="4"/><path d="M116 115 Q134 104 143 120 Q137 136 121 137 L114 129Z" fill="#ca7960" stroke="#181323" stroke-width="3"/><path d="M91 90 117 113 M153 81 134 112 M120 130 134 118" fill="none" stroke="#84423a" stroke-width="2.5"/></g></svg>

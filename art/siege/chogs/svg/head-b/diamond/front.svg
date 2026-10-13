@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>head/diamond/front</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><g transform="translate(-26 15)"><path d="M140 107 153 102 165 110 171 127 160 138 146 134 136 119Z" fill="#82d6ed" stroke="#344c68" stroke-width="3"/><path d="M143 111 152 108 161 113 165 125 158 132 149 129 142 118Z" fill="#b9f1fb" stroke="#5085a3" stroke-width="1.8"/><path d="M140 107 143 111 M153 102 152 108 M165 110 161 113 M171 127 165 125 M160 138 158 132 M146 134 149 129 M136 119 142 118" fill="none" stroke="#5085a3" stroke-width="1.8"/><path d="M145 113 149 122" fill="none" stroke="#fffdf2" stroke-width="2.5"/></g></g></svg>

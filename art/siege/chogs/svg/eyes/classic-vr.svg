@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="320" viewBox="0 0 256 320">
+<title>eyes/classic-vr</title><defs><filter id="paper" x="-3%" y="-3%" width="106%" height="106%" color-interpolation-filters="sRGB">
+<feTurbulence type="fractalNoise" baseFrequency=".76" numOctaves="3" seed="12" result="noise"/>
+<feColorMatrix in="noise" type="saturate" values="0" result="grey"/>
+<feComposite in="grey" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".18" k3="1" k4="-.09" result="grain"/>
+<feComposite in="grain" in2="SourceAlpha" operator="in"/></filter></defs>
+<g stroke-linecap="round" stroke-linejoin="round" filter="url(#paper)"><path d="M47 151H66V184H47ZM190 151H209V184H190Z" fill="#32333c" stroke="#181323" stroke-width="4"/><path d="M70 140H186Q198 140 198 152V182Q198 194 186 194H70 Q58 194 58 182V152Q58 140 70 140Z" fill="#84838b" stroke="#181323" stroke-width="4.5"/><path d="M70 147H186Q191 147 191 153V181Q191 187 185 187H71 Q65 187 65 181V153Q65 147 70 147Z" fill="#0d1117" stroke="#181323" stroke-width="3"/><path d="M105 148H115L97 186H87Z M120 148H124L106 186H102Z M157 148H171L153 186H139Z" fill="#dadbdc" stroke="none" stroke-width="4"/><path d="M70 146H186" fill="none" stroke="#f4f1ed" stroke-width="2.5"/></g></svg>
