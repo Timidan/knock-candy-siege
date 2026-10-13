@@ -33,7 +33,7 @@ Play at https://knock.timidan.xyz, on a phone held sideways or in a desktop brow
 | Read a perk | Tap a perk badge (top left, under the jars and candy). |
 | Inspect an enemy | Tap it. You see its Chog number and its modifiers. |
 | Change speed | Tap the speed button (top right) to cycle 1×, 2× and 3×. |
-| Pause | Tap pause (top right). Switching to another browser tab also pauses the game. |
+| Pause | Tap pause (top right). Switching to another browser tab also pauses the game. A Porch Party has no pause (see [Porch Party](#porch-party-co-op)). |
 | Pick a talent | When your hero levels up, a talent card pauses the game. Tap one of the two cards. After 10 seconds it picks the left one for you. |
 
 ### Keyboard
@@ -100,7 +100,7 @@ These are on the second page of the build ring (**MORE →**). They have three l
 | Candy Corn Catapult | 190 | Very long range and a huge ground splash, but a slow reload. Can't hit flyers. | Win Mint Mews |
 | Ghost Lighthouse | 160 | A sweeping beam that reveals and frightens. Low damage. | Win Mon Manor |
 | Haunted Organ | 175 | Sound waves shove nearby enemies back. Aqua (slippery) enemies resist. | Win Radioactive Ridge |
-| Bat Roost | 135 | Three bats hunt flyers. Can't attack ground enemies. | Own it from the shop (1,000 $KNOCK). It isn't on sale yet. |
+| Bat Roost | 135 | Three bats hunt flyers. Can't attack ground enemies. | Buy it in the shop (400 $KNOCK). It goes on sale with the next release. |
 
 ## Traps, spells and supplies
 
@@ -280,12 +280,28 @@ The shop sells cosmetics and convenience for $KNOCK, never raw power. $KNOCK is 
 | Golden towers | 600 | Gold versions of the four classic towers. Turn them on in Settings. |
 | Crypto emote pack | 300 | GM, LFG, WAGMI, REKT, HODL, MOON, GN and NGMI |
 | A sweeter start | 200 | +50 starting candy on every level, for good |
-| Bat Roost | 1,000 (planned) | Unlocks the Bat Roost tower. Listed, but not for sale until its on-chain price is set. |
+| Bat Roost | 400 | Unlocks the Bat Roost tower. It goes on sale with the next release; until then the shop shows "Not for sale". |
 
 - **How buying works:** you sign one permit for the exact price, then send one purchase transaction. A guest wallet does both inside the page. Items are recorded on-chain, so they follow your wallet to any device.
 - **Gas:** you need a little test ETH on Robinhood Chain Testnet. The shop links to the faucet.
-- **The starter grant:** every wallet can claim **300 $KNOCK and 0.0005 test ETH** once. Tap **Claim 300 $KNOCK** in the shop; the title screen also links to it. The claim joins a queue and is paid on Robinhood testnet. The shop checks every 5 seconds and links to the payment once it's made. Each network can make three new claims per UTC day.
+- **The starter grant:** every wallet can claim **300 $KNOCK and 0.0005 test ETH** once. Tap **Claim 300 $KNOCK** in the shop; the title screen also links to it. The claim joins a queue and is paid on Robinhood testnet. The shop checks every 5 seconds and links to the payment once it's made. Each network can make three new claims per UTC day, and the bank accepts 150 new claims per UTC day from everyone together. If those are gone, try again the next day.
 - **The shop link:** it also links to $KNOCK's page on vibe/vibe, a testnet token launchpad.
+
+## Porch Party (co-op)
+
+Two players, two Chogs, one porch: you defend a story level together.
+
+- **Bring a Chog you hold.** Each player needs a Chog that their chosen wallet owns. No Chog? Tap **Try as a holder** first; the demo Chog counts.
+- **Start a room:** pick any of the six story levels and choose your Chog, then tap **Porch Party · play together**. Tap **Copy invite** and send the link. The level is yours to pick; the Daily and Endless have no co-op.
+- **Join a room:** open the invite link, choose your own Chog (or tap **Try as a holder**), then tap **Join Porch Party →**. Use your own device, another browser or a private window: tabs in the same browser share one guest wallet.
+- **When it starts:** as soon as both Chogs have loaded. There's no tutorial. A room that hasn't started closes after 10 minutes.
+- **Shared:** candy, towers, traps, spells, supplies and the 20 jars. Either player can build on any pad and upgrade or sell any tower, from the same candy.
+- **Yours:** your hero, its special and ultimate, your talents and your emotes. Your partner's Chog, hero level and health show at the top right.
+- **Perks:** each player owns their Chog, so each Chog gets Home advantage. If either player holds $CHOG, the team gets the $CHOG candy perks once.
+- **Talents:** when either hero levels up, combat pauses for both of you, and the other player sees "Partner is choosing…". After about 10 seconds the left card is picked.
+- **No pause and one speed:** the game runs at 1× and keeps going when you switch tabs. The pause button reads **LEAVE** and asks before you go, while the game keeps running. Leaving ends the room for both of you. The shop stays closed until the room ends.
+- **If the connection drops or the two games disagree,** play stops with "Partner disconnected" or "Out of sync: restart together". There's no reconnect, so start a new room.
+- **The result** shows both Chogs and a team score. A Porch Party doesn't change your saved stars or best scores, has no share card, and isn't counted on the stats page.
 
 ## Daily and Endless
 
@@ -333,10 +349,10 @@ The shop sells cosmetics and convenience for $KNOCK, never raw power. $KNOCK is 
 ## FAQ
 
 **Do I need a Chog, a wallet or crypto to play?**
-No. Pick any Chog by number or tap **Random**. Wallets only matter for Home advantage, the $CHOG perk and the shop.
+No. Pick any Chog by number or tap **Random**. Wallets only matter for Home advantage, the $CHOG perk, the shop and Porch Party, where each player brings a Chog they hold. The holder demo's guest wallet covers that too.
 
 **Can I play a Chog I don't own?**
-Yes. Every Chog is playable as a guest hero with its real traits. Owning it adds Home advantage.
+Yes, except in Porch Party. Every Chog is playable as a guest hero with its real traits, and owning it adds Home advantage. In a Porch Party, each player brings a Chog they hold, or a holder-demo one.
 
 **Why can't Random give me some Chogs?**
 312 Chogs have crude text on their cap or shirt. Random, the default hero and the holder demo skip them. You can still play them by typing their number.
@@ -366,4 +382,4 @@ They fly. Shooting towers, your hero, spells and the Bat Roost hit them.
 Its kind, its real Chog number and its trait modifiers.
 
 **Is there co-op?**
-Not yet. Two-player co-op is being built.
+Yes: Porch Party. Two players, each with a Chog they hold (or a holder-demo Chog), defend one story level together. See [Porch Party](#porch-party-co-op).

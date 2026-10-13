@@ -16,11 +16,21 @@ Knock: Candy Siege is a Halloween tower-defence game that runs in a phone or des
 4. Tap **Let's make mischief →**. Your first Rosie Row is a 7-step tutorial; **SKIP** is on the tutorial card.
 5. At the start of the level, the **CHOG #… · TRAITS ACTIVE** card lists the perks that come from your Chog's real traits.
 
+### Co-op quick test: Porch Party
+
+Each player must bring a Chog their wallet owns, so this test uses the holder demo twice.
+
+1. **Browser A:** do steps 1 and 2, then tap **Try as a holder**. When your Chog appears, tap **Porch Party · play together**, then **Copy invite**.
+2. **Browser B:** use a second browser, a private window or a phone, so it gets its own guest wallet. Open the invite link, tap **Try as a holder**, then **Join Porch Party →**.
+3. The level starts once both Chogs have loaded, with no tutorial. Each player moves their own hero and uses its own special, ultimate and talents. Candy, towers, traps, spells and jars are shared. Your partner's Chog, level and health show at the top right.
+
+The two holder demos use two of the sandbox's five tries per network per hour. A room that hasn't started closes after 10 minutes.
+
 ## Why the NFT is essential
 
 Take the Chogs out and nothing is left to play: the collection's trait data is the game's rule table. It decides the heroes, the enemies, their modifiers and the bosses.
 
-- **All 1,969 Chogs are playable.** Type any token number from 1 to 1,969. **Random**, the default hero and the holder demo skip the 312 Chogs whose cap or shirt carries crude text. Those 312 are still playable by number.
+- **All 1,969 Chogs are playable.** Type any token number from 1 to 1,969. **Random**, the default hero and the holder demo skip the 312 Chogs whose cap or shirt carries crude text. Those 312 are still playable by number. Enemies still come from all 1,969, but they wear costumes instead of their shirts, an enemy with one of the eight crude caps wears it without the print, and the new-enemy card skips crude-text portraits.
 - **Each Chog's real traits become its kit.** Every trait value maps to something, and all 1,969 Chogs get a full kit:
 
   | Trait | Becomes | Families |
@@ -40,6 +50,7 @@ Take the Chogs out and nothing is left to play: the collection's trait data is t
 - **The 10 legendary 1:1s are bosses,** each with its own move. The Great Pumpkin is the final boss.
 - **Home advantage.** Connect the wallet that holds a Chog. The game checks `ownerOf` on Monad, and your own Chog starts one hero level higher and wears a gold frame.
 - **The $CHOG holder perk.** If the connected wallet holds any $CHOG on Monad, you start each level with 25 more candy and earn 10% more candy from kills. The game only reads the balance; nothing is spent.
+- **Porch Party co-op needs a Chog you hold.** Before a player opens or joins a room, the game checks `ownerOf` for their Chog; a holder-demo Chog counts. Both Chogs then fight on one porch, each with its own kit and Home advantage.
 - **"Try as a holder" for judges.** One tap in the hero picker gives the browser's guest wallet a random real Chog, 1,000 $CHOG and 1 MON on a fork of Monad mainnet. You then play with Home advantage and the $CHOG perk. The screen says "Sandbox: a demo copy of Monad, nothing is real", and the sandbox resets every night at 00:05 UTC.
 
 ## Features
@@ -47,29 +58,40 @@ Take the Chogs out and nothing is left to play: the collection's trait data is t
 - **Six story levels,** all open from the start: Rosie Row, Lemon Lane, Mint Mews, Mon Manor, Radioactive Ridge and Rare Row. Each map has its own twist (two roads, a canal bridge, portals, toxic pools, darkness) and a prop you tap, such as a street lamp to knock over or a manor bell to ring.
 - **Endless mode** on Town Square: a new road every 10 waves, and a boss every 10th wave.
 - **A daily challenge** seeded by the UTC date. It picks one of the six maps and a night: Quiet night, Blood Moon (faster enemies), Candy Rain (double candy) or Costume Night (enemy types shuffled).
-- **Towers:** four families (Egg Stand, TP Launcher, Haunted Lantern, Pumpkin Patch), each with three levels, two specialisations and two more ranks. Four special towers unlock with stars. A fifth, the Bat Roost, is listed in the shop but not on sale yet.
+- **Porch Party co-op:** two players, two Chogs, one porch, on any of the six story levels. Candy, towers, traps, spells and jars are shared, and each player controls their own hero, special, ultimate, talents and emotes. One player opens a room from the hero picker and sends the invite link. The result shows both Chogs and a team score. See the [player guide](docs/HOLDERS.md#porch-party-co-op).
+- **Towers:** four families (Egg Stand, TP Launcher, Haunted Lantern, Pumpkin Patch), each with three levels, two specialisations and two more ranks. Four special towers unlock with stars. A fifth, the Bat Roost, costs 400 $KNOCK in the shop; it goes on sale with the next release.
 - **Enemies:** eight types plus the mummy's two minis. Ghosts are hidden, pumpkins resist eggs, bats fly, goblins steal three jars, witches heal, mummies split and skeletons come in fives. In Witching Hour waves, ghosts and bats pour in from the screen edges.
 - **Your hero:** move it, let it auto-attack, and use its special and ultimate. It levels up during a level, and you pick talents. Emotes: 8 for everyone plus your Chog's signature.
 - **Also:** two spells (Candy Rain, Boo!), three traps, five supplies, 1×/2×/3× speed, and a field guide.
 - **Teaching:** a tutorial with a pointing glove, a card for each new enemy, one-time rule callouts ("ARMOURED", "FLYING"), a preview of the next wave's path, and a porch alarm when a jar is stolen.
 - **Feedback:** hit flashes, BLOCK!, CRIT!, MISS and TINK pops, candy flying to the counter, a letterboxed boss entrance, and a star-slam result screen.
 - **Sound:** menu, level and boss music, and a sound for every event. Audio starts on the first tap.
-- **Sharing:** a 1080×1350 share card with your Chog, stars and score, and a public stats page with a community goal of 100,000 monsters stopped.
-- **The $KNOCK shop** (testnet): dances, crew costumes, golden towers, a crypto emote pack and +50 starting candy. Cosmetics and convenience only.
+- **Sharing:** a 1080×1350 share card with your Chog, stars, score and one accolade: **BOSS SLAYER** and the boss's name after a win in which a boss fell, **PERFECT DEFENSE** for a win with all 20 jars, or else the number of Chogs stopped. The public stats page has a community goal of 100,000 monsters stopped, and its **Share image** button draws a 1200×630 card of the goal and the top three Chogs.
+- **The Candy Vault,** the $KNOCK shop (testnet): dances, crew costumes, golden towers, a crypto emote pack and +50 starting candy. Cosmetics and convenience only. If the starter grant is paid while the vault is open, candies fountain into your balance.
+- **Menus:** the title centres tonight's Chog under the logo, with one big **Hold the porch →**. Sticker buttons press down on a lip. Level cards are night tablets with a map preview and a green PLAY, and the hero picker previews dances as a row of chips.
+- **Readable roads:** every route has a dark curb, and build pads are carved stones whose purple glyph pulses while a build ring is open.
 - **Settings:** music and effects volume, Lite mode, screen shake, vibration (Android), full screen on Play, golden towers and a stats opt-out. Reduced-motion preferences are respected.
 
 ## How it's built
 
-- **Stack:** Vite, TypeScript, **React 19** for menus, the shop and overlays, **Phaser 3.90** for the game world and the in-game HUD, and viem for chain reads and testnet purchases. Gameplay runs entirely in the browser, with no game server. Scores and progress are saved in the browser.
-- **A deterministic simulation.** The game advances in fixed 1/45-second steps, and one seeded random stream drives all gameplay. Visual randomness uses a separate stream, so effects never change the outcome. Every gameplay input goes through one `command()` entry point. A 1,800-tick seeded replay stayed byte-identical before and after each of today's combat, teaching, polish and taste passes. This is the base for the planned two-player co-op.
+- **Stack:** Vite, TypeScript, **React 19** for menus, the shop and overlays, **Phaser 3.90** for the game world and the in-game HUD, and viem for chain reads and testnet purchases. Gameplay runs in the browser, and no server runs the game. In co-op, a relay only orders the two players' inputs and compares state hashes. Scores and progress are saved in the browser.
+- **A deterministic simulation.** The game advances in fixed 1/45-second steps, and one seeded random stream drives all gameplay. Visual randomness uses a separate stream, so effects never change the outcome. Every gameplay input goes through one `command()` entry point. A 1,800-tick seeded replay stayed byte-identical across the combat, teaching, polish, taste and world passes and the co-op integration. Porch Party is built on this.
+- **Lockstep co-op.** In Porch Party, both browsers run the whole simulation from one shared seed, and only inputs and state hashes cross the network.
+  - Each command is scheduled for a future tick and sent through a Cloudflare Durable Object, one per room. On every tick, both browsers apply player 0's commands, then player 1's. There is no prediction, rollback or reconnect: if an input is late, both games wait.
+  - The input delay is fixed for the whole match. In the lobby, eight round-trip probes set it to `ceil((2 × max RTT + 30 ms) × 45 / 1000)` ticks, between 6 and 45 (133 ms to 1 s), and both players use the larger value.
+  - A clock in a Web Worker drives the 45 Hz steps apart from rendering, so the shared game keeps time while a tab is hidden.
+  - Every 90 ticks (2 seconds), each browser hashes the gameplay state and the relay compares the two. A mismatch stops the match with "Out of sync: restart together", and the result appears only after the final hashes agree.
+  - A talent card pauses combat for both players while network ticks continue, and the card picks the left talent after 450 ticks (10 seconds).
+  - **Measured** on one laptop with two browsers and 50 ms added each way: a full Rosie Row win took 213 s of wall time for 206 s of game time, with 103 matching checkpoints. A 40-second pacing run lost under 0.5% of its time to waiting. The relay is in `coop/`; its README covers the checks.
 - **Content is data.** Towers, enemies, waves, traps and spells are typed config in `app/src/siege/data/`. Maps are JSON exported from the art pipeline. `kits.json`, `traits.json` and `legends.json` map the collection to the rules.
 - **Art:**
   - The hero is a puppet rig: a costume body with the real Chog portrait as its head, so one rig animates all 1,969 faces.
   - Enemies are frame-animated costumes with the portrait in a face window.
-  - Python scripts build the texture atlases offline from SVG sources. They live in a separate `art/` folder, not in this repository; the built atlases are here.
+  - Python scripts in `art/` build the texture atlases offline from SVG sources (see [art/README.md](art/README.md)). The built atlases are in `app/public/siege/atlas/`.
 - **Performance:** pooled sprites and capped effects. A quality governor drops ambience, then half the effects, then render resolution when the frame rate falls below 55 fps. It steps back up after 10 seconds above 58 fps. The Lite mode setting turns off ambience and halves the effects.
   - **Measured:** about 60 fps (56.5 to 60.0 fps across today's runs, 95th-percentile frame 16.8 ms) with 60 enemies and 12 towers firing. That was in Chrome on an Intel Iris Xe laptop GPU, at a phone-sized 844×390 viewport and DPR 3.
-  - **Not yet measured:** a physical phone.
+  - **Co-op, measured:** with 100 ms of added round trip, the foreground display held 60 fps (95th-percentile frame 16.7 ms) with 60 enemies and 11 towers firing, while the partner's game kept simulating, networking and hashing. Two displays sharing one laptop GPU managed 49 fps each.
+  - **Not yet measured:** a physical phone, and co-op between two separate devices.
 
 ## On-chain pieces
 
@@ -80,9 +102,11 @@ The shop and $KNOCK are on **Robinhood Chain Testnet**. $KNOCK is a testnet toke
 | Chog Genesis (ERC-721) | Monad mainnet (143) | `0xc96d31F8626c6D03Fae5dCD3d61e3FB9F4a73763` | Reads `ownerOf` for Home advantage and **My Chog**. Traits and portraits come from a snapshot of the collection. |
 | $CHOG (ERC-20) | Monad mainnet (143) | `0x350035555E10d9AfAF1566AaebfCeD5BA6C27777` | Reads `balanceOf` for the holder perk. |
 | $KNOCK, "Knock candy" (ERC-20 with EIP-2612 `permit`) | Robinhood Chain Testnet (46630) | `0x2Ae41145A6acB58d4457c49df27ab6BFEF618492` | Spent in the shop. The shop links to its page on vibe/vibe, a testnet token launchpad. |
-| KnockShop | Robinhood Chain Testnet (46630) | `0xc52dfedAf158031fd7b5fAe0A2F1CFB6c1aC89b6` | Sells items for $KNOCK. Ownership is on-chain (`owned(address, item)`), so it follows the wallet. |
+| KnockShop | Robinhood Chain Testnet (46630) | `0xdfE49a06DEB6040Ecd6855AE07411cA2B336688C` | Sells items for $KNOCK. Ownership is on-chain (`owned(address, item)`), so it follows the wallet. |
 
 - **Buying:** one `permit` signature for the exact price, then one `buyFor` transaction. If the shop already has enough allowance, only the transaction is needed.
+- **Only the buyer can buy:** `buyFor` only accepts a purchase sent by the buyer, so nobody else can spend a buyer's permit or leftover allowance.
+- **The first shop:** this shop replaced the first one, `0xc52dfedAf158031fd7b5fAe0A2F1CFB6c1aC89b6`, which lacked that check. Items bought there still count, because the app reads ownership from both. The app moves to the new shop with the next release; until then the live app still buys from the first one.
 - **The Candy Bank starter grant:** 300 $KNOCK and 0.0005 test ETH for gas, once per wallet. The claim is queued by a Cloudflare Worker, and an outbound relay pays it on Robinhood testnet.
 - **Wallets:** a guest wallet (a key made and kept in the browser, for testnet only) can claim the grant and buy items without an extension. A browser wallet works too.
 
@@ -90,13 +114,14 @@ The shop and $KNOCK are on **Robinhood Chain Testnet**. $KNOCK is a testnet toke
 
 | Service | Where | What it does |
 |---|---|---|
-| Candy Bank | `worker/`, a Cloudflare Worker with D1, https://candy-bank.timidan-knock.workers.dev | Queues starter-grant claims: one per address ever, and three new claims per IP per UTC day. |
+| Candy Bank | `worker/`, a Cloudflare Worker with D1, https://candy-bank.timidan-knock.workers.dev | Queues starter-grant claims: one per address ever, three new claims per IP per UTC day, and 150 new claims per UTC day across everyone. A rate limiter turns floods away before they reach the database, and IP hashes use a salt that changes daily. |
 | Grant relay | `relay/`, a Node service with no inbound ports | Polls the Candy Bank every 10 seconds and pays queued claims: 300 KNOCK, then 0.0005 ETH. It pays at most 60 grants an hour, pauses when funds run low, and saves each signed transaction before sending it. |
-| Holder sandbox | `sandbox/`, an anvil fork of Monad mainnet behind a JSON-RPC filter, https://sandbox-rpc.timidan.xyz | `POST /holder` gives the caller a random Chog, 1,000 CHOG and 1 MON on the fork. One grant per address per fork and five attempts per IP per hour. It resets nightly at 00:05 UTC. |
-| Live stats | `stats/`, a Cloudflare Worker with D1, https://siege-stats.timidan-knock.workers.dev | Counts anonymous play events for `/stats`. |
-| Hosting | Cloudflare Pages | Serves https://knock.timidan.xyz. |
+| Holder sandbox | `sandbox/`, an anvil fork of Monad mainnet behind a JSON-RPC filter, https://sandbox-rpc.timidan.xyz | `POST /holder` gives the caller a random Chog, 1,000 CHOG and 1 MON on the fork. One grant per address per fork and five attempts per IP per hour. It resets nightly at 00:05 UTC. Its public JSON-RPC is read-only and rate-limited per call, with a gas cap on calls. |
+| Live stats | `stats/`, a Cloudflare Worker with D1, https://siege-stats.timidan-knock.workers.dev | Counts anonymous play events for `/stats`. A rate limiter turns floods away before they reach the database, and `/stats` is cached for 30 seconds. |
+| Co-op relay | `coop/`, a Cloudflare Worker with Durable Objects, https://knock-coop.timidan-knock.workers.dev | One Durable Object per Porch Party room: two player slots, inputs relayed in a fixed order, and state-hash checks. It knows room slots, not wallets, and runs no game logic. A room closes 10 minutes after it opens if the game hasn't started, and after an hour at most. Each IP can open about 5 rooms and make about 30 join attempts a minute; these limits are approximate and apply per Cloudflare location. |
+| Hosting | Cloudflare Pages | Serves https://knock.timidan.xyz, with a Content-Security-Policy that lists every service the app calls and blocks framing. |
 
-**What the stats collect:** each browser gets a random id. No wallet or IP address is stored; a salted IP hash is kept for one day to stop spam. Players can opt out in Settings, and automated browsers never send.
+**What the stats collect:** each browser gets a random id. No wallet or IP address is stored; a salted IP hash is kept for one day to stop spam. Players can opt out in Settings, and automated browsers never send. Co-op runs aren't counted.
 
 ## Running locally
 
@@ -114,7 +139,8 @@ npm run dev
 
 - **Dev mode:** `npm run dev` doesn't read `app/.env.production`, so the shop is preview-only, the starter grant is hidden and stats are off.
 - **Builds:** `npm run build` reads `app/.env.production`, which sets `VITE_KNOCK_SHOP`, `VITE_CANDY_BANK_URL` and `VITE_STATS_URL`. `npm run preview` serves the build.
-- **Optional overrides:** `VITE_RPC_URL` (the Monad RPC, default `https://rpc.monad.xyz`), `VITE_SHOP_RPC_URL`, `VITE_HOLDER_RPC_URL` and `VITE_HOLDER_URL`.
+- **Optional overrides:** `VITE_RPC_URL` (the Monad RPC, default `https://rpc.monad.xyz`), `VITE_SHOP_RPC_URL`, `VITE_HOLDER_RPC_URL`, `VITE_HOLDER_URL` and `VITE_COOP_RELAY` (default: the deployed co-op relay).
+- **Co-op:** the relay, its deploy and the two-browser checks are in [coop/README.md](coop/README.md).
 - **Debug view:** add `?siegeStats` to the URL to see fps, draw calls and texture memory in the game.
 - **Checks:** `npx tsc -b`, and `node --experimental-strip-types scripts/rig-check.mts`, which checks all 1,969 kits, the rig poses, the seeded world, the maps and the bosses.
 - **Contracts:** the Solidity libraries aren't in git. In `contracts/`, run `forge install --no-git foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts`, then `forge test`. The deployed build used forge-std 1.17.0 and OpenZeppelin Contracts 5.7.0.
@@ -124,10 +150,10 @@ npm run dev
 | Folder | Contents |
 |---|---|
 | `app/` | The game. `app/src/siege/` is the game itself; `app/src/stats/` is the stats page. |
-| `contracts/` | Foundry. `KnockShop.sol` is deployed on Robinhood testnet. `Knock.sol` belongs to the dropped street game and was never deployed to mainnet. |
-| `worker/`, `relay/`, `stats/`, `sandbox/` | The services above. |
+| `contracts/` | Foundry. `KnockShop.sol` is the buyer-only shop deployed on Robinhood testnet. `Knock.sol` belongs to the dropped street game and was never deployed to mainnet. |
+| `worker/`, `relay/`, `stats/`, `sandbox/`, `coop/` | The services above. `coop/` also holds the two-browser co-op checks. |
+| `art/` | The SVG art sources and the Python scripts that build the atlases. See [art/README.md](art/README.md). |
 | `archive/street/` | The original Knock street game, which was dropped on 13 Oct. |
-| not included | The SVG art sources and the Python scripts that build the atlases. They are in a separate `art/` folder. |
 | `docs/` | The [player guide](docs/HOLDERS.md), a [phone test checklist](docs/PHONE-TEST.md), and the 12 Oct design doc ([SIEGE.md](docs/SIEGE.md)). |
 
 ## Credits
