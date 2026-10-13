@@ -13,6 +13,7 @@ import type { Save, Settings } from './data/save'
 import { NO_STREET, readHolderBonuses, readHomeAdvantage, holderLines } from './street'
 import type { StreetRead, StreetBonuses } from './street'
 import { ENEMIES, seededRandom } from './data/config'
+import { CRUDE_TEXT_CHOGS } from './data/crudeChogs'
 import type { EnemyKind } from './data/config'
 import { LEVELS, ENDLESS_LEVEL, mapFile } from './data/level1'
 import { dailyInfo, DAILY_LEVEL, NIGHTS } from './data/endless'
@@ -38,6 +39,8 @@ type Run = { id: number; home: boolean; serial: number; level: number; mode: Mod
 type Menu = 'title' | 'levels' | 'hero' | 'pause' | 'settings' | 'book' | 'result' | 'intro' | 'shop' | 'street' | null
 if (import.meta.env.DEV) selfCheck()
 track('session') // once per page load: this module is evaluated once
+// Random picks never land on a Chog with crude cap or shirt text; those stay playable by number.
+const randomHero = (random: () => number) => { let id: number; do id = Math.floor(random() * 1969) + 1; while (CRUDE_TEXT_CHOGS.has(id)); return String(id) }
 function Modal({ children, label, onEscape, className = '' }: { children: ReactNode; label: string; onEscape: () => void; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); dialog?.querySelector<HTMLElement>('[data-initial-focus]')?.focus(); return () => dialog?.close() }, [])
@@ -127,7 +130,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const [returnMenu, setReturnMenu] = useState<Menu>('title')
   const [level, setLevel] = useState(1)
   const [menuRandom] = useState(() => seededRandom(crypto.getRandomValues(new Uint32Array(1))[0]))
-  const [hero, setHero] = useState(() => String(Math.floor(menuRandom() * 1969) + 1))
+  const [hero, setHero] = useState(() => randomHero(menuRandom))
   const [run, setRun] = useState<Run | null>(null)
   const [streetRead, setStreetRead] = useState<StreetRead | null>(null)
   const pendingRun = useRef<Run | null>(null), startToken = useRef(0)
@@ -384,7 +387,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
           </div>
           {/* The start button sits right under the Chog choice so a landscape phone never scrolls to play. */}
           <div className="siege-hero-side">
-            <div className="row"><PlaqueInput label="Chog #" value={hero} onChange={setHero} min={1} max={1969} /><Sticker onClick={() => setHero(String(Math.floor(menuRandom() * 1969) + 1))}>Random</Sticker>
+            <div className="row"><PlaqueInput label="Chog #" value={hero} onChange={setHero} min={1} max={1969} /><Sticker onClick={() => setHero(randomHero(menuRandom))}>Random</Sticker>
               {activeWallet.account && <Sticker tone="gold" disabled={!myChogs.length} onClick={() => { const index = myChogs.indexOf(Number(hero)); setHero(String(myChogs[(index + 1) % myChogs.length])) }}>My Chog</Sticker>}
               <Sticker tone="gold" disabled={tryingHolder || starting || shop.busy} onClick={() => void tryHolder()}>{tryingHolder ? 'Preparing holder demo…' : 'Try as a holder'}</Sticker>{hasChog && <strong className="siege-shop-note">$CHOG holder</strong>}
             </div>
