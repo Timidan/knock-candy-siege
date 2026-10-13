@@ -1,38 +1,42 @@
 #!/usr/bin/env python3
 """A small JSON-RPC filter in front of the sandbox's anvil fork.
 
-Judges and visitors play as any Chog on a public copy of Monad, so the fork runs with --auto-impersonate.
-This filter is what makes that safe to expose: it allows only the methods the app needs, caps request size
-and rate, and adds the CORS headers the browser requires. Standard library only; the sandbox is reset
-nightly, so simplicity beats throughput.
+The fork runs with --auto-impersonate so the /holder helper below can hand a guest a real Chog and $CHOG.
+This filter is what makes that safe to expose: public RPC is read-only (no sends of any kind, no anvil_/evm_
+admin calls), every call in a batch pays rate, upstream work, simulation gas and log ranges are bounded, and
+it adds the CORS headers the browser requires. /holder talks to the fork directly. Standard library only; the
+sandbox is reset nightly, so simplicity beats throughput.
 
   python3 rpc-filter.py --listen 0.0.0.0:8545 --upstream http://127.0.0.1:8546
 """
-import argparse, hashlib, json, os, re, secrets, ssl, threading, time, urllib.request
+import argparse, hashlib, hmac, json, os, re, secrets, ssl, threading, time, urllib.request
 from pathlib import Path
 from urllib.parse import urlsplit
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ALLOWED = {
-    # reads
+    # reads only; /holder below is the sandbox's only writer, and it talks to anvil directly
     'eth_chainId', 'eth_blockNumber', 'eth_getBlockByNumber', 'eth_getBlockByHash', 'eth_call', 'eth_estimateGas',
     'eth_gasPrice', 'eth_maxPriorityFeePerGas', 'eth_feeHistory', 'eth_getBalance', 'eth_getCode', 'eth_getLogs',
     'eth_getTransactionCount', 'eth_getTransactionReceipt', 'eth_getTransactionByHash', 'eth_getStorageAt',
     'net_version', 'web3_clientVersion',
-    # writes the app makes on a fork: impersonated sends, raw sends from play keys, gas money, Next night
-    'eth_sendTransaction', 'eth_sendRawTransaction', 'anvil_setBalance', 'evm_increaseTime', 'evm_mine',
 }
 MAX_BODY = 200_000            # bytes; a 16 KB multicall is the app's largest request
 MAX_BATCH = 50
-RATE = 30                     # requests per second per IP, with a burst of 60
+RATE = 30                     # calls per second per IP (each call in a batch counts), with a burst of 60
 BURST = 60
-MAX_SET_BALANCE = 10 ** 22    # 10,000 MON of play money per call is plenty
-MAX_TIME_JUMP = 2 * 86400     # Next night jumps one day; allow two
-MAX_MINE = 10
+MAX_LOG_SPAN = 2000           # blocks per eth_getLogs
+MAX_CALL_GAS = 5_000_000      # eth_call/eth_estimateGas; the app's reads use under 30k
+MAX_UPSTREAM = 8              # public RPC requests in flight to anvil at once
+UPSTREAM_WAIT = 5             # seconds a request may queue for one of those slots
+BODY_DEADLINE = 10            # seconds to receive a whole request body
+# Keys the stored IP hashes. Per process: reset.sh recreates the container nightly, so it rotates daily.
+IP_SALT = secrets.token_bytes(32)
 
 buckets = {}
 lock = threading.Lock()
 holder_lock = threading.Lock()
+upstream_slots = threading.BoundedSemaphore(MAX_UPSTREAM)
 CHOG_NFT = '0xc96d31F8626c6D03Fae5dCD3d61e3FB9F4a73763'
 CHOG_TOKEN = '0x350035555E10d9AfAF1566AaebfCeD5BA6C27777'
 # Large liquidity holder, impersonated ONLY on the local anvil fork.
@@ -75,7 +79,7 @@ def holder_grant(upstream, state_path, address, ip):
                 return 200, {'chogId': previous['chogId']}
             return 409, {'error': 'Grant already attempted; available again after nightly reset'}
         now = time.time()
-        ip_hash = hashlib.sha256(ip.encode()).hexdigest()
+        ip_hash = hmac.new(IP_SALT, ip.encode(), hashlib.sha256).hexdigest()
         state['ips'] = {key: [t for t in times if t > now - 3600] for key, times in state['ips'].items() if any(t > now - 3600 for t in times)}
         if len(state['ips'].get(ip_hash, [])) >= 5:
             return 429, {'error': 'Holder limit reached (5 per hour per IP)'}
@@ -150,52 +154,55 @@ def holder_grant(upstream, state_path, address, ip):
             return 502, {'error': 'Fork grant failed; available again after nightly reset'}
 
 
-def allowed_by_rate(ip):
+def allowed_by_rate(ip, cost=1):
     now = time.monotonic()
     with lock:
         tokens, last = buckets.get(ip, (BURST, now))
         tokens = min(BURST, tokens + (now - last) * RATE)
-        if tokens < 1:
+        if tokens < cost:
             buckets[ip] = (tokens, now)
             return False
-        buckets[ip] = (tokens - 1, now)
+        buckets[ip] = (tokens - cost, now)
         if len(buckets) > 50_000:
             buckets.clear()
         return True
 
 
+def quantity(value):
+    """A JSON-RPC hex quantity as an int; anything else raises ValueError."""
+    if isinstance(value, str) and value.startswith('0x'):
+        return int(value, 16)
+    raise ValueError(value)
+
+
+def log_block(tag):
+    """An eth_getLogs bound as a number, or None for the head (anvil's safe/finalized trail it by at most 64)."""
+    if tag in (None, 'latest', 'pending', 'safe', 'finalized'):
+        return None
+    return 0 if tag == 'earliest' else quantity(tag)
+
+
 def check(call):
-    """Returns an error message, or None when the call may pass."""
+    """Returns an error message, or None when the call may pass. Caps simulation gas in place."""
     if not isinstance(call, dict):
         return 'bad request'
     method = call.get('method')
     params = call.get('params') or []
     if method not in ALLOWED:
         return f'method not allowed in the sandbox: {method}'
-    if method == 'anvil_setBalance':
-        try:
-            if int(str(params[1]), 0) > MAX_SET_BALANCE:
-                return 'too much play money'
-        except (IndexError, ValueError, TypeError):
-            return 'bad params'
-    if method == 'evm_increaseTime':
-        try:
-            if int(str(params[0]), 0) > MAX_TIME_JUMP:
-                return 'time jump too large'
-        except (IndexError, ValueError, TypeError):
-            return 'bad params'
-    if method == 'evm_mine':
-        blocks = params[0].get('blocks', 1) if params and isinstance(params[0], dict) else 1
-        if int(blocks) > MAX_MINE:
-            return 'too many blocks'
-    if method == 'eth_getLogs':
-        try:
-            span = params[0]
-            start, end = span.get('fromBlock'), span.get('toBlock')
-            if isinstance(start, str) and isinstance(end, str) and start.startswith('0x') and end.startswith('0x') and int(end, 16) - int(start, 16) > 2000:
+    try:
+        if method in ('eth_call', 'eth_estimateGas'):
+            tx, gas = params[0], params[0].get('gas')
+            tx['gas'] = hex(MAX_CALL_GAS if gas is None else min(quantity(gas), MAX_CALL_GAS))
+        if method == 'eth_getLogs':
+            start, end = log_block(params[0].get('fromBlock')), log_block(params[0].get('toBlock'))
+            # A head tag on one side only (earliest..latest, N..latest) has no span we can check here.
+            if (start is None) != (end is None):
+                return 'log range needs hex fromBlock and toBlock'
+            if start is not None and end - start > MAX_LOG_SPAN:
                 return 'log range too large'
-        except (IndexError, AttributeError):
-            return 'bad params'
+    except (IndexError, KeyError, AttributeError, ValueError, TypeError):
+        return 'bad params'
     return None
 
 
@@ -207,6 +214,25 @@ class Handler(BaseHTTPRequestHandler):
     upstream = 'http://127.0.0.1:8546'
     holder_state = 'holder-state/claims.json'
     protocol_version = 'HTTP/1.1'
+    # Per socket read/write, so a stalled or idle connection frees its thread. Longer than Caddy's 2-minute
+    # upstream keep-alive, so Caddy drops idle pooled connections first and never reuses one we just closed.
+    timeout = 150
+
+    def read_body(self, length):
+        """Reads the body within BODY_DEADLINE in total, not per recv, so a trickling sender can't hold the thread."""
+        deadline = time.monotonic() + BODY_DEADLINE
+        body = bytearray()
+        while len(body) < length:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                raise TimeoutError('body deadline')
+            self.connection.settimeout(left)
+            chunk = self.rfile.read1(length - len(body))
+            if not chunk:
+                raise ConnectionError('client closed')
+            body += chunk
+        self.connection.settimeout(self.timeout)
+        return bytes(body)
 
     def cors(self):
         origin = self.headers.get('Origin', '')
@@ -259,7 +285,12 @@ class Handler(BaseHTTPRequestHandler):
         if length > MAX_BODY:
             return self.reply(413, error({}, 'request too large'))
         try:
-            payload = json.loads(self.rfile.read(length))
+            body = self.read_body(length)
+        except OSError:  # deadline passed or the client left: drop the connection, nothing to answer
+            self.close_connection = True
+            return
+        try:
+            payload = json.loads(body)
         except ValueError:
             return self.reply(400, error({}, 'bad json'))
         if self.path == '/holder':
@@ -274,10 +305,15 @@ class Handler(BaseHTTPRequestHandler):
         calls = payload if isinstance(payload, list) else [payload]
         if len(calls) > MAX_BATCH:
             return self.reply(413, error({}, 'batch too large'))
+        # Every call pays a token; the first was paid before the body was read.
+        if len(calls) > 1 and not allowed_by_rate(ip, len(calls) - 1):
+            return self.reply(429, error({}, 'slow down'))
         verdicts = [check(call) for call in calls]
         passing = [call for call, verdict in zip(calls, verdicts) if verdict is None]
         answers = {}
         if passing:
+            if not upstream_slots.acquire(timeout=UPSTREAM_WAIT):
+                return self.reply(503, error({}, 'sandbox busy, try again'))
             req = urllib.request.Request(self.upstream, data=json.dumps(passing).encode(), headers={'Content-Type': 'application/json'})
             try:
                 with urllib.request.urlopen(req, timeout=60) as response:
@@ -285,6 +321,8 @@ class Handler(BaseHTTPRequestHandler):
                         answers[json.dumps(answer.get('id'))] = answer
             except Exception as exc:  # anvil down or mid-reset
                 return self.reply(502, error({}, f'sandbox chain unavailable: {type(exc).__name__}'))
+            finally:
+                upstream_slots.release()
         results = [answers.get(json.dumps(call.get('id')), error(call, 'no answer')) if verdict is None else error(call, verdict)
                    for call, verdict in zip(calls, verdicts)]
         self.reply(200, results if isinstance(payload, list) else results[0])

@@ -40,7 +40,7 @@ Take the Chogs out and nothing is left to play: the collection's trait data is t
 - **The 10 legendary 1:1s are bosses,** each with its own move. The Great Pumpkin is the final boss.
 - **Home advantage.** Connect the wallet that holds a Chog. The game checks `ownerOf` on Monad, and your own Chog starts one hero level higher and wears a gold frame.
 - **The $CHOG holder perk.** If the connected wallet holds any $CHOG on Monad, you start each level with 25 more candy and earn 10% more candy from kills. The game only reads the balance; nothing is spent.
-- **"Try as a holder" for judges.** One tap gives the browser's guest wallet a random real Chog, 1,000 $CHOG and 1 MON on a fork of Monad mainnet. You then play with Home advantage and the $CHOG perk. The screen says "Sandbox: a demo copy of Monad, nothing is real", and the sandbox resets every night at 00:05 UTC.
+- **"Try as a holder" for judges.** One tap in the hero picker gives the browser's guest wallet a random real Chog, 1,000 $CHOG and 1 MON on a fork of Monad mainnet. You then play with Home advantage and the $CHOG perk. The screen says "Sandbox: a demo copy of Monad, nothing is real", and the sandbox resets every night at 00:05 UTC.
 
 ## Features
 

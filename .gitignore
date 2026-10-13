@@ -13,3 +13,4 @@ app/.env.local
 .fork.pid
 .env.relay
 .env.bank
+__pycache__/

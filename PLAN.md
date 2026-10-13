@@ -15,7 +15,7 @@ Chogathon 2026, Chog's NFT hackathon on Monad.
 - **Holders:**
   - Home advantage for the Chog you own;
   - the $CHOG holder perk;
-  - a sandbox "Try as a holder" so judges can play as one.
+  - a sandbox "Try as a holder" button in the hero picker, so judges can play as one.
 - **Testnet shop:** a $KNOCK shop on Robinhood testnet, with a one-time starter grant.
 
 | | |
