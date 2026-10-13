@@ -1,6 +1,7 @@
 // chogHead API stable
 import type Phaser from 'phaser'
 import type { TraitData } from './data/traits'
+import { loadImage, loadJson } from './assets'
 
 export type HeadRef = { key: string; frame: string }
 type Rect = { x: number; y: number; w: number; h: number }
@@ -13,7 +14,7 @@ const slug = (s = '') => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-
 // Crude cap names (Balls, Horny, TISM, Boob/BOOB, JEET/Jeet, RETARD); the slugs merge the case variants.
 const CRUDE_CAPS = new Set(['balls-cap', 'horny-cap', 'tism-cap', 'boob-cap', 'jeet-cap', 'retard-cap'])
 const makeCanvas = (width = 256, height = 320) => { const c = document.createElement('canvas'); c.width = width; c.height = height; return c }
-const json = async <T,>(url: string): Promise<T> => { const r = await fetch(url); if (!r.ok) throw new Error(`Could not load ${url}`); return r.json() }
+const json = <T,>(url: string): Promise<T> => loadJson(url)
 let sources: Promise<Sources> | undefined
 function loadSources() {
   return sources ??= (async () => {
@@ -22,7 +23,7 @@ function loadSources() {
       json<Sources['skins']>('/siege/skins.json'), json<Sources['legends']>('/siege/legends.json'),
       Promise.all(Object.keys(import.meta.glob('/public/siege/atlas/chog-*.json')).filter(p => !p.endsWith('chog-template.json')).sort().map(async path => {
         const data = await json<{ frames: Record<string, Frame>; meta: Meta }>(path.replace('/public', ''))
-        const image = await new Promise<HTMLImageElement>((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = () => reject(new Error(`Could not load ${data.meta.image}`)); img.src = `/siege/atlas/${data.meta.image}` })
+        const image = await loadImage(`/siege/atlas/${data.meta.image}`)
         if (image.width > 2048 || image.height > 2048) throw new Error(`Oversized Chog atlas: ${data.meta.image}`)
         return { data, image }
       })),

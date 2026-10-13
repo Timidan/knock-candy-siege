@@ -16,41 +16,96 @@ const inventory = import.meta.glob([
   '/public/siege/{traits,kits,skins,legends}.json', '/public/chogs.json', '/public/siege/atlas/hero-*@2x.json', '/public/siege/atlas/cards2.json', '/public/siege/atlas/{rig,sig}.json', '/public/siege/atlas/{kit,fx2,sig,units2,props}.{png,json}', '/public/siege/atlas/{units,fx,ui}.{png,json}', '/public/siege/atlas/faces.json',
   '/public/siege/levels/level{1,2,3}.{json,webp}', '/public/siege/atlas/dances.json',
   '/public/siege/audio/sfx/{throw,splat,coin,hit,hero-step,laser}-{1,2,3}.{ogg,mp3}', '/public/siege/audio/sfx/{armor,guard-attack}-{1,2}.{ogg,mp3}',
-  '/public/siege/audio/sfx/{build,upgrade,wave,jar-stolen,emote,victory,defeat,boo,candy-cascade,trap,ui-open}-1.{ogg,mp3}',
+  '/public/siege/audio/sfx/{build,upgrade,wave,jar-stolen,emote,victory,defeat,boo,candy-cascade,trap,ui-open,ui-click,ui-close,ui-confirm,ui-error,ui-toggle}-1.{ogg,mp3}',
 ], { query: '?url', import: 'default', eager: true })
 export const hasAsset = (path: string) => `/public${path}` in inventory
 type Anchor = { x: number; y: number; r: number; die?: { x: number; y: number; r: number }[]; cast?: { x: number; y: number; r: number }[]; grab?: { x: number; y: number; r: number }[]; frames?: { x: number; y: number; r?: number }[]; hurt?: { x: number; y: number; r: number } }
 export type Dance = { name: string; clip: string; group: 'universal' | 'shop' | 'signature'; loop: boolean; emote?: string; sig?: string }
 export type LegendFile = { legends: Record<string, LegendInfo>; greatPumpkin: { name: string; phases: string[] } }
 export type AssetPack = { traits: TraitData; kits: KitData; legends: LegendFile; chogs: ChogRow[]; skins: Record<string, Skin>; rig: RigData; dances: Record<string, Dance>; signatures: SignatureData; geometry: LevelGeometry; faces: Record<string, Anchor>; atlases: { key: string; image: HTMLImageElement; data: { frames: Record<string, { frame: { x: number; y: number; w: number; h: number } }> } }[]; background?: HTMLImageElement }
-export function loadImage(url: string, signal?: AbortSignal): Promise<HTMLImageElement> {
+// Queue images before starting the clocks; small JSON requests keep the launch path moving.
+const IDLE = 15_000, CAP = 180_000
+let received = 0
+const completed = new Map<string, Blob>()
+let free = 2
+const waiting: (() => void)[] = []
+function acquire(signal?: AbortSignal): Promise<void> {
+  signal?.throwIfAborted()
+  if (free) { free--; return Promise.resolve() }
   return new Promise((resolve, reject) => {
-    const img = new Image()
-    const abort = () => { img.src = ''; reject(new Error('Cancelled')) }
-    const clean = () => signal?.removeEventListener('abort', abort)
-    img.onload = () => { clean(); resolve(img) }
-    img.onerror = () => { clean(); reject(new Error('Image unavailable')) }
-    signal?.addEventListener('abort', abort, { once: true })
-    if (signal?.aborted) { abort(); return }
-    img.src = url
+    const next = () => { signal?.removeEventListener('abort', cancel); resolve() }
+    const cancel = () => { waiting.splice(waiting.indexOf(next), 1); reject(signal!.reason) }
+    waiting.push(next)
+    signal?.addEventListener('abort', cancel, { once: true })
   })
 }
-// A stalled request fails after 20 s, so its launch stage shows the Retry panel instead of a label that never changes. No signal (Boss.ts) means no timeout.
-// ponytail: a flat cap per request, not an idle timer. The level stage pulls about 8 MB at once beside the hero art, so links under about 3-4 Mbps can reach
-// Retry mid-download (finished files are cached, so each Retry gets further). Upgrade: restart the timer on each streamed chunk. Without AbortSignal.any: no timeout, as before.
-const timed = (signal?: AbortSignal) => signal && typeof AbortSignal.any === 'function' ? AbortSignal.any([signal, AbortSignal.timeout(20_000)]) : signal
+const release = () => { const next = waiting.shift(); if (next) next(); else free++ }
+async function download(url: string, signal?: AbortSignal): Promise<Blob> {
+  signal?.throwIfAborted()
+  const cached = completed.get(url)
+  if (cached) return cached
+  const stop = new AbortController(), cancel = () => stop.abort(signal?.reason)
+  const timeout = () => stop.abort(new DOMException(`Download stalled: ${url}`, 'TimeoutError'))
+  const started = performance.now()
+  let progress = 0
+  // Before the first byte, the browser may be queuing this request behind other images.
+  // Once it starts, only this file's bytes extend its idle deadline; another file cannot hide a body stall.
+  const idle = setInterval(() => {
+    if (performance.now() - (progress || Math.max(started, received)) >= IDLE) timeout()
+  }, 500)
+  // The 3.7 MB Chog aura needs over 120 s when two downloads share a 50 KB/s link.
+  const cap = setTimeout(timeout, CAP)
+  signal?.addEventListener('abort', cancel, { once: true })
+  try {
+    signal?.throwIfAborted()
+    const response = await fetch(url, { signal: stop.signal, priority: 'high' })
+    if (!response.ok || !response.body) throw new Error(`Could not load ${url}`)
+    const reader = response.body.getReader(), chunks: BlobPart[] = []
+    try {
+      for (let part = await reader.read(); !part.done; part = await reader.read()) {
+        if (!part.value.byteLength) continue
+        chunks.push(part.value)
+        progress = received = performance.now()
+      }
+    } finally { reader.releaseLock() }
+    const blob = new Blob(chunks, { type: response.headers.get('Content-Type') ?? '' })
+    completed.set(url, blob)
+    return blob
+  } catch (error) { stop.abort(); throw error }
+  finally { clearInterval(idle); clearTimeout(cap); signal?.removeEventListener('abort', cancel) }
+}
+export const loadJson = async (url: string, signal?: AbortSignal) => {
+  const blob = await download(url, signal)
+  try { return JSON.parse(await blob.text()) }
+  catch (error) { completed.delete(url); throw error }
+}
+export async function loadImage(url: string, signal?: AbortSignal): Promise<HTMLImageElement> {
+  await acquire(signal)
+  const blob = await download(url, signal).finally(release)
+  signal?.throwIfAborted()
+  const src = URL.createObjectURL(blob), img = new Image()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const cancel = () => { img.src = ''; clean(); reject(signal!.reason) }
+      const clean = () => { img.onload = null; img.onerror = null; signal?.removeEventListener('abort', cancel) }
+      img.onload = () => { clean(); resolve() }
+      img.onerror = () => { clean(); completed.delete(url); reject(new Error(`Image unavailable: ${url}`)) }
+      signal?.addEventListener('abort', cancel, { once: true })
+      img.src = src
+    })
+    return img
+    // A loaded atlas's img.src is reused as a CSS background by the menus' sprites, so its object URL lives for the page.
+  } catch (error) { URL.revokeObjectURL(src); throw error }
+}
 export async function loadAssets(signal: AbortSignal): Promise<AssetPack> {
-  const json = async (path: string) => {
-    if (!hasAsset(path)) return null
-    try { const response = await fetch(path, { signal: timed(signal) }); return response.ok ? await response.json() : null } catch { return null }
-  }
+  const json = async (path: string) => hasAsset(path) ? loadJson(path, signal).catch(() => null) : null
   const [traits, baseKits, skins, chogs, rig, signatures, faces, dances, legends, ...atlases] = await Promise.all([
     json('/siege/traits.json'), json('/siege/kits.json'), json('/siege/skins.json'), json('/chogs.json'), json('/siege/atlas/rig.json'), json('/siege/atlas/sig.json'), json('/siege/atlas/faces.json'),
     json('/siege/atlas/dances.json'), json('/siege/legends.json'),
     ...['units', 'fx', 'ui', 'kit', 'sig'].map(async key => {
       if (!hasAsset(`/siege/atlas/${key}.png`) || !hasAsset(`/siege/atlas/${key}.json`)) return null
       try {
-        const [data, image] = await Promise.all([json(`/siege/atlas/${key}.json`), loadImage(`/siege/atlas/${key}.png`, timed(signal))])
+        const [data, image] = await Promise.all([json(`/siege/atlas/${key}.json`), loadImage(`/siege/atlas/${key}.png`, signal)])
         return data?.frames && image.width <= 2048 && image.height <= 2048 ? { key, image, data } : null
       } catch { return null }
     }),
@@ -68,22 +123,18 @@ export async function loadAssets(signal: AbortSignal): Promise<AssetPack> {
 }
 
 export async function loadAtlas(key: string, signal?: AbortSignal): Promise<AssetPack['atlases'][number]> {
-    const limit = timed(signal)
-    const [response, image] = await Promise.all([fetch(`/siege/atlas/${key}.json`, { signal: limit }), loadImage(`/siege/atlas/${key}.png`, limit)])
-    if (!response.ok) throw new Error(`Could not load ${key}`)
-    const data = await response.json()
+    const [data, image] = await Promise.all([loadJson(`/siege/atlas/${key}.json`, signal), loadImage(`/siege/atlas/${key}.png`, signal)])
     if (!data.frames || image.width > 2048 || image.height > 2048) throw new Error(`Invalid atlas: ${key}`)
     return { key, image, data }
 }
 export async function loadLevelAssets(pack: AssetPack, level: number, signal: AbortSignal, daily = false): Promise<AssetPack> {
-  const response = await fetch(`/siege/levels/${mapFile(level)}.json`, { signal: timed(signal) })
-  const geometry = response.ok ? readGeometry(await response.json()) : null
+  const geometry = readGeometry(await loadJson(`/siege/levels/${mapFile(level)}.json`, signal))
   if (!geometry) throw new Error('The map could not be loaded. Please retry.')
   // props3 carries the batch 3 props, the portal, the map effects, the darkness light and the daily icons.
   const newProps = !!(geometry.portals || geometry.zones || geometry.dark || geometry.props.some(p => p.kind === 'bell' || p.kind === 'grate' || p.kind === 'bonfire'))
   const keys = ['units2', 'fx2', 'fx3', 'towers3', 'items', ...(geometry.props.some(p => p.use) || geometry.ambient ? ['props'] : []), ...(newProps || daily ? ['props3'] : [])]
   const normal = `/siege/levels/${geometry.background}`, wide = normal.replace(/\.webp$/, '-wide.webp')
-  const backgroundImage = loadImage(wide, timed(signal)).catch(() => loadImage(normal, timed(signal)))
+  const backgroundImage = loadImage(wide, signal).catch(() => loadImage(normal, signal))
   const [background, ...atlases] = await Promise.all([backgroundImage, ...keys.map(key => loadAtlas(key, signal))])
   return { ...pack, geometry, background, atlases: [...pack.atlases, ...atlases] }
 }
