@@ -98,6 +98,8 @@ async function readStats(db) {
   const value = key => total[key] ?? 0
   return {
     generatedAt: new Date().toISOString(),
+    // Every number here is reported by anonymous browsers: the Worker checks shape and rate, not gameplay or payments.
+    reported: true,
     players: { allTime: value('players'), today: daily[utcDay()] ?? 0, last7Days: week[0].n,
       daily: Array.from({ length: 14 }, (_, i) => utcDay(13 - i)).map(day => ({ day, players: daily[day] ?? 0 })) },
     runs: { started: value('runs_started'), finished: value('runs_finished'), wins: value('wins'), quits: value('quits'), playSeconds: value('play_seconds') },
@@ -111,8 +113,16 @@ async function readStats(db) {
   }
 }
 
-// Each isolate recomputes /stats at most every 30 seconds, however many viewers refresh.
-let snapshot = { at: 0, body: '' }
+// Each isolate recomputes /stats at most every 30 seconds, however many viewers refresh; concurrent requests share one D1 read.
+let snapshot = { at: 0, body: '' }, refreshing = null
+async function statsBody(db) {
+  if (Date.now() - snapshot.at > 30_000) {
+    refreshing ??= readStats(db).then(stats => { snapshot = { at: Date.now(), body: JSON.stringify(stats) } }).finally(() => { refreshing = null })
+    try { await refreshing } catch (error) { if (!snapshot.body) throw error } // keep serving the last good numbers through a D1 hiccup
+  }
+  return snapshot.body
+}
+
 async function readBody(request) {
   if (Number(request.headers.get('Content-Length') || 0) > MAX_BODY) return null
   // Bound actual bytes as well; Content-Length can be absent on streamed requests.
@@ -131,7 +141,7 @@ async function readBody(request) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin')
     const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', Vary: 'Origin' }
     if (origin && allowedOrigin(origin)) Object.assign(headers, {
@@ -144,33 +154,44 @@ export default {
     if (origin && !allowedOrigin(origin)) return reply({ error: 'Origin not allowed' }, 403)
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })
     const path = new URL(request.url).pathname
+    const route = request.method === 'GET' && path === '/stats' ? 'stats' : request.method === 'POST' && path === '/event' ? 'event' : ''
+    if (!route) return reply({ error: 'Not found' }, 404)
+    const ip = request.headers.get('CF-Connecting-IP')
     try {
-      if (request.method === 'GET' && path === '/stats') {
-        if (Date.now() - snapshot.at > 30_000) {
-          try { snapshot = { at: Date.now(), body: JSON.stringify(await readStats(env.DB)) } }
-          catch (error) { if (!snapshot.body) throw error } // keep serving the last good numbers through a D1 hiccup
+      // Per IP and route, before anything touches D1, so a flood costs no reads or writes.
+      if (!(await env.LIMITER.limit({ key: `${route}:${ip}` })).success) return reply({ error: 'Too many requests' }, 429)
+      if (route === 'stats') {
+        // One copy per Cloudflare location for 30 seconds, stored without the CORS headers (they differ per origin).
+        const key = new URL('/stats', request.url).href
+        let cached = await caches.default.match(key)
+        if (!cached) {
+          cached = new Response(await statsBody(env.DB), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'public, max-age=30' } })
+          ctx.waitUntil(caches.default.put(key, cached.clone()))
         }
         headers['Cache-Control'] = 'public, max-age=30'
-        return new Response(snapshot.body, { headers })
+        const response = new Response(cached.body, cached)
+        for (const [name, value] of Object.entries(headers)) response.headers.set(name, value)
+        return response
       }
-      if (request.method !== 'POST' || path !== '/event') return reply({ error: 'Not found' }, 404)
       const text = await readBody(request)
       if (text === null) return reply({ error: 'Body too large' }, 413)
       let body
       try { body = JSON.parse(text) } catch { return reply({ error: 'Invalid JSON' }, 400) }
       const event = clean(body)
       if (typeof event === 'string') return reply({ error: event }, 400)
-      const ip = request.headers.get('CF-Connecting-IP')
       if (!ip) return reply({ error: 'Client IP unavailable' }, 503)
       const day = utcDay(), hour = new Date().toISOString().slice(0, 13)
       const ipHash = hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${await saltFor(env.DB, day)}:${ip}`)))
-      const bump = (bucket, key) => env.DB.prepare('INSERT INTO hits (bucket, key, n) VALUES (?, ?, 1) ON CONFLICT (bucket, key) DO UPDATE SET n = n + 1 RETURNING n').bind(bucket, key)
-      const [byIp, byPid, seen] = await env.DB.batch([bump(hour, `ip:${ipHash}`), bump(hour, `pid:${event.pid}`), env.DB.prepare('SELECT 1 FROM players WHERE pid = ?').bind(event.pid)])
-      if (byIp.results[0].n > LIMIT.ip) return reply({ error: 'Too many events from this network' }, 429)
-      if (byPid.results[0].n > LIMIT.pid) return reply({ error: 'Too many events from this browser' }, 429)
-      // This read only gates the new-id limit; a rare race here just counts one extra id toward that limit.
-      if (!seen.results[0] && (await bump(day, `new:${ipHash}`).first()).n > LIMIT.newPids) return reply({ error: 'Too many new players from this network today' }, 429)
-      await env.DB.batch(writes(env.DB, event, day))
+      // Read every limit first, so a rejected event writes nothing. Events racing past a limit together can overshoot it
+      // by a few; the limiter above bounds how many can race.
+      const hits = (bucket, key) => env.DB.prepare('SELECT n FROM hits WHERE bucket = ? AND key = ?').bind(bucket, key)
+      const [byIp, byPid, newIds, seen] = (await env.DB.batch([hits(hour, `ip:${ipHash}`), hits(hour, `pid:${event.pid}`), hits(day, `new:${ipHash}`),
+        env.DB.prepare('SELECT 1 AS n FROM players WHERE pid = ?').bind(event.pid)])).map(result => result.results[0]?.n ?? 0)
+      if (byIp >= LIMIT.ip) return reply({ error: 'Too many events from this network' }, 429)
+      if (byPid >= LIMIT.pid) return reply({ error: 'Too many events from this browser' }, 429)
+      if (!seen && newIds >= LIMIT.newPids) return reply({ error: 'Too many new players from this network today' }, 429)
+      const bump = (bucket, key) => env.DB.prepare('INSERT INTO hits (bucket, key, n) VALUES (?, ?, 1) ON CONFLICT (bucket, key) DO UPDATE SET n = n + 1').bind(bucket, key)
+      await env.DB.batch([bump(hour, `ip:${ipHash}`), bump(hour, `pid:${event.pid}`), ...(seen ? [] : [bump(day, `new:${ipHash}`)]), ...writes(env.DB, event, day)])
       return new Response(null, { status: 204, headers })
     } catch {
       return reply({ error: 'Stats temporarily unavailable' }, 503)

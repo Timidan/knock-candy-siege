@@ -7,5 +7,9 @@
     "binding": "DB",
     "database_name": "candy-bank",
     "database_id": "69df04dc-0c86-44ea-b727-00114fb6ff86"
-  }]
+  }],
+  "ratelimits": [
+    { "name": "CLAIM_LIMIT", "namespace_id": "2026101303", "simple": { "limit": 10, "period": 60 } },
+    { "name": "STATUS_LIMIT", "namespace_id": "2026101304", "simple": { "limit": 120, "period": 60 } }
+  ]
 }

@@ -3,6 +3,27 @@ const validAddress = value => typeof value === 'string' && addressPattern.test(v
 const allowedOrigin = origin => /^https:\/\/([a-z0-9-]+\.)?knock-ej6\.pages\.dev$/.test(origin) ||
   origin === 'https://knock.timidan.xyz' || /^http:\/\/localhost(?::\d+)?$/.test(origin)
 const publicState = row => row ? { state: row.state, ...(row.tx ? { tx: row.tx } : {}) } : { state: 'none' }
+const hex = bytes => [...new Uint8Array(bytes)].map(x => x.toString(16).padStart(2, '0')).join('')
+// New claims admitted per UTC day across everyone, so the queue and the payer's spending stay bounded.
+const DAILY_GRANT_CAP = 150
+const CAPPED = { state: 'capped', error: "Today's starter grants are gone. Try again tomorrow." }
+
+// A random salt per UTC day, kept in D1 as the stats Worker does, so a stored IP hash cannot be recomputed from the date.
+// Rotating it deletes earlier salts and clears earlier days' IP hashes; the per-IP limit only needs today's. Claim rows stay.
+let salt = { day: '', value: '' }
+async function saltFor(db, day) {
+  if (salt.day === day) return salt.value
+  const results = await db.batch([
+    db.prepare('INSERT OR IGNORE INTO salts (day, salt) VALUES (?, ?)').bind(day, hex(crypto.getRandomValues(new Uint8Array(16)))),
+    db.prepare('DELETE FROM salts WHERE day < ?').bind(day),
+    db.prepare("UPDATE claims SET ip_hash = '' WHERE day < ? AND ip_hash <> ''").bind(day),
+    db.prepare('SELECT salt FROM salts WHERE day = ?').bind(day),
+  ])
+  salt = { day, value: results[3].results[0].salt }
+  return salt.value
+}
+// Today's count only rises, so once this isolate has seen the cap reached it answers without D1 until the UTC day changes.
+let cappedDay = ''
 
 export default {
   async fetch(request, env) {
@@ -22,8 +43,13 @@ export default {
       if (!env.BANK_TOKEN || request.headers.get('Authorization') !== `Bearer ${env.BANK_TOKEN}`)
         return reply({ error: 'Unauthorized' }, 401)
     }
-    const getClaim = address => env.DB.prepare('SELECT state, tx FROM claims WHERE address = ?').bind(address).first()
+    const claimQuery = address => env.DB.prepare('SELECT state, tx FROM claims WHERE address = ?').bind(address)
+    const getClaim = address => claimQuery(address).first()
     try {
+      // Public routes pass a per-IP limiter before any D1 work. Status checks get more room: the app polls every 5 s while queued.
+      const limiter = request.method === 'POST' && path === '/claim' ? env.CLAIM_LIMIT : request.method === 'GET' && path.startsWith('/claim/') ? env.STATUS_LIMIT : null
+      if (limiter && !(await limiter.limit({ key: request.headers.get('CF-Connecting-IP') ?? '' })).success)
+        return reply({ error: 'Too many requests. Please wait a minute.' }, 429)
       if (request.method === 'GET' && path.startsWith('/claim/')) {
         const address = path.slice(7)
         if (!validAddress(address)) return reply({ error: 'Invalid address' }, 400)
@@ -62,17 +88,25 @@ export default {
       }
       const existing = await getClaim(address)
       if (existing) return reply(publicState(existing))
+      const day = new Date().toISOString().slice(0, 10)
+      if (cappedDay === day) return reply(CAPPED, 429)
       const ip = request.headers.get('CF-Connecting-IP')
       if (!ip) return reply({ error: 'Client IP unavailable' }, 503)
-      const day = new Date().toISOString().slice(0, 10)
-      const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${day}:${ip}`))
-      const ipHash = [...new Uint8Array(digest)].map(x => x.toString(16).padStart(2, '0')).join('')
-      // One statement serializes the IP check and unique-address insert in SQLite.
-      await env.DB.prepare(`INSERT OR IGNORE INTO claims (address, state, ip_hash, day, created_at)
-        SELECT ?, 'queued', ?, ?, ? WHERE (SELECT count(*) FROM claims WHERE ip_hash = ? AND day = ?) < 3`)
-        .bind(address, ipHash, day, Date.now(), ipHash, day).run()
-      const row = await getClaim(address)
-      return row ? reply(publicState(row)) : reply({ state: 'none', error: 'Daily limit reached (3 claims per IP, UTC)' }, 429)
+      const ipHash = hex(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`${await saltFor(env.DB, day)}:${ip}`)))
+      // One statement serializes the per-IP check, the daily cap and the unique-address insert in SQLite, so concurrent
+      // claims cannot overshoot either limit. CASE keeps the day count from running for an IP already at its limit.
+      const [, claim, used] = await env.DB.batch([
+        env.DB.prepare(`INSERT OR IGNORE INTO claims (address, state, ip_hash, day, created_at) SELECT ?, 'queued', ?, ?, ?
+          WHERE CASE WHEN (SELECT count(*) FROM claims WHERE ip_hash = ? AND day = ?) >= 3 THEN 0
+          ELSE (SELECT count(*) FROM claims WHERE day = ?) < ? END`).bind(address, ipHash, day, Date.now(), ipHash, day, day, DAILY_GRANT_CAP),
+        claimQuery(address),
+        env.DB.prepare('SELECT count(*) AS n FROM claims WHERE ip_hash = ? AND day = ?').bind(ipHash, day),
+      ])
+      if (claim.results[0]) return reply(publicState(claim.results[0]))
+      if (used.results[0].n >= 3) return reply({ state: 'none', error: 'Daily limit reached (3 claims per IP, UTC)' }, 429)
+      // Not a duplicate and not this IP's limit, so today's cap is reached.
+      cappedDay = day
+      return reply(CAPPED, 429)
     } catch {
       return reply({ error: 'Candy Bank temporarily unavailable' }, 503)
     }
