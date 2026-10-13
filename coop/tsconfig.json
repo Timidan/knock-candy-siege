@@ -1,0 +1,5 @@
+{
+  "extends": "../app/tsconfig.app.json",
+  "include": ["*.ts", "../app/src/siege/net/*.ts"],
+  "compilerOptions": { "types": ["../app/node_modules/vite/client"] }
+}
