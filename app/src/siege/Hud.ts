@@ -13,7 +13,7 @@ import type { BossState } from './Boss'
 import type { Enemy } from './world'
 import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner } from './renderShapes'
 
-type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; costRed?: Phaser.GameObjects.Image; hot?: boolean }
+type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; costRed?: Phaser.GameObjects.Image; hot?: boolean; tip?: () => string; price?: () => number }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
@@ -22,6 +22,27 @@ const REST = .85, PLATE = .75
 // Prices use the candy counter's own gold, and turn red while unaffordable.
 const PRICE = '#FFD23F', SHORT = '#FF8A8A'
 const candyFormat = new Intl.NumberFormat('en-US')
+// Desktop hover tips: a few words per family. Names, costs, cooldowns and damage are read from the data on hover.
+const TIPS: Record<string, string> = {
+  'special:laser': 'beam sweeps the path', 'special:target-lock': 'toughest foes take extra damage', 'special:deal-with-it': 'stuns everyone nearby',
+  'special:tear-flood': 'wave pushes enemies back', 'special:charm': 'enemies fight for you', 'special:play-dead': 'vanish, then a stunning scare',
+  'special:stare-down': 'fear cone: enemies walk back', 'special:confetti': 'enemies wander, confused', 'special:pep-talk': 'nearby towers attack faster',
+  'special:legend-561': 'fire ring burns everything near', 'special:legend-900': 'spinning bones block every hit', 'special:legend-942': 'fear cone: enemies walk back',
+  'special:legend-1002': 'two zombie Chogs fight for you', 'special:legend-1481': 'nearby enemies slow to a crawl', 'special:legend-1514': 'blinks ahead, slashing the way',
+  'special:legend-1667': 'heals you and nearby guards', 'special:legend-1798': 'a shield wall blocks the road', 'special:legend-1881': 'freezes a foe for triple candy',
+  'special:legend-1884': 'imps dive the toughest enemies',
+  'ultimate:meteor': 'huge hit that leaves fire', 'ultimate:tidal': 'wave sweeps the path backwards', 'ultimate:twister': 'pulls enemies in, drops flyers',
+  'ultimate:vanish': 'enemies lose you; you backstab', 'ultimate:arcane': 'a storm of homing bolts', 'ultimate:bloom': 'roots enemies, refills jars',
+  'ultimate:love-bomb': 'wave charms all it touches', 'ultimate:purify': 'strips buffs, reveals everything', 'ultimate:thunder': 'lightning chains through enemies',
+  'ultimate:candy-bomb': 'a giant candy bomb', 'ultimate:legend-561': 'sets the road ablaze', 'ultimate:legend-900': 'blazing charge down the road',
+  'ultimate:legend-942': 'every enemy flees', 'ultimate:legend-1002': 'fallen enemies fight for you', 'ultimate:legend-1481': 'stunning golden frogs rain down',
+  'ultimate:legend-1514': 'time stops, then one huge slash', 'ultimate:legend-1667': 'light strikes along the road', 'ultimate:legend-1798': 'spears rain on the busiest road',
+  'ultimate:legend-1881': 'gold rain: damage and candy', 'ultimate:legend-1884': 'double damage; costs a jar',
+  'trap:pumpkin': 'stuns a crowd once', 'trap:bowl': 'stops enemies to eat', 'trap:gum': 'sticky patch slows feet',
+  'item:pumpkin-bomb': 'big splash damage', 'item:holy-water': 'reveals and burns ghosts', 'item:garlic': 'poison cloud slows walkers',
+  'item:candy-cane': 'blocks the road', 'item:scarecrow': 'decoy lures walkers', 'spell:boo': 'enemies flee in fear',
+}
+const tipLine = (...parts: string[]) => parts.filter(Boolean).join(' · ')
 // One reveal per level in this page session, including scene teardown/restarts; never touches the player's save.
 const revealedLevels = new Set<number>()
 type RuleMoment = { x: number; y: number; key: string; enemy: Enemy; generation: number; icon: string; copy: string; age: number }
@@ -47,6 +68,13 @@ export class Hud {
   private spendAge = 1
   private spendValue = 0
   private costTaught = new Set<string>()
+  private needAt = 0
+  private hoverTips = matchMedia('(hover: hover) and (pointer: fine)')
+  private tip: Phaser.GameObjects.Container
+  private tipText: Phaser.GameObjects.Text
+  private tipCaps: Phaser.GameObjects.Image[]
+  private tipFor?: Button
+  private tipDue = 0
   private alarm: Phaser.GameObjects.Image
   private alarmAge = 1
   private wave: Phaser.GameObjects.Text
@@ -215,6 +243,7 @@ export class Hud {
       if (family === 'none') continue
       const button = this.button(top, 96 + i * 138, 180, `kit/${slot}/${family}`, 84, () => this.toast(`${info.name} · ${info.effect || 'Your portrait’s own colour'}`), false, false, '#836EF9')
       button.icon.setDisplaySize(48, 48); button.root.setVisible(this.perkAge >= 3.7)
+      button.tip = () => tipLine(info.name, shortEffects[family] || info.effect)
       const n = this.perks.length, x = 28 + n % 2 * 442, y = 79 + Math.floor(n / 2) * 88
       const pill = scene.add.container(x, y)
       pill.add([plate(scene, 0, 0, 424, 76, 32, 0x2e1a47, 1, 0x836ef9, 2), scene.art.image(40, 38, `kit/${slot}/${family}`).setDisplaySize(50, 50)])
@@ -236,6 +265,8 @@ export class Hud {
         if (this.firstCost(kind, cost)) this.toast(`${TRAPS[kind].name} · Drag onto the path\nCosts ${cost} candy each use`)
       })
       this.cost(b, scene.trapCost(kind)); this.trapButtons[kind] = b
+      b.price = () => scene.trapCost(kind)
+      b.tip = () => tipLine(TRAPS[kind].name, TIPS[`trap:${kind}`], scene.trapCost(kind) ? `${scene.trapCost(kind)} candy` : 'FREE')
     }
     this.suppliesButton = this.button(this.bottomRight, 1792, 824, 'item/pumpkin-bomb', 120, () => {
       const open = !this.suppliesOpen; scene.cancel(); this.suppliesOpen = open; this.supplies.setVisible(open)
@@ -250,6 +281,8 @@ export class Hud {
         if (this.firstCost(kind, c.cost)) this.toast(`${c.name} · ${c.description}\nDrag or tap the road · Costs ${c.cost} candy each use`)
       }, false, false, '#22C55E')
       this.cost(b, CONSUMABLES[kind].cost); this.itemButtons[kind] = b
+      b.price = () => CONSUMABLES[kind].cost
+      b.tip = () => tipLine(CONSUMABLES[kind].name, TIPS[`item:${kind}`], `${CONSUMABLES[kind].cost} candy`, `${CONSUMABLES[kind].cooldown}s`)
     }
     this.preview = scene.add.container(0, 0).setDepth(3250).setVisible(false)
     const entrances = [...scene.routes, ...scene.flyRoutes]
@@ -262,7 +295,7 @@ export class Hud {
       const bounty = scene.art.image(40, 24, 'ui/candy').setDisplaySize(34, 34).setVisible(false)
       b.root.add([early, bounty]); this.calls.push(Object.assign(b, { early, bounty }))
     })
-    this.tutorialCard = scene.add.container(1120, 217).setDepth(3500)
+    this.tutorialCard = scene.add.container(1120, 217).setDepth(3500).setVisible(false)
     this.tutorialCard.add(plate(scene, -600, -75, 1200, 150, 22, 0xffefd0, .98, 0x251c2d, 4))
     this.tutorialText = this.text(-568, 0, '', 34, '#35253d', true).setWordWrapWidth(990)
     this.tutorialCard.add(this.tutorialText)
@@ -283,7 +316,17 @@ export class Hud {
     this.hand = scene.art.image(0, 0, 'teach/hand').setOrigin(.5, .94).setDisplaySize(104, 140).setDepth(3350)
     this.statsText = this.text(1130, 24, '', 34, '#fff0d5', true).setOrigin(.5, 0).setWordWrapWidth(850).setAlign('center').setPadding(8).setBackgroundColor('#20162cdd').setDepth(3600).setVisible(new URLSearchParams(location.search).has('siegeStats'))
     this.pulsing = [this.ability, this.ultimate, this.rain, this.boo, ...this.calls]
-    scene.hudLayer.add([top, bottom, this.topRight, this.bottomRight, this.entrances, this.radialRoot, this.wheel, this.talentCard, this.preview, this.supplies, this.tutorialCard, this.toastText, this.waveBanner, this.hand, this.statsText])
+    const hero = scene.localHero, kits = scene.options.assets.kits.slots, special = kits.special[hero.kit.special], ultimate = kits.ultimate[hero.kit.ultimate]
+    this.ability.tip = () => tipLine(special.name, TIPS[`special:${hero.kit.special}`] ?? special.effect, `${Math.round(hero.abilityTotal)}s`)
+    this.ultimate.tip = () => tipLine(ultimate.name, TIPS[`ultimate:${hero.kit.ultimate}`] ?? ultimate.effect)
+    this.rain.tip = () => tipLine(SPELLS.rain.name, `${SPELLS.rain.damage} damage in an area`, `${Math.round(SPELLS.rain.cooldown * hero.spellFactor)}s`)
+    this.boo.tip = () => tipLine(SPELLS.boo.name, TIPS['spell:boo'], `${Math.round(SPELLS.boo.cooldown * hero.spellFactor)}s`)
+    this.portrait.tip = () => tipLine(`Chog #${hero.kit.id}`, 'click, then click ground to move')
+    // One pill for every tip: round caps behind a text whose background fills the middle. Never interactive.
+    this.tipText = this.text(0, 0, '', 30, '#fff5d6', true).setOrigin(.5).setResolution(2).setPadding(14, 8).setBackgroundColor('#160c24')
+    this.tipCaps = [0, 1].map(() => circle(scene, 26, 0x160c24, 1))
+    this.tip = scene.add.container(0, 0, [...this.tipCaps, this.tipText]).setDepth(3550).setVisible(false)
+    scene.hudLayer.add([top, bottom, this.topRight, this.bottomRight, this.entrances, this.radialRoot, this.wheel, this.talentCard, this.preview, this.supplies, this.tutorialCard, this.toastText, this.waveBanner, this.hand, this.statsText, this.tip])
   }
   layout() {
     const s = this.scene, v = s.view, centre = (v.left + v.right) / 2
@@ -362,7 +405,8 @@ export class Hud {
     if (s.talentWaiting) { this.perkRoot.setVisible(false); return }
     if (this.perkAge >= 3.7) return
     if (this.perkAge < 0) {
-      if (s.focus.active || this.tutorialCard.visible || s.paused || this.talentCard.visible || this.bossBannerRoot) return
+      // Talent cards come first, then the reveal; it also waits out a wave banner, so the three never overlap.
+      if (s.focus.active || this.tutorialCard.visible || s.paused || this.talentCard.visible || this.bossBannerRoot || this.waveBanner.visible || s.tutorialStep >= TUTORIAL.length && s.localHero.talentLevels.length) return
       revealedLevels.add(s.options.level); this.perkAge = 0
     }
     this.perkAge += dt
@@ -375,6 +419,11 @@ export class Hud {
       .setScale(motion ? (.86 + .14 * Phaser.Math.Easing.Back.Out(enter)) * scale : 1)
       .setPosition(Phaser.Math.Linear(x, portrait.tx - 460 * .06, shrink), Phaser.Math.Linear(y, portrait.ty - 137 * .06, shrink) - (motion ? (1 - Phaser.Math.Easing.Back.Out(enter)) * 46 : 0))
     if (age >= 3.7) for (const button of this.perks) button.root.setVisible(true)
+  }
+  // Ends a playing reveal at once when a talent card or wave banner needs the space; its badges take over.
+  private endReveal() {
+    if (this.perkAge < 0 || this.perkAge >= 3.7) return
+    this.perkAge = 3.7; this.perkRoot.setVisible(false); for (const b of this.perks) b.root.setVisible(true)
   }
   candyArrived() {
     const s = this.scene
@@ -401,6 +450,27 @@ export class Hud {
     const motion = !reducedMotion(), t = this.spendAge = Math.min(1, this.spendAge + dt)
     this.candyRoot.y = 82 + (motion ? Math.sin(Math.min(1, t / .24) * Math.PI) * 8 : 0)
     this.candyLoss.setVisible(t < .9).setAlpha(Math.min(1, (.9 - t) / .3)).setY(124 + (motion ? 28 * t : 0)).setScale(motion ? Math.max(1, 1.35 - t / .15 * .35) : 1)
+  }
+  // Tapping something unaffordable says how far off it is, at most once a second.
+  private needCandy(cost: number) {
+    const s = this.scene, short = cost - s.candy
+    if (short <= 0 || s.presentationTime < this.needAt) return
+    this.needAt = s.presentationTime + 1; this.toast(`Need ${short} more candy`, 2)
+  }
+  // Desktop only (a fine, hovering pointer, and not a touch): the tip shows after 250 ms over the control.
+  private hover(b: Button, p: Phaser.Input.Pointer) {
+    if (!b.tip || p.wasTouch || !this.hoverTips.matches) return
+    this.tipFor = b; this.tipDue = this.scene.presentationTime + .25
+  }
+  private hideTip() { this.tipFor = undefined; this.tip.setVisible(false) }
+  private showTip(b: Button) {
+    const v = this.scene.view, m = b.root.getWorldTransformMatrix()
+    this.tipText.setText(b.tip!())
+    const w = this.tipText.width, h = this.tipText.height, gap = b.size / 2 + h / 2 + 8
+    this.tipCaps[0].setDisplaySize(h, h).setPosition(-w / 2, 0); this.tipCaps[1].setDisplaySize(h, h).setPosition(w / 2, 0)
+    // Controls in the top half get their tip below, the rest above; it stays inside the view.
+    const y = m.ty < (v.top + v.bottom) / 2 ? m.ty + gap : m.ty - gap
+    this.tip.setPosition(Phaser.Math.Clamp(m.tx, v.left + (w + h) / 2 + 8, v.right - (w + h) / 2 - 8), y).setVisible(true)
   }
   // The first selection of each trap or supply says its badge is a price, not a stock count.
   private firstCost(kind: TrapKind | ConsumableKind, cost: number) {
@@ -441,10 +511,11 @@ export class Hud {
     const b: Button = { root, face, front, lip, icon, label, sweep, glow, size, enabled: true }
     this.buttons.add(b); root.once('destroy', () => this.buttons.delete(b))
     // Touch fires over on press and out on release, so this also lights a pressed control.
-    root.on('pointerover', () => { b.hot = true; this.shade(b) }).on('pointerout', () => { b.hot = false; this.shade(b) })
+    root.on('pointerover', (p: Phaser.Input.Pointer) => { b.hot = true; this.shade(b); this.hover(b, p) }).on('pointerout', () => { b.hot = false; this.shade(b); if (this.tipFor === b) this.hideTip() })
     root.on('pointerdown', (p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation()
+      event.stopPropagation(); this.hideTip()
       if (!root.getData('tutorialSkip') && s.focus && !s.focus.input(p, false)) return
+      if (!b.enabled && b.price && !s.paused && !s.ended) this.needCandy(b.price())
       if ((!b.enabled && !previewUnavailable) || s.paused || s.ended) return
       void s.options.sfx.unlock()
       action(p)
@@ -513,6 +584,7 @@ export class Hud {
   refresh() {
     const s = this.scene, factor = s.localHero.spellFactor
     if (this.partner && s.options.coop) { const hero = s.heroes[1 - s.options.coop.client.player]; this.partner.setText(`#${hero.kit.id} · Lv ${hero.level} · ${Math.ceil(hero.hp)} HP`) }
+    if (s.paused && this.tipFor) this.hideTip()
     if (s.ended) return
     this.watchSpend()
     if (this.candyTarget !== s.candy) {
@@ -603,7 +675,8 @@ export class Hud {
             b.glow.setVisible(true).setTint(0xffe296)
             this.refresh()
             b.label.setText('✓').setPosition(43, -43).setFontFamily(BODY).setColor('#ffe296').setStroke('#241b30', 4)
-            this.toast(`${config.name} · ${config.description}\n${config.levels[0].cost} candy · Tap again to build${s.options.assets.geometry.pads[s.selected]?.boost ? '\nBoosted pad: +20% range and damage' : ''}`)
+            const cost = config.levels[0].cost
+            this.toast(`${config.name} · ${config.description}\n${cost} candy · ${s.candy < cost ? `Need ${cost - s.candy} more candy` : 'Tap again to build'}${s.options.assets.geometry.pads[s.selected]?.boost ? '\nBoosted pad: +20% range and damage' : ''}`)
           }
         }, true, true)
         this.cost(b, config.levels[0].cost)
@@ -614,13 +687,13 @@ export class Hud {
       const next = tower.spec ? tower.rank < 2 ? { cost: rankCost(tower.rank) } : null : TOWERS[tower.kind].levels[tower.level]
       if (tower.level === 3 && !tower.spec && TOWERS[tower.kind].specialisations.length > 0) {
         Object.entries(SPECIALISATIONS).filter(([, v]) => v.kind === tower.kind).forEach(([key, spec], i) => {
-          const b = this.button(this.radialRoot, i ? 164 : -164, -140, `tower/${tower.kind}/${key}`, 136, () => { if (s.previewSpec === key) s.command({ type: 'specialise', pad: s.selected, spec: key as Specialisation }); else { s.previewSpec = key as Specialisation; this.toast(`${spec.name} · ${spec.description}\n${SPEC_COST} candy · Tap again to choose`) } }, true, true)
+          const b = this.button(this.radialRoot, i ? 164 : -164, -140, `tower/${tower.kind}/${key}`, 136, () => { if (s.previewSpec === key) s.command({ type: 'specialise', pad: s.selected, spec: key as Specialisation }); else { s.previewSpec = key as Specialisation; this.toast(`${spec.name} · ${spec.description}\n${SPEC_COST} candy · ${s.candy < SPEC_COST ? `Need ${SPEC_COST - s.candy} more candy` : 'Tap again to choose'}`) } }, true, true)
           this.cost(b, SPEC_COST); this.radialButtons.push({ button: b, cost: SPEC_COST })
           b.root.add(this.text(0, -106, spec.name.replace(' ', '\n'), 30).setOrigin(.5).setAlign('center').setStroke('#241b30', 5))
         })
       } else {
         const up = this.button(this.radialRoot, -156, -88, s.towerFrame(tower.kind, Math.min(3, tower.level + 1), tower.spec), 136, () => s.command({ type: 'upgrade', pad: s.selected }), true)
-        if (next) this.cost(up, next.cost)
+        if (next) { this.cost(up, next.cost); up.price = () => next.cost }
         up.root.add(this.text(0, -96, next ? tower.spec ? `RANK ${tower.rank + 1}` : 'UPGRADE' : 'MAX', 34).setOrigin(.5).setStroke('#241b30', 5))
         this.radialButtons.push({ button: up, cost: next?.cost ?? Infinity })
       }
@@ -712,6 +785,7 @@ export class Hud {
     }
     const choices = level ? hero.choices : null
     if (!choices) return
+    this.endReveal()
     // Each card holds its own pause for at most ten seconds; scene.time keeps running while paused.
     s.options.sfx.play('talent-open'); this.talentTick = 0
     if (!s.options.coop) {
@@ -725,7 +799,9 @@ export class Hud {
     choices.forEach((choice, i) => {
       const x = i ? 176 : -176, panel = this.scene.add.container(x, 82).setSize(340, 180).setInteractive()
       panel.add(plate(this.scene, -166, -90, 332, 180, 12, 0xffefd0))
-      panel.add(this.text(0, -54, choice.name, 34, '#35253d').setOrigin(.5))
+      // Long legend "… Mastery" names shrink to the panel: exactly to its width, and to no less than 80% height.
+      const name = this.text(0, -54, choice.name, 34, '#35253d').setOrigin(.5), fit = Math.min(1, 302 / name.width)
+      panel.add(name.setScale(fit, Math.max(fit, .8)))
       panel.add(this.text(0, 22, choice.effect, 34, '#35253d', true).setOrigin(.5).setWordWrapWidth(302).setAlign('center'))
       panel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.pickTalent(i) })
       this.talentCard.add(panel)
@@ -763,9 +839,11 @@ export class Hud {
   }
   banner(value: string) {
     this.scene.tweens.killTweensOf(this.waveBanner)
-    const v = this.scene.view, y = v.top + 490
-    this.bannerText.setText(value.replace('  ·  ', '\n')); this.waveBanner.setVisible(true).setPosition((v.left + v.right) / 2, reducedMotion() ? y : -130)
-    this.scene.tweens.add({ targets: this.waveBanner, y, duration: reducedMotion() ? 0 : 250, hold: 1700, yoyo: true, onComplete: () => this.waveBanner.setVisible(false) })
+    this.endReveal()
+    // With the tutorial card up, the banner rests just below it and fades in there rather than sliding through it.
+    const v = this.scene.view, tutorial = this.tutorialCard.visible, y = tutorial ? this.tutorialCard.y + 75 + 92 + 16 : v.top + 490
+    this.bannerText.setText(value.replace('  ·  ', '\n')); this.waveBanner.setVisible(true).setAlpha(tutorial ? 0 : 1).setPosition((v.left + v.right) / 2, reducedMotion() ? y : tutorial ? y + 30 : -130)
+    this.scene.tweens.add({ targets: this.waveBanner, y, alpha: 1, duration: reducedMotion() ? 0 : 250, hold: 1700, yoyo: true, onComplete: () => this.waveBanner.setVisible(false) })
   }
   // The bar sits between the resource plate and the speed buttons; its fill drains smoothly.
   bossBar(e: Enemy) {
@@ -853,6 +931,9 @@ export class Hud {
     // Checked each frame too, so a spend is measured against the previous frame rather than the last 8 Hz refresh.
     this.watchSpend()
     this.animateSpend(dt)
+    const tip = this.tipFor
+    if (tip && (!tip.root.active || !tip.root.visible || !tip.root.parentContainer?.visible)) this.hideTip()
+    else if (tip && !this.tip.visible && time >= this.tipDue) this.showTip(tip)
     const value = candyFormat.format(Math.round(this.candyRoll.value))
     if (this.candy.text !== value) { this.candy.setText(value).setScale(1); this.candy.setScale(Math.min(1, 150 / this.candy.getTextBounds().local.width)); if (motion) this.candy.y = this.candyRoll.value > this.candyTarget ? 6 : -6 }
     this.candy.y = motion ? this.candy.y * Math.exp(-17.26 * dt) : 0
