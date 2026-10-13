@@ -14,7 +14,8 @@ export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y:
   // Road blockers snap onto it; the decoy stands just beside it, drawing marchers off to one side.
   const at = kind === 'candy-cane' ? spot : kind === 'scarecrow' ? { x: spot.x, y: spot.y + (spot.y > 820 ? -52 : 52) } : { x, y }
   if (!c.duration) {
-    s.effect(`item/${kind}/world`, s.hero.x, s.hero.y - 90, .5, 1, 'travel', at.x, at.y - 35)
+    const flight = s.effect(`item/${kind}/world`, s.hero.x, s.hero.y - 90, .5, 1, 'travel', at.x, at.y - 35)
+    if (flight) flight.simulationStart = s.clock
     s.options.sfx.play('throw', kind === 'holy-water' ? 1.5 : .8, .7)
     s.after(.5, () => {
       s.effect(`item/${kind}/fx/0`, at.x, at.y - 35, .85, c.radius / 65)

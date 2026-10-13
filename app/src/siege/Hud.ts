@@ -13,7 +13,7 @@ import type { BossState } from './Boss'
 import type { Enemy } from './world'
 import { plate, circle, shapeTexture, setSweep } from './renderShapes'
 
-type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; costLabel?: Phaser.GameObjects.Text; hot?: boolean }
+type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; hot?: boolean }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
@@ -104,6 +104,18 @@ export class Hud {
   constructor(scene: SiegeScene) {
     this.scene = scene
     shapeTexture(scene)
+    const release = (pointer?: Phaser.Input.Pointer) => this.releasePresses(pointer?.id)
+    const cancel = () => this.releasePresses()
+    scene.input.on('pointerup', release).on('pointerupoutside', release)
+    window.addEventListener('pointerup', cancel)
+    window.addEventListener('pointercancel', cancel)
+    window.addEventListener('blur', cancel)
+    scene.events.once('shutdown', () => {
+      scene.input.off('pointerup', release).off('pointerupoutside', release)
+      window.removeEventListener('pointerup', cancel)
+      window.removeEventListener('pointercancel', cancel)
+      window.removeEventListener('blur', cancel)
+    })
     const top = this.top = scene.add.container(0, 0).setDepth(3000)
     const bottom = this.bottom = scene.add.container(0, 0).setDepth(3000)
     this.topRight = scene.add.container(0, 0).setDepth(3000)
@@ -364,12 +376,24 @@ export class Hud {
       if (!root.getData('tutorialSkip') && s.focus && !s.focus.input(p, false)) return
       if ((!b.enabled && !previewUnavailable) || s.paused || s.ended) return
       void s.options.sfx.unlock()
-      if (!reducedMotion()) { s.tweens.killTweensOf(root); root.setScale(1); s.tweens.add({ targets: root, scaleX: 1.08, scaleY: .88, duration: 75, yoyo: true }) }
       action(p)
+      // Actions still run on down (including trap drag). Compress only the face, so the hit area stays fixed.
+      if (root.active && root.input?.enabled && b.enabled && !s.paused && !s.ended) {
+        b.pressed = p.id
+        face.setDisplaySize(size * 1.06, size * .9)
+        this.shade(b)
+      }
     })
     return b
   }
+  releasePresses(pointerId?: number) {
+    for (const b of this.buttons) if (b.pressed !== undefined && (pointerId === undefined || b.pressed === pointerId)) this.release(b)
+  }
+  private release(b: Button) {
+    b.pressed = undefined; b.face.setDisplaySize(b.size, b.size); this.shade(b)
+  }
   private enabled(b: Button, enabled: boolean) {
+    if (!enabled && b.pressed !== undefined) this.release(b)
     b.enabled = enabled; b.root.setAlpha(enabled ? 1 : .65); b.icon.setTint(enabled ? 0xffffff : 0x777777)
   }
   private shade(b: Button) {
@@ -386,7 +410,7 @@ export class Hud {
   // Open popups and the tutorial card are in use; docked controls light up when hovered, pressed or selected.
   private lit(b: Button) {
     const s = this.scene, m = s.mode, parent = b.root.parentContainer
-    if (b.hot || parent === this.radialRoot || parent === this.wheel || parent === this.tutorialCard) return true
+    if (b.pressed !== undefined || b.hot || parent === this.radialRoot || parent === this.wheel || parent === this.tutorialCard) return true
     const chosen = m === 'rain' ? this.rain : m === 'boo' ? this.boo : m ? this.trapButtons[m as TrapKind] ?? this.itemButtons[m as ConsumableKind] : undefined
     return b === chosen || b === this.calls[this.previewPath] || b === this.portrait && s.heroSelected || b === this.emoteButton && s.emoteOpen || b === this.suppliesButton && this.suppliesOpen
   }
@@ -404,6 +428,7 @@ export class Hud {
   }
   private close(panel: Phaser.GameObjects.Container) {
     this.scene.tweens.killTweensOf(panel)
+    for (const b of this.buttons) if (b.root.parentContainer === panel && b.pressed !== undefined) this.release(b)
     for (const child of panel.list) child.disableInteractive()
     if (!panel.visible) return
     if (reducedMotion()) { panel.setVisible(false); return }
@@ -626,8 +651,8 @@ export class Hud {
     this.talentLevel = -1; this.refresh()
   }
   toast(value: string, seconds = 3.5) {
-    if (this.toastValue === value && this.scene.clock < this.toastUntil) return
-    this.toastValue = value; this.toastStart = this.scene.clock; this.toastSeconds = seconds
+    if (this.toastValue === value && this.scene.presentationTime < this.toastUntil) return
+    this.toastValue = value; this.toastStart = this.scene.presentationTime; this.toastSeconds = seconds
     const lines = this.toastText.getWrappedText(value)
     this.toastPages = []
     // Three-line pages keep long trait descriptions inside the gap below the road.
@@ -651,8 +676,8 @@ export class Hud {
     const root = s.add.container(0, 0).setDepth(3050); s.hudLayer.add(root)
     const left = v.left + 690, right = v.right - 1920 + 1470, k = Phaser.Math.Clamp((right - left) / 560, .8, 1.7)
     root.setPosition((left + right) / 2, v.top + 72)
-    root.add(s.art.image(0, 0, 'boss/ui/bar').setScale(k))
-    const fill = s.art.image(-226 * k, -k, 'boss/ui/fill').setOrigin(0, .5); fill.setDisplaySize(452 * k, 22 * k); root.add(fill); root.sendToBack(fill)
+    root.add(s.textures.exists('boss-ui') ? s.art.image(0, 0, 'boss/ui/bar').setScale(k) : plate(s, -280 * k, -40 * k, 560 * k, 80 * k, 16, 0x261442, 1, 0xffc86b, 3))
+    const fill = (s.textures.exists('boss-ui') ? s.art.image(-226 * k, -k, 'boss/ui/fill') : s.add.image(-226 * k, -k, 'siege-shapes', 'white').setTint(0xffc86b)).setOrigin(0, .5); fill.setDisplaySize(452 * k, 22 * k); root.add(fill); if (s.textures.exists('boss-ui')) root.sendToBack(fill)
     root.add(this.text(0, 46 * k, b.name.toUpperCase(), 34, '#fff0d5').setOrigin(.5).setStroke('#241b30', 6))
     if (b.rig) {
       root.add(circle(s, 40, 0xffc86b, 0, 0xffc86b, 6).setPosition(-250 * k, 0))
@@ -677,7 +702,7 @@ export class Hud {
     const s = this.scene, v = s.view, k = 1.35
     if (this.bossBannerRoot) { s.tweens.killTweensOf(this.bossBannerRoot); this.bossBannerRoot.destroy() }
     const root = s.add.container((v.left + v.right) / 2, -150).setDepth(3330); s.hudLayer.add(root)
-    root.add(s.art.image(0, 0, 'boss/ui/banner').setScale(k))
+    root.add(s.textures.exists('boss-ui') ? s.art.image(0, 0, 'boss/ui/banner').setScale(k) : plate(s, -320 * k, -68 * k, 640 * k, 136 * k, 18, 0x261442, 1, 0xffc86b, 3))
     if (b.rig) {
       const legend = s.options.assets.legends.legends[String(b.id)]
       root.add(plate(s, -130 * k, -29 * k, 358 * k, 60 * k, 8, 0x261442))
@@ -686,6 +711,7 @@ export class Hud {
       root.add([circle(s, 52 * k, 0x261442, 1).setPosition(-248 * k, 0), circle(s, 50 * k, 0xffc86b, 0, 0xffc86b, 6).setPosition(-248 * k, 0)])
       root.add(s.add.image(-248 * k, 0, 'siege-faces', s.art.face(b.id as number)).setDisplaySize(50 * k * 128 / 61, 50 * k * 128 / 61))
     }
+    if (!b.rig && !s.textures.exists('boss-ui')) root.add(this.text(0, 0, b.name.toUpperCase(), 46, '#ede3d1').setOrigin(.5))
     this.bossBannerRoot = root
     this.closePreview(); this.calls.forEach(b => b.root.setVisible(false))
     for (const button of this.buttons) this.shade(button)
@@ -728,7 +754,7 @@ export class Hud {
     const motion = !reducedMotion(), s = this.scene
     const value = String(Math.round(this.candyRoll.value))
     if (this.candy.text !== value) { this.candy.setText(value); if (motion) this.candy.y = -6 }
-    this.candy.y += (0 - this.candy.y) * .25
+    this.candy.y = motion ? this.candy.y * Math.exp(-17.26 * dt) : 0
     this.toastText.setVisible(time < this.toastUntil)
     if (this.toastText.visible) this.toastText.setText(this.toastPages[Math.floor((time - this.toastStart) / this.toastSeconds)] ?? '')
     const pulse = motion && !s.settings.lite && s.quality.tier < 2

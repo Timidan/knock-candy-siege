@@ -69,12 +69,13 @@ function setup(s: SiegeScene, e: Enemy, spec: BossSpawn, wave: number, hp: numbe
   let holder: Phaser.GameObjects.Container, rig: Rig | undefined, aura: Phaser.GameObjects.Image | undefined, sprite: Phaser.GameObjects.Image | undefined
   if (legend) {
     const kit = resolveKit(a.kits, a.traits, a.chogs, spec.id as number, false)
-    rig = new Rig(s, s.art, a, kit, event => { if (event === 'step') s.options.sfx.play('hero-step') }, kit.costume)
+    const costume = s.textures.exists(`hero-${kit.costume}`) ? kit.costume : s.hero.kit.costume
+    rig = new Rig(s, s.art, a, { ...kit, costume }, event => { if (event === 'step') s.options.sfx.play('hero-step') }, costume)
     rig.size = 1.8
-    aura = s.art.image(0, 0, `boss/${spec.id}/aura/0`).setOrigin(.5, .9)
+    aura = s.art.image(0, 0, s.textures.exists(bossAtlasKey(spec.id)) ? `boss/${spec.id}/aura/0` : 'fx/levelup/0').setOrigin(.5, .9)
     holder = s.add.container(0, 0, [aura, rig.root])
   } else {
-    sprite = s.art.image(0, 0, 'boss/pumpkin/walk/0').setOrigin(.5, .84).setScale(half ? .6 : 1)
+    sprite = s.art.image(0, 0, s.textures.exists('boss') ? 'boss/pumpkin/walk/0' : 'enemy/pumpkin/walk/0').setOrigin(.5, .84).setScale((half ? .6 : 1) * (s.textures.exists('boss') ? 1 : 3))
     holder = s.add.container(0, 0, [sprite])
   }
   e.boss = half ? { ...half, holder, sprite, child: true, state: 'walk', stateTime: 0, roll: s.clock + 5 + s.random() * 3, started: true, intro: 0, immune: 0, casting: 0 }
@@ -84,10 +85,9 @@ function setup(s: SiegeScene, e: Enemy, spec: BossSpawn, wave: number, hp: numbe
 export function spawnBoss(s: SiegeScene, spec: BossSpawn, wave: number): boolean {
   const ready = bossReady(s, spec.id)
   if (ready === 'loading') return false // the rest of the wave waits for the art
-  if (ready === 'failed') { s.hud.toast('A legend stayed home tonight. Their art did not arrive.'); return true }
   const e = s.enemies.find(o => !o.active)
   if (!e) return false
-  if (spec.id === 'pumpkin' && !s.textures.exists('boss')) { s.art.addAtlas(s.bossSheet!); s.bossOwned.add('boss') }
+  if (spec.id === 'pumpkin' && s.bossSheet && !s.textures.exists('boss')) { s.art.addAtlas(s.bossSheet!); s.bossOwned.add('boss') }
   setup(s, e, spec, wave, (spec.hp ?? bossConfig(spec.id).hp) * s.healthScale(wave), START)
   s.hud.bossBar(e)
   // The first meeting of each boss gets a card; the cinematic starts when play resumes.
@@ -108,8 +108,6 @@ function startIntro(s: SiegeScene, e: Enemy, b: BossState) {
   s.hud.bossBanner(b)
   if (b.rig) b.rig.emote(); else s.emote('taunt', e.x, e.y - 250)
   s.options.sfx.boss(b.id, true); s.shake(.006)
-  if (reducedMotion()) return
-  s.slowBeat = 1.5
 }
 
 function enrage(s: SiegeScene, e: Enemy, b: BossState) {
@@ -146,13 +144,13 @@ function legendTick(s: SiegeScene, e: Enemy, b: BossState, dt: number) {
   if (id === 561) { e.status.burn = 0; b.trail -= dt; if (moving && b.trail <= 0) { b.trail = 1.1; s.hazards.push({ x: e.x, y: e.y, r: 62, life: 6, pulse: 0 }) } } // burning footprints
   if (!rig.busy) rig.play(moving || b.dash > 0 ? 'walk' : 'idle')
   rig.update(dt, rig.clip === 'walk' ? Math.max(.4, (b.dash > 0 ? b.dashSpeed : e.speed) / (rig.walkSpeed * 1.8)) : 1, !s.presentationFrozen && e.art.reaction.stop <= 0)
-  if (!s.presentationFrozen && e.art.reaction.stop <= 0) { b.aura!.setAlpha(b.phase === 2 ? .95 : .7); s.art.set(b.aura!, `boss/${id}/aura/${Math.floor(e.art.age * 6) % 4}`) }
+  if (!s.presentationFrozen && e.art.reaction.stop <= 0) { b.aura!.setAlpha(b.phase === 2 ? .95 : .7); s.art.set(b.aura!, s.textures.exists(b.atlas) ? `boss/${id}/aura/${Math.floor(e.art.age * 6) % 4}` : 'fx/levelup/0') }
 }
 
 // The ten boss moves, named in legends.json.
 function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
   if (!e.active || !e.boss) return
-  const id = b.id as number, fx = (name: string, x = e.x, y = e.y - 70, seconds = 1, size = 2.2) => s.effect(art(b, name), x, y, seconds, size)
+  const id = b.id as number, fx = (name: string, x = e.x, y = e.y - 70, seconds = 1, size = 2.2) => s.effect(s.textures.exists(b.atlas) ? art(b, name) : 'fx/levelup/0', x, y, seconds, size)
   s.options.sfx.boss(b.id)
   if (id === 561) { // Wildfire: a ring of flame scorches guards and the hero
     fx('special/0', e.x, e.y - 20, 1.2, 3)
@@ -170,7 +168,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
     fx('ultimate/0', e.x, e.y - 10, .9, 1.7)
   } else if (id === 1514) { // Final Panel
     for (const t of s.towers) if (t) t.stun = Math.max(t.stun, 3)
-    s.effect(art(b, 'ultimate/0'), 960, 540, 1.1, 4.6); s.shake(.008); s.hud.toast('Final Panel! Time stops for your towers.')
+    s.effect(s.textures.exists(b.atlas) ? art(b, 'ultimate/0') : 'fx/levelup/0', 960, 540, 1.1, 4.6); s.shake(.008); s.hud.toast('Final Panel! Time stops for your towers.')
   } else if (id === 1667) { // Sanctuary
     let shielded = 0
     for (const o of s.enemies) if (o.active && !o.returning && o !== e && distanceSq(o, e) < 300 ** 2) { o.shield = 5; if (shielded++ < 8) s.effect('fx/levelup/0', o.x, o.y - 70, .8, 1.2) }
@@ -178,7 +176,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
   } else if (id === 1798) { b.blocks = 5; fx('special/0', e.x, e.y - 90, 1.4, 2.2); s.hud.toast('Testudo! The next five hits are blocked.') } // Testudo
   else if (id === 1881) { // Golden Touch
     const free = s.towers.filter(t => t && !t.gold)
-    for (let i = 0; i < 2 && free.length; i++) { const t = free.splice(Math.floor(s.random() * free.length), 1)[0]!; t.stun = 5; t.gold = 5; s.effect(art(b, 'special/0'), t.x, t.y - 100, 1.2, 1.4) }
+    for (let i = 0; i < 2 && free.length; i++) { const t = free.splice(Math.floor(s.random() * free.length), 1)[0]!; t.stun = 5; t.gold = 5; s.effect(s.textures.exists(b.atlas) ? art(b, 'special/0') : 'fx/levelup/0', t.x, t.y - 100, 1.2, 1.4) }
     s.hud.toast('Golden Touch! Two towers are silenced.')
   } else if (id === 1884) { // Pact
     // The first Pact takes three jars; beating Lil' Devil breaks the bargain and returns them.
@@ -202,14 +200,14 @@ function pumpkinTick(s: SiegeScene, e: Enemy, b: BossState) {
     for (let i = 0; i < 8; i++) s.schedule.push({ time: s.clock + .1 + i * .25, kind: i % 4 === 3 ? 'ghost' : 'treater', path: 0, route: e.path, wave: e.wave, distance: Math.min(route.length - 160, e.distance + 120 + i * 45), risen: true })
     s.schedule.sort((p, q) => p.time - q.time); s.effect('fx/levelup/0', e.x, e.y - 100, 1, 3)
   }
-  const frame = b.state === 'roll' ? `roll/${Math.floor(s.clock * 14) % 6}` : b.state === 'summon' ? `summon/${Math.min(3, Math.floor((1.4 - b.stateTime) / 1.4 * 4))}` : b.state === 'split' ? `split/${Math.min(5, Math.floor((1.3 - b.stateTime) / 1.3 * 6))}` : e.hit > 0 ? 'hurt' : `walk/${Math.floor(s.clock * 7) % 6}`
-  if (!s.presentationFrozen && e.art.reaction.stop <= 0) s.art.set(b.sprite!, `boss/pumpkin/${frame}`)
+  const frame = b.state === 'roll' ? `roll/${Math.floor(s.clock * 14) % 6}` : b.state === 'summon' ? `summon/${Math.min(3, Math.floor((1.4 - b.stateTime) / 1.4 * 4))}` : b.state === 'split' ? `split/${Math.min(5, Math.floor((1.3 - b.stateTime) / 1.3 * 6))}` : e.hit > 0 ? 'hurt' : `walk/${Math.floor(e.art.walkAge * 7) % 6}`
+  if (!s.presentationFrozen && e.art.reaction.stop <= 0) s.art.set(b.sprite!, s.textures.exists('boss') ? `boss/pumpkin/${frame}` : `enemy/pumpkin/walk/${Math.floor(e.art.walkAge * 7) % 6}`)
 }
 
 function splitPumpkin(s: SiegeScene, e: Enemy, b: BossState) {
   b.state = 'walk'; b.child = true; b.casting = 0
   const hp = Math.max(1, e.hp / 3), at = e.distance
-  e.hp = hp; e.maxHp = hp; e.jars = Math.ceil(e.jars / 2); b.scale = .6; b.sprite!.setScale(.6)
+  e.hp = hp; e.maxHp = hp; e.jars = Math.ceil(e.jars / 2); b.scale = .6; b.sprite!.setScale(s.textures.exists('boss') ? .6 : 1.8)
   let made = 0
   for (const other of s.enemies) if (made < 2 && !other.active) { setup(s, other, { id: 'pumpkin' }, e.wave, hp, Math.max(0, at + (made ? 55 : -55)), { ...b, holder: null }); made++ }
   s.effect('fx/poof/0', e.x, e.y - 60, .6, 3); s.shake(.008)
@@ -240,18 +238,18 @@ export function drawBoss(s: SiegeScene, e: Enemy) {
   const v = e.art.reaction, motion = !reducedMotion(), spring = motion ? (v.life / .28) ** 2 * Math.cos((.28 - v.life) * 16) : 0
   if (b.rig) { if (left !== null) b.rig.facing = left ? -1 : 1 }
   else if (b.sprite) { if (left !== null) b.sprite.setFlipX(left); if (v.flash > 0) b.sprite.setTintFill(0xffffff); else if (e.gold > 0) b.sprite.setTint(0xffd45e); else b.sprite.clearTint() }
-  const bounce = b.sprite && b.state !== 'roll' && !reducedMotion() ? Math.abs(Math.sin(e.art.age * 7)) * 6 : 0
+  const bounce = b.sprite && b.state !== 'roll' && !e.status.stun && !e.status.freeze && !reducedMotion() && !s.settings.lite && s.quality.tier < 2 ? Math.abs(Math.sin(e.art.walkAge * 7)) * 6 : 0
   const squash = 1 - .06 * Math.max(0, spring)
   holder.setPosition((v.stop > 0 ? v.atX : e.x) + v.x * spring, (v.stop > 0 ? v.atY : e.y) + v.y * spring - bounce).setScale(2 - squash, squash).setDepth(e.y + 30).setVisible(true).setAlpha(e.shield > 0 ? .8 : 1)
 }
 
-// The big finish: the boss falls, the world slows, candy pours out and the screen shakes.
+// The big finish: the boss falls, candy pours out and the screen shakes.
 export function bossDeath(s: SiegeScene, e: Enemy) {
   const b = e.boss!, last = !s.enemies.some(o => o !== e && o.active && o.boss && o.boss.id === b.id), holder = b.holder
   const drop = last && s.bossOwned.has(b.atlas) ? b.atlas : ''
   if (holder) {
     if (b.rig) { b.rig.cancelDance(); b.rig.play('faint'); s.corpses.push({ holder, rig: b.rig, life: 1.8, atlas: drop }) }
-    else { s.effect('boss:boss/pumpkin/die/0', e.x, e.y - 70 * b.scale, 1.2, b.scale * 1.1); holder.destroy(); s.corpses.push({ holder: null, life: 1.6, atlas: drop }) }
+    else { s.effect(s.textures.exists('boss') ? 'boss:boss/pumpkin/die/0' : 'enemy/pumpkin/die/0', e.x, e.y - 70 * b.scale, 1.2, b.scale * 1.1); holder.destroy(); s.corpses.push({ holder: null, life: 1.6, atlas: drop }) }
     b.holder = null
   }
   const count = last ? (s.settings.lite ? 14 : 30) : (s.settings.lite ? 4 : 8)
@@ -259,7 +257,6 @@ export function bossDeath(s: SiegeScene, e: Enemy) {
   s.shake(last ? .014 : .007)
   if (last) {
     s.bossesDefeated.push(String(b.id))
-    if (!reducedMotion() && s.settings.shake) s.slowBeat = 1.3
     s.hud.banner(`${b.name.toUpperCase()}  ·  DEFEATED`); s.options.sfx.play('candy-cascade')
   }
   if (b.stolen) { s.jars = Math.min(20, s.jars + b.stolen); s.hud.toast('The Pact is broken! Your jars come home.') }

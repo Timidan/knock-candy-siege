@@ -338,7 +338,6 @@ export class Hero {
     this.ultimates++; s.options.sfx.ability(family, true)
     s.hud.banner(s.options.assets.kits.slots.ultimate[family].name)
     s.shake(.009)
-    if (!reducedMotion() && s.settings.shake) s.slowBeat = .28
     if (this.kit.legend) { legendUltimate(this, enemies, talent); return }
     if (family === 'meteor') {
       this.fx('ult', 'meteor/0', { x: at.x, y: at.y - 220 }, .7, 2); this.fx('ult', 'impact/0', at, 1.2, 2.7)
