@@ -3,6 +3,9 @@ import { CANDY_TOKEN, injectedWallet, isSandbox } from '../chain'
 import { SHOP_ITEMS } from './data/shop'
 
 export const SHOP_ADDRESS = isAddress(import.meta.env.VITE_KNOCK_SHOP ?? '') ? import.meta.env.VITE_KNOCK_SHOP as Address : null
+// Items bought on the first shop (replaced by a buyer-only version) still belong to their buyers.
+const LEGACY_SHOP: Address = '0xc52dfedAf158031fd7b5fAe0A2F1CFB6c1aC89b6'
+const legacy = () => SHOP_ADDRESS && SHOP_ADDRESS.toLowerCase() !== LEGACY_SHOP.toLowerCase() && !isSandbox
 export const shopRpc = import.meta.env.VITE_SHOP_RPC_URL || 'https://rpc.testnet.chain.robinhood.com'
 export const robinhood = defineChain({ id: 46630, name: 'Robinhood Chain Testnet', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [shopRpc] } }, contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } } })
 // All shop reads share one transport so prices, balances and ownership travel together.
@@ -21,13 +24,14 @@ export function pendingPurchase(address: Address): Hash | null {
 }
 function savePending(address: Address, hash: Hash | null) { try { if (hash) localStorage.setItem(storageKey(address) + ':pending', hash); else localStorage.removeItem(storageKey(address) + ':pending') } catch { /* Keep the hash in the visible purchase state too. */ } }
 export async function readShop(address: Address | null) {
-  const [balance, gas, prices, owned] = await Promise.all([
+  const [balance, gas, prices, owned, legacyOwned] = await Promise.all([
     address && !isSandbox ? client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'balanceOf', args: [address] }) : null,
     address && !isSandbox ? client.getBalance({ address }) : null,
     SHOP_ADDRESS ? Promise.all(SHOP_ITEMS.map(item => client.readContract({ address: SHOP_ADDRESS!, abi: shopAbi, functionName: 'price', args: [BigInt(item.id)] }))) : SHOP_ITEMS.map(item => BigInt(item.price) * 10n ** 18n),
     address && SHOP_ADDRESS && !isSandbox ? client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'ownedItems', args: [address, SHOP_ITEMS.map(i => BigInt(i.id))] }) : [],
+    address && legacy() ? client.readContract({ address: LEGACY_SHOP, abi: shopAbi, functionName: 'ownedItems', args: [address, SHOP_ITEMS.map(i => BigInt(i.id))] }).catch(() => []) : [],
   ])
-  const ids = SHOP_ITEMS.filter((_, index) => owned[index]).map(i => i.id)
+  const ids = SHOP_ITEMS.filter((_, index) => owned[index] || legacyOwned[index]).map(i => i.id)
   if (address && SHOP_ADDRESS && !isSandbox) cacheOwned(address, ids)
   return { balance, gas, prices: Object.fromEntries(SHOP_ITEMS.map((item, index) => [item.id, prices[index]])), owned: ids }
 }
@@ -78,7 +82,8 @@ export async function purchase(address: Address, item: number, displayedPrice: b
   state('checking'); await verifyWallet()
   const [price, owned, token, balance, gasBalance, allowance] = await Promise.all([
     client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'price', args: [BigInt(item)] }),
-    client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'owned', args: [address, BigInt(item)] }),
+    Promise.all([client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'owned', args: [address, BigInt(item)] }),
+      legacy() ? client.readContract({ address: LEGACY_SHOP, abi: shopAbi, functionName: 'owned', args: [address, BigInt(item)] }).catch(() => false) : false]).then(([now, before]) => now || before),
     client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'knock' }),
     client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'balanceOf', args: [address] }), client.getBalance({ address }),
     client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'allowance', args: [address, SHOP_ADDRESS] }),
