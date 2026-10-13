@@ -14,7 +14,7 @@ export class Quality {
     this.fps = this.frames * 1000 / this.elapsed
     this.healthy = this.fps > 58 ? this.healthy + this.elapsed : 0
     const before = this.tier
-    if (this.fps < 50 && this.tier < 3) { this.tier++; this.healthy = 0 }
+    if (this.fps < 55 && this.tier < 3) { this.tier++; this.healthy = 0 }
     else if (this.healthy >= 10000 && this.tier > 0) { this.tier--; this.healthy = 0 }
     this.elapsed = 0; this.frames = 0
     return before !== this.tier

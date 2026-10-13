@@ -3,6 +3,7 @@ import type { Address, Hash } from 'viem'
 import type { SiegeWallet } from './guestWallet'
 import { injectedWallet, isSandbox } from '../chain'
 import { cachedOwned, confirmPurchase, onShopNetwork, pendingPurchase, purchase, readShop, shopError, switchShopNetwork, type PurchasePhase } from './shopChain'
+import { track } from './telemetry'
 
 export function useShop(wallet: SiegeWallet) {
   const account = wallet.account
@@ -47,7 +48,7 @@ export function useShop(wallet: SiegeWallet) {
     const owner = account
     const messages: Record<PurchasePhase, string> = { checking: 'Checking price, balance and ownership…', signature: wallet.guest ? 'Signing the exact-price permit in your guest wallet…' : 'Waiting for your permit signature · exactly this item’s price.', transaction: wallet.guest ? 'Sending from your guest wallet…' : 'Confirm the purchase transaction in your wallet.', confirming: 'Confirming on Robinhood Chain Testnet…', owned: 'Owned! Your item is ready to use.' }
     try {
-      await purchase(owner, item, data.prices[item], (phase, tx) => { if (current.current === owner) { setStatus(messages[phase]); if (tx) setHash(tx) } }, wallet.guest)
+      await purchase(owner, item, data.prices[item], (phase, tx) => { if (phase === 'owned' && tx) track('purchase', { item: String(item) }); if (current.current === owner) { setStatus(messages[phase]); if (tx) setHash(tx) } }, wallet.guest)
       await refresh(owner)
     } catch (reason) { if (current.current === owner) setError(shopError(reason)) }
     finally { locked.current = false; setBusy(false) }

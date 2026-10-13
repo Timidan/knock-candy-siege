@@ -1,0 +1,84 @@
+/* The public live stats page: Siege's night palette (siege.css) on Knock's shared boards and stickers (ui.css).
+   Scoped under .stats-page because index.css styles bare main, h1 and button elements. */
+.stats-page {
+  gap: 22px;
+  padding: max(24px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(32px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: radial-gradient(ellipse 120% 60% at 50% 0%, #64425c, #39263f 45%, #21172d 90%) no-repeat, #21172d;
+  color: var(--paper);
+  font: 18px/1.35 var(--font-hand);
+}
+.stats-page > * { width: 100%; max-width: 1080px; margin-inline: auto; }
+.stats-head { text-align: center; }
+.stats-eyebrow { font: 13px/1.5 var(--font-display); letter-spacing: .2em; color: #dec1d2; }
+.stats-page h1 {
+  width: fit-content;
+  margin: 12px auto 16px;
+  font: 400 clamp(56px, 11vw, 106px)/.9 var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: -.02em;
+  color: #ffe2a5;
+  transform: rotate(-3deg);
+  text-shadow: 4px 6px 0 #20162e;
+  -webkit-text-stroke: 1px #20162e;
+}
+.stats-page h1 span { color: #ff965c; }
+.stats-updated { margin: 0; color: #d5bbdb; font-size: 17px; }
+.stats-actions { justify-content: center; margin-top: 16px; }
+.stats-actions .sticker { font-size: 1.05rem; padding: 10px 18px; }
+.stats-copied { margin: 12px auto 0; max-width: 560px; color: #ffe1a8; overflow-wrap: anywhere; }
+
+.stats-headline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.stats-tile { padding: 22px 12px 16px; text-align: center; background: var(--grain), #3a2848; }
+.stats-tile strong {
+  display: block;
+  font: 400 clamp(36px, 5.6vw, 64px)/1 var(--font-display);
+  color: #ffe2a5;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 3px 4px 0 #120d1a;
+  overflow-wrap: anywhere;
+}
+.stats-tile span { display: block; margin-top: 8px; font: 400 19px/1.1 var(--font-display); letter-spacing: .03em; color: #ff965c; }
+.stats-tile small { display: block; margin-top: 6px; color: #d5bbdb; font-size: 16px; }
+
+.stats-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.stats-chips li { padding: 6px 12px; border: 2px solid var(--ink); border-radius: 10px 4px 12px 5px; background: var(--grain), #faddab; color: #39263f; font-size: 17px; box-shadow: 2px 3px 0 var(--ink); }
+.stats-chips b { font: 400 18px var(--font-display); letter-spacing: .02em; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+.stats-grid > :first-child { grid-row: span 2; } /* the tall kills list sits beside the day chart and the heroes */
+.stats-grid .board { padding: 22px 20px 20px; background: var(--grain), #3a2848; }
+.stats-empty, .stats-note { color: #d5bbdb; font-size: 16px; }
+.stats-note { margin: 10px 0 0 !important; }
+
+.stats-bars { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.stats-bars li { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 3px 12px; }
+.stats-bars b { font: 400 18px var(--font-display); color: #ffe1a8; font-variant-numeric: tabular-nums; }
+.stats-bars i { grid-column: 1 / -1; display: block; height: 12px; border: 2px solid var(--ink); border-radius: 6px 3px 7px 3px; background: #ffc93c; }
+
+.stats-days { display: grid; grid-template-columns: repeat(14, 1fr); gap: 4px; height: 180px; margin: 0; padding: 0; list-style: none; }
+.stats-days li { display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-width: 0; }
+.stats-days span { width: 100%; min-height: 4px; border: 2px solid var(--ink); border-radius: 6px 6px 2px 2px; background: #b8a1e3; }
+.stats-days li:last-child span { background: #ff965c; }
+.stats-days small { margin-top: 4px; font-size: 13px; color: #d5bbdb; }
+
+.stats-heroes { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 14px 10px; margin: 0; padding: 0; list-style: none; }
+.stats-heroes li { display: grid; justify-items: center; text-align: center; }
+.stats-heroes img { width: min(84px, 100%); height: auto; aspect-ratio: 1; margin-bottom: 6px; border: 3px solid var(--ink); border-radius: 50%; background: #261a35; box-shadow: 3px 4px 0 var(--ink); }
+.stats-heroes li:first-child img { border-color: #ffd477; }
+.stats-heroes span { font-size: 16px; }
+.stats-heroes b { font: 400 15px var(--font-display); color: #ffe1a8; letter-spacing: .02em; }
+
+.stats-status { text-align: center; }
+.stats-status h2 { font-size: 1.6rem !important; }
+.stats-privacy { max-width: 680px !important; margin: 4px auto 0; text-align: center; color: #c6adc9; font-size: 16px; }
+
+@media (max-width: 760px) {
+  .stats-page { gap: 18px; }
+  .stats-headline { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stats-grid { grid-template-columns: 1fr; }
+  .stats-grid > :first-child { grid-row: auto; }
+  .stats-tile { padding: 18px 8px 14px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .stats-page h1 { font-size: 52px; margin: 8px auto 10px; }
+}

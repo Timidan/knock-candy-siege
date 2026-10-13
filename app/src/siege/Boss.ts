@@ -63,6 +63,7 @@ function setup(s: SiegeScene, e: Enemy, spec: BossSpawn, wave: number, hp: numbe
   Object.assign(e, { active: true, generation: e.generation + 1, wave, kind: legend ? 'treater' : 'pumpkin', id: legend ? spec.id : 1, mods: [], path: s.roadFor('treater', 0), route: undefined, distance, returning: 0, casting: 0, poisonStacks: 0, speed: cfg.speed, hp, maxHp: hp, candy: cfg.candy, jars: half ? Math.ceil(cfg.jars / 2) : cfg.jars, age: 0, hit: 0, attack: .5, skill: 99, lucky: false, revived: false, armour: false, visible: true, slowPower: .5, heroDot: false, sigCooldown: 0, shield: 0, gold: 0, lit: true })
   for (const key of Object.keys(e.status) as (keyof typeof e.status)[]) e.status[key] = 0
   e.art.root.setVisible(false)
+  s.resetReaction(e)
   s.routeFor(e).at(distance, e)
   s.waveAlive[wave] = (s.waveAlive[wave] ?? 0) + 1
   let holder: Phaser.GameObjects.Container, rig: Rig | undefined, aura: Phaser.GameObjects.Image | undefined, sprite: Phaser.GameObjects.Image | undefined
@@ -147,9 +148,8 @@ function legendTick(s: SiegeScene, e: Enemy, b: BossState, dt: number) {
   }
   if (id === 561) { e.status.burn = 0; b.trail -= dt; if (moving && b.trail <= 0) { b.trail = 1.1; s.hazards.push({ x: e.x, y: e.y, r: 62, life: 6, pulse: 0 }) } } // burning footprints
   if (!rig.busy) rig.play(moving || b.dash > 0 ? 'walk' : 'idle')
-  rig.update(dt, rig.clip === 'walk' ? Math.max(.4, (b.dash > 0 ? b.dashSpeed : e.speed) / (rig.walkSpeed * 1.8)) : 1)
-  b.aura!.setAlpha(b.phase === 2 ? .95 : .7)
-  s.art.set(b.aura!, `boss/${id}/aura/${Math.floor(s.clock * 6) % 4}`)
+  rig.update(dt, rig.clip === 'walk' ? Math.max(.4, (b.dash > 0 ? b.dashSpeed : e.speed) / (rig.walkSpeed * 1.8)) : 1, !s.presentationFrozen && e.art.reaction.stop <= 0)
+  if (!s.presentationFrozen && e.art.reaction.stop <= 0) { b.aura!.setAlpha(b.phase === 2 ? .95 : .7); s.art.set(b.aura!, `boss/${id}/aura/${Math.floor(e.art.age * 6) % 4}`) }
 }
 
 // The ten boss moves, named in legends.json.
@@ -160,7 +160,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
   if (id === 561) { // Wildfire: a ring of flame scorches guards and the hero
     fx('special/0', e.x, e.y - 20, 1.2, 3)
     guardsNear(s, e.x, e.y, 290, g => { g.hp -= 70; s.effect('status/burn/0', g.x, g.y - 40, .8, 1.4) })
-    if (s.hero.alive && distanceSq(e, s.hero) < 290 ** 2) s.hero.hurt(22)
+    if (s.hero.alive && distanceSq(e, s.hero) < 290 ** 2) s.hero.hurt(22, e)
   } else if (id === 900) { b.dash = .8; b.dashSpeed = 480; fx('ultimate/0', e.x, e.y - 40, .9, 1.6) } // Hell Ride
   else if (id === 942) { s.missTime = 4; fx('ultimate/0', e.x, e.y - 100, 1.4, 3); s.warp(); s.hud.toast('The Scream! Your towers will miss half their shots.') }
   else if (id === 1002) { // Rise Again
@@ -185,7 +185,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
     s.hud.toast('Golden Touch! Two towers are silenced.')
   } else if (id === 1884) { // Pact
     // The first Pact takes three jars; beating Lil' Devil breaks the bargain and returns them.
-    if (!b.stolen) { b.stolen = Math.max(0, Math.min(3, s.jars - 1)); s.jars -= b.stolen; s.effect('ui/jar', e.x, e.y - 90, 1.2, .7, 'jar', e.x + 150, e.y - 170) }
+    if (!b.stolen) { b.stolen = Math.max(0, Math.min(3, s.jars - 1)); s.jarsLost += b.stolen; s.jars -= b.stolen; s.effect('ui/jar', e.x, e.y - 90, 1.2, .7, 'jar', e.x + 150, e.y - 170) }
     for (let i = 0; i < 5; i++) s.schedule.push({ time: s.clock + .1 + i * .15, kind: 'bat', path: 0, route: e.path, wave: e.wave, distance: Math.max(0, e.distance + 20 + i * 30), risen: true })
     s.schedule.sort((p, q) => p.time - q.time); fx('ultimate/0', e.x, e.y - 60, 1.6, 1.8); s.hud.toast(b.stolen ? 'The Pact! Imps pour out. Beat Lil’ Devil to win your jars back.' : 'The Pact! Imps pour out.')
   }
@@ -206,7 +206,7 @@ function pumpkinTick(s: SiegeScene, e: Enemy, b: BossState) {
     s.schedule.sort((p, q) => p.time - q.time); s.effect('fx/levelup/0', e.x, e.y - 100, 1, 3)
   }
   const frame = b.state === 'roll' ? `roll/${Math.floor(s.clock * 14) % 6}` : b.state === 'summon' ? `summon/${Math.min(3, Math.floor((1.4 - b.stateTime) / 1.4 * 4))}` : b.state === 'split' ? `split/${Math.min(5, Math.floor((1.3 - b.stateTime) / 1.3 * 6))}` : e.hit > 0 ? 'hurt' : `walk/${Math.floor(s.clock * 7) % 6}`
-  s.art.set(b.sprite!, `boss/pumpkin/${frame}`)
+  if (!s.presentationFrozen && e.art.reaction.stop <= 0) s.art.set(b.sprite!, `boss/pumpkin/${frame}`)
 }
 
 function splitPumpkin(s: SiegeScene, e: Enemy, b: BossState) {
@@ -219,11 +219,11 @@ function splitPumpkin(s: SiegeScene, e: Enemy, b: BossState) {
 }
 
 // Damage the boss absorbs before it reaches the shared damage code: Testudo blocks and the split's grace period.
-export function bossAbsorbs(s: SiegeScene, e: Enemy, hit: boolean): boolean {
+export function bossAbsorbs(_s: SiegeScene, e: Enemy, hit: boolean): boolean {
   const b = e.boss!
   if (b.immune > 0) return true
   // Only a real hit spends one of Testudo's five blocks; burning and poison ticks pass the shield.
-  if (hit && b.blocks > 0) { b.blocks--; s.effect('fx/crit/0', e.x, e.y - 100, .4, 1); return true }
+  if (hit && b.blocks > 0) { b.blocks--; return true }
   return false
 }
 // Hellfire Skull rises once.
@@ -240,10 +240,12 @@ export function drawBoss(s: SiegeScene, e: Enemy) {
   if (!holder) return
   const route = s.routeFor(e), point = route.points[Math.min(route.points.length - 1, Math.floor(e.distance / route.length * (route.points.length - 1)) + 1)]
   const left = point.x < e.x - .5 ? true : point.x > e.x + .5 ? false : null
-  if (b.rig) { if (left !== null) b.rig.facing = left ? -1 : 1; if (e.hit > 0) b.rig.flash() }
-  else if (b.sprite) { if (left !== null) b.sprite.setFlipX(left); if (e.hit > 0) b.sprite.setTintFill(0xfff0cd); else if (e.gold > 0) b.sprite.setTint(0xffd45e); else b.sprite.clearTint() }
-  const bounce = b.sprite && b.state !== 'roll' && !reducedMotion() ? Math.abs(Math.sin(s.clock * 7)) * 6 : 0
-  holder.setPosition(e.x, e.y - bounce).setDepth(e.y + 30).setVisible(true).setAlpha(e.shield > 0 ? .8 : 1)
+  const v = e.art.reaction, motion = !reducedMotion(), spring = motion ? (v.life / .28) ** 2 * Math.cos((.28 - v.life) * 16) : 0
+  if (b.rig) { if (left !== null) b.rig.facing = left ? -1 : 1 }
+  else if (b.sprite) { if (left !== null) b.sprite.setFlipX(left); if (v.flash > 0) b.sprite.setTintFill(0xffffff); else if (e.gold > 0) b.sprite.setTint(0xffd45e); else b.sprite.clearTint() }
+  const bounce = b.sprite && b.state !== 'roll' && !reducedMotion() ? Math.abs(Math.sin(e.art.age * 7)) * 6 : 0
+  const squash = 1 - .06 * Math.max(0, spring)
+  holder.setPosition((v.stop > 0 ? v.atX : e.x) + v.x * spring, (v.stop > 0 ? v.atY : e.y) + v.y * spring - bounce).setScale(2 - squash, squash).setDepth(e.y + 30).setVisible(true).setAlpha(e.shield > 0 ? .8 : 1)
 }
 
 // The big finish: the boss falls, the world slows, candy pours out and the screen shakes.
@@ -259,6 +261,7 @@ export function bossDeath(s: SiegeScene, e: Enemy) {
   for (let i = 0; i < count; i++) { const coin = i % 3 === 0; s.effect(coin ? 'fx/coin' : 'fx/candy-burst/0', e.x + (s.visualRandom() - .5) * 220, e.y - 120 - s.visualRandom() * 90, .7 + i * .035, coin ? .3 : .9, coin ? 'coin' : 'burst', 261, 82) }
   s.shake(last ? .014 : .007)
   if (last) {
+    s.bossesDefeated.push(String(b.id))
     if (!reducedMotion() && s.settings.shake) s.slowBeat = 1.3
     s.hud.banner(`${b.name.toUpperCase()}  ·  DEFEATED`); s.options.sfx.play('candy-cascade')
   }
@@ -270,9 +273,13 @@ export function updateCorpses(s: SiegeScene, dt: number) {
   for (let i = s.corpses.length - 1; i >= 0; i--) {
     const c = s.corpses[i]; c.life -= dt
     if (c.rig) { c.rig.update(dt); c.holder?.setAlpha(Math.min(1, c.life / .6)) }
+    if (c.flee && c.holder) {
+      const t = 1 - c.life / .75, run = Math.max(0, (t - .27) / .73)
+      c.holder.setPosition(c.flee.x + c.flee.dx * run, c.flee.y + c.flee.dy * run).setAlpha(Math.min(1, c.life / .2))
+    }
     if (c.life > 0) continue
     c.holder?.destroy(); s.corpses.splice(i, 1)
-    if (c.atlas) { s.art.removeAtlas(c.atlas); s.bossArt.delete(c.atlas); s.bossOwned.delete(c.atlas) }
+    if (c.atlas && !s.enemies.some(e => e.active && e.boss?.atlas === c.atlas) && !s.corpses.some(other => other.atlas === c.atlas)) { s.art.removeAtlas(c.atlas); s.bossArt.delete(c.atlas); s.bossOwned.delete(c.atlas) }
   }
 }
 // A boss leaves play without dying (it reached the porch): free its visuals.
@@ -280,6 +287,6 @@ export function releaseBoss(s: SiegeScene, e: Enemy) {
   const b = e.boss
   if (!b) return
   b.holder?.destroy(); b.holder = null
-  if (s.bossOwned.has(b.atlas) && !s.enemies.some(o => o !== e && o.active && o.boss && o.boss.id === b.id)) { s.art.removeAtlas(b.atlas); s.bossArt.delete(b.atlas); s.bossOwned.delete(b.atlas) }
+  if (s.bossOwned.has(b.atlas) && !s.enemies.some(o => o !== e && o.active && o.boss && o.boss.id === b.id) && !s.corpses.some(c => c.atlas === b.atlas)) { s.art.removeAtlas(b.atlas); s.bossArt.delete(b.atlas); s.bossOwned.delete(b.atlas) }
   e.boss = undefined
 }

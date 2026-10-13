@@ -13,9 +13,12 @@ import type { BossState } from './Boss'
 import type { Enemy } from './world'
 import { plate, circle, shapeTexture, setSweep } from './renderShapes'
 
-type Button = { root: Phaser.GameObjects.Container; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; costLabel?: Phaser.GameObjects.Text }
+type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; costLabel?: Phaser.GameObjects.Text; hot?: boolean }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
+// At rest, docked controls let the road and enemies show through: plates at .75,
+// icons and numbers at .85 so they stay readable.
+const REST = .85, PLATE = .75
 export class Hud {
   scene: SiegeScene
   hand: Phaser.GameObjects.Text
@@ -29,6 +32,8 @@ export class Hud {
   private ultimate: Button
   private talentCard: Phaser.GameObjects.Container
   private talentLevel = 0
+  private talentTimer?: Phaser.Time.TimerEvent
+  private talentBar?: Phaser.GameObjects.Image
   private health: Phaser.GameObjects.Image
   private pulsing: Button[] = []
   private top: Phaser.GameObjects.Container
@@ -81,7 +86,7 @@ export class Hud {
     this.entrances = scene.add.container(0, 0).setDepth(3000)
     this.radialRoot = scene.add.container(0, 0).setDepth(3200)
     this.wheel = scene.add.container(0, 0).setDepth(3300)
-    top.add(plate(scene, 24, 24, 620, 222, 28, 0x241b30, .96, 0xc7a2cb, 4))
+    top.add(plate(scene, 24, 24, 620, 222, 28, 0x241b30, .96, 0xc7a2cb, 4).setAlpha(PLATE))
     top.add(scene.art.image(74, 81, 'ui/jar').setDisplaySize(49, 60))
     this.jars = scene.add.bitmapText(118, 82, 'siege-digits', '', 44).setOrigin(0, .5); top.add(this.jars)
     top.add(scene.art.image(261, 82, 'ui/candy').setDisplaySize(56, 56))
@@ -109,7 +114,8 @@ export class Hud {
     const legendArt = scene.hero.kit.legend ? `hero-${scene.hero.kit.costume}:` : ''
     this.ability = this.button(bottom, 266, 984, legendArt ? `${legendArt}special/2` : `kit/special/${scene.hero.kit.special}`, 132, () => { scene.cancel(); scene.heroAbility(); this.toast(scene.abilityName()) })
     this.ultimate = this.button(bottom, 266, 830, legendArt ? `${legendArt}ultimate/3` : `kit/ultimate/${scene.hero.kit.ultimate}`, 132, () => { scene.cancel(); scene.command({ type: 'ultimate' }) })
-    this.talentCard = scene.add.container(960, 165).setDepth(3150).setVisible(false)
+    // The card pauses play, so it sits above popups and banners whose tweens freeze with it.
+    this.talentCard = scene.add.container(960, 165).setDepth(3345).setVisible(false)
     for (const [i, slot] of (['passive', 'headgear', 'trinket', 'skin'] as const).entries()) {
       const family = scene.hero.kit[slot], info = scene.options.assets.kits.slots[slot][family]
       if (family === 'none') continue
@@ -129,7 +135,7 @@ export class Hud {
       if (open) this.toast('Supplies · drag an item to the road, or select it and tap a target.'); this.refresh()
     })
     this.suppliesButton.root.add(this.text(0, -82, 'SUPPLIES', 30).setOrigin(.5).setStroke('#241b30', 5))
-    this.supplies.add(plate(scene, -380, -80, 760, 172, 24, 0x241b30, .97, 0xc7a2cb, 3))
+    this.supplies.add(plate(scene, -380, -80, 760, 172, 24, 0x241b30, .97, 0xc7a2cb, 3).setAlpha(PLATE))
     for (const [i, kind] of (Object.keys(CONSUMABLES) as ConsumableKind[]).entries()) {
       const b = this.button(this.supplies, (i - 2) * 146, 0, `item/${kind}`, 124, p => scene.selectConsumable(kind, scene.viewToWorld(p)))
       this.cost(b, CONSUMABLES[kind].cost); this.itemButtons[kind] = b
@@ -206,11 +212,14 @@ export class Hud {
     const icon = s.art.image(0, 0, frame || 'ui/candy').setVisible(!!frame)
     const scale = size * .65 / Math.max(icon.width, icon.height); icon.setScale(scale)
     const label = this.text(0, 0, '', 40, '#35253d').setOrigin(.5).setAlign('center')
-    root.add([glow, s.art.image(0, 0, slot ? 'ui/radial-slot' : 'ui/btn-round').setDisplaySize(size, size), icon, sweep, label]); parent.add(root)
+    const face = s.art.image(0, 0, slot ? 'ui/radial-slot' : 'ui/btn-round').setDisplaySize(size, size)
+    root.add([glow, face, icon, sweep, label]); parent.add(root)
     const hitSize = Math.max(120, size)
     root.setSize(hitSize, hitSize).setInteractive(new Phaser.Geom.Circle(hitSize / 2, hitSize / 2, hitSize / 2), Phaser.Geom.Circle.Contains)
-    const b = { root, icon, label, sweep, glow, size, enabled: true }
+    const b: Button = { root, face, icon, label, sweep, glow, size, enabled: true }
     this.buttons.add(b); root.once('destroy', () => this.buttons.delete(b))
+    // Touch fires over on press and out on release, so this also lights a pressed control.
+    root.on('pointerover', () => { b.hot = true; this.shade(b) }).on('pointerout', () => { b.hot = false; this.shade(b) })
     root.on('pointerdown', (p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation()
       if (!root.getData('tutorialSkip') && s.focus && !s.focus.input(p, false)) return
@@ -223,6 +232,23 @@ export class Hud {
   }
   private enabled(b: Button, enabled: boolean) {
     b.enabled = enabled; b.root.setAlpha(enabled ? 1 : .65); b.icon.setTint(enabled ? 0xffffff : 0x777777)
+  }
+  private shade(b: Button) {
+    const s = this.scene, matrix = b.root.getWorldTransformMatrix(), skip = b.root.getData('tutorialSkip')
+    const allowed = skip || !s.focus || s.focus.permits({ x: matrix.tx, y: matrix.ty }, false)
+    // During the tutorial the only allowed control (besides skip/pause) is the current step's target, so it stays lit.
+    // Disabled (.65) and tutorial-blocked (.38) controls keep their existing look.
+    const rest = allowed && b.enabled && (skip || !s.focus?.active) && !this.lit(b)
+    b.root.setAlpha(rest ? REST : allowed ? b.enabled ? 1 : .65 : .38)
+    b.face.setAlpha(rest ? PLATE / REST : 1)
+    b.icon.setTint(allowed && b.enabled ? 0xffffff : 0x777777)
+  }
+  // Open popups and the tutorial card are in use; docked controls light up when hovered, pressed or selected.
+  private lit(b: Button) {
+    const s = this.scene, m = s.mode, parent = b.root.parentContainer
+    if (b.hot || parent === this.radialRoot || parent === this.wheel || parent === this.tutorialCard) return true
+    const chosen = m === 'rain' ? this.rain : m === 'boo' ? this.boo : m ? this.trapButtons[m as TrapKind] ?? this.itemButtons[m as ConsumableKind] : undefined
+    return b === chosen || b === this.calls[this.previewPath] || b === this.portrait && s.heroSelected || b === this.emoteButton && s.emoteOpen || b === this.suppliesButton && this.suppliesOpen
   }
   private cost(b: Button, value: number, refund = false) {
     if (b.costLabel) { b.costLabel.setText(`${refund ? '+' : ''}${value}`); return }
@@ -265,6 +291,8 @@ export class Hud {
     const health = Phaser.Math.Clamp(s.hero.hp / s.hero.maxHp, 0, 1)
     this.health.setScale(health, 1).setTint(health < .3 ? 0xff876e : 0xa7d987).setVisible(health > 0)
     this.talents()
+    // refresh() keeps running while paused, so the countdown drains at the HUD's 8 Hz rate.
+    if (this.talentTimer && this.talentBar) this.talentBar.scaleX = 1 - this.talentTimer.getProgress()
     this.cooldown(this.rain, s.spellCooldown.rain, SPELLS.rain.cooldown * factor)
     this.cooldown(this.boo, s.spellCooldown.boo, SPELLS.boo.cooldown * factor)
     for (const kind of ['pumpkin', 'bowl', 'gum'] as const) { this.enabled(this.trapButtons[kind], s.candy >= s.trapCost(kind)); this.cost(this.trapButtons[kind], s.trapCost(kind)); if (kind === 'pumpkin' && s.freePumpkin > 0) this.trapButtons[kind].costLabel?.setText('FREE').setFontSize(26); else this.trapButtons[kind].costLabel?.setFontSize(34) }
@@ -283,12 +311,7 @@ export class Hud {
     for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown); this.enabled(b, s.itemCooldown[kind] <= 0 && s.candy >= CONSUMABLES[kind].cost) }
     this.suppliesButton.root.setVisible(!s.focus?.active)
     this.suppliesButton.glow.setVisible(this.suppliesOpen)
-    for (const button of this.buttons) {
-      const matrix = button.root.getWorldTransformMatrix()
-      const allowed = button.root.getData('tutorialSkip') || !s.focus || s.focus.permits({ x: matrix.tx, y: matrix.ty }, false)
-      button.root.setAlpha(allowed ? button.enabled ? 1 : .65 : .38)
-      button.icon.setTint(allowed && button.enabled ? 0xffffff : 0x777777)
-    }
+    for (const button of this.buttons) this.shade(button)
     if (this.previewWave !== s.wave) this.closePreview()
     if (this.statsText.visible && s.time.now >= this.statsAt) { this.statsAt = s.time.now + 500; const stats = s.stats(); this.statsText.setText(`${stats.fps} FPS · Q${stats.quality} · ${stats.enemies} foes · ${stats.objects} objects · ${s.game.renderer.type === Phaser.WEBGL ? stats.draws + ' draws · GPU tex ≈' + stats.textureMB + ' MB' : 'Canvas'}`) }
   }
@@ -411,21 +434,45 @@ export class Hud {
     this.open(this.wheel)
   }
   private talents() {
-    const hero = this.scene.hero, level = this.scene.tutorialStep < TUTORIAL.length ? 0 : hero.talentLevels[0] ?? 0
-    if (level === this.talentLevel) return
+    const s = this.scene, hero = s.hero, level = s.tutorialStep < TUTORIAL.length ? 0 : hero.talentLevels[0] ?? 0
+    // While a menu, an enemy intro or the shop holds the pause, a new card waits, so its countdown never resumes play behind them.
+    // It also waits for the finished tutorial's card and spotlight to clear; pausing would freeze them on screen.
+    if (level === this.talentLevel || level && (s.paused || this.tutorialCard.visible) && !this.talentTimer) return
     this.talentLevel = level; this.talentCard.removeAll(true); this.talentCard.setVisible(!!level)
-    const choices = hero.choices
+    this.talentTimer?.remove(); this.talentTimer = undefined
+    s.input.keyboard?.off('keydown', this.talentKey, this)
+    const choices = level ? hero.choices : null
     if (!choices) return
-    this.talentCard.add(plate(this.scene, -360, -64, 720, 250, 20, 0x2e203c, .97, 0xffd58b, 3))
+    // Each card holds its own pause for at most ten seconds; scene.time keeps running while paused.
+    s.setPaused(true)
+    this.talentTimer = s.time.delayedCall(10000, () => this.pickTalent(0, true))
+    s.input.keyboard?.on('keydown', this.talentKey, this)
+    this.talentCard.add(plate(s, -360, -64, 720, 272, 20, 0x2e203c, .97, 0xffd58b, 3))
     this.talentCard.add(this.text(0, -34, `LEVEL ${level} · PICK A TALENT [Z / X]`, 34).setOrigin(.5))
     choices.forEach((choice, i) => {
       const x = i ? 176 : -176, panel = this.scene.add.container(x, 82).setSize(340, 180).setInteractive()
       panel.add(plate(this.scene, -166, -90, 332, 180, 12, 0xffefd0))
       panel.add(this.text(0, -54, choice.name, 34, '#35253d').setOrigin(.5))
       panel.add(this.text(0, 22, choice.effect, 34, '#35253d', true).setOrigin(.5).setWordWrapWidth(302).setAlign('center'))
-      panel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.scene.command({ type: 'talent', index: i }); this.refresh() })
+      panel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.pickTalent(i) })
       this.talentCard.add(panel)
     })
+    this.talentCard.add(plate(s, -330, 184, 660, 14, 7, 0x171020))
+    this.talentBar = plate(s, -330, 184, 660, 14, 7, 0xffd58b); this.talentCard.add(this.talentBar)
+  }
+  // Held keys repeat; ignoring repeats keeps one press from answering the next card too.
+  private talentKey(event: KeyboardEvent) {
+    if (!event.repeat && (event.code === 'KeyZ' || event.code === 'KeyX')) this.pickTalent(event.code === 'KeyZ' ? 0 : 1)
+  }
+  // The scene ignores commands while paused, so resume first. Resetting talentLevel makes the refresh
+  // open the next card, or close this one, even if the choice was somehow refused.
+  private pickTalent(index: number, auto = false) {
+    const s = this.scene, choice = s.hero.choices?.[index]
+    if (!this.talentTimer || !choice) return
+    this.talentTimer.remove(); this.talentTimer = undefined
+    s.setPaused(false); s.command({ type: 'talent', index })
+    if (auto) this.toast(`Auto-picked: ${choice.name}`)
+    this.talentLevel = -1; this.refresh()
   }
   toast(value: string, seconds = 3.5) {
     if (this.toastValue === value && this.scene.clock < this.toastUntil) return

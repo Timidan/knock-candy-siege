@@ -34,7 +34,7 @@ Existing enemy/tower families, balance, waves and tutorial wording can change as
 
 Tap a pad to open its four tower slots. Tap a tower icon to preview its range, role and cost; tap it again (including the tick) to build. Unaffordable slots still preview, but never spend candy. Tap a built tower to upgrade, sell for 70%, or cycle first/last/strong/close targeting. Build, upgrade, sell and outside taps close the ring. Lanterns reveal ghosts, pumpkins resist eggs, and bats bypass guards and ground traps. Tap the hero portrait and then ground to move; hold the hero to emote. Drag a trap onto the path; candy is charged only on a valid drop. Selecting a trap and tapping the path also works. Select a spell then tap its target area. Escape cancels a selection or pauses.
 
-Keyboard: Space pauses, 1/2 select spells, Q uses the hero ability, R uses the charged ultimate, Z/X choose a talent, E opens emotes, N calls the next wave. The pause menu includes settings, a restart and level select. Switching browser tabs pauses the game. Talent cards at levels 2–5 do not pause; starting-level choices queue, and stay hidden during the tutorial.
+Keyboard: Space pauses, 1/2 select spells, Q uses the hero ability, R uses the charged ultimate, Z/X choose a talent, E opens emotes, N calls the next wave. The pause menu includes settings, a restart and level select. Switching browser tabs pauses the game. A talent card pauses the game until a talent is picked, for at most 10 seconds, then picks the left one; starting-level choices queue, and stay hidden during the tutorial.
 
 Pools cap enemies at 96, projectiles at 128, effects at 96 and bitmap damage numbers at 40; lite mode halves the effect/number budget. A full enemy pool delays spawns instead of dropping them. The 60-enemy/12-tower phone performance target needs a real device playtest; a successful build alone does not establish it.
 
@@ -54,7 +54,7 @@ Coordinates are in the fixed **1920 × 1080** design buffer. Round controls belo
 | Emote | `(100, 830)`, diameter 124 |
 | Ultimate | `(266, 830)`, diameter 132; charge percentage, then ready glow |
 | Perks / hero details | Passive, headgear, trinket and skin buttons at `(76 + 126i, 310)`, diameter 120; tap for effect text. HP and quirk labels begin `(24, 152)` |
-| Talent card | `(960, 165)`, `720 × 250`; two `340 × 180` hit targets, 34px text |
+| Talent card | `(960, 165)`, `720 × 272` with a 10 s countdown bar; two `340 × 180` hit targets, 34px text |
 | Pumpkin / bowl / gum traps | `(1488, 984)` / `(1640, 984)` / `(1792, 984)`, diameter 132; candy badges at local y=58 |
 | Call wave | First on-screen sample of each incoming route, inset to x=`84…1836`, y=`84…900`, moved away from resource/perk controls when necessary, diameter 144. Fly routes have their own entrance controls. Rosie Row is approximately `(84, 562)` |
 | Wave preview | Beside the tapped entrance; `max(380, 112 × enemy types + 44) × 280`; first tap previews, second tap on entrance calls |

@@ -1,6 +1,6 @@
 import type { SiegeScene } from '../SiegeScene'
 import type { Enemy, Tower } from '../world'
-import { distanceSq } from '../world'
+import { distanceSq, reaction } from '../world'
 import type { Point, Status, TrapKind } from '../data/config'
 import { ENEMIES, TRAPS } from '../data/config'
 import { resolveKit, WEAPONS, SPECIAL_COOLDOWNS } from '../data/kits'
@@ -25,6 +25,10 @@ export class Hero {
   ability = 0
   respawn = 0
   hit = 0
+  reaction = reaction()
+  private shieldPopAt = 0
+  // Bone Shield already uses untargetable; this timestamp only identifies its artwork.
+  boneShieldUntil = 0
   fear = 0
   slow = 0
   charge = 0
@@ -123,16 +127,23 @@ export class Hero {
   }
   enemyDamage(enemy: Enemy) { return this.alive && this.kit.headgear === 'chill' && distanceSq(this, enemy) < 190 ** 2 ? this.has('headgear') ? .65 : .8 : 1 }
   heal(amount: number) { if (this.alive) { const value = Math.min(amount, this.maxHp - this.hp); this.hp += value; if (value >= 3) this.scene.number(Math.ceil(value), this.x, this.y - 130, 0x9afaad) } }
-  hurt(amount: number) {
-    if (!this.alive || this.untargetable > 0) return
+  hurt(amount: number, from?: Point) {
+    if (!this.alive) return
     const s = this.scene
-    if (s.crew === 1 && amount >= 1 && s.random() < .1) { s.effect('fx/poof/0', this.x, this.y - 50, .4, .8); return }
-    if (this.shield && amount >= 1) { this.shield--; s.effect('fx/crit/0', this.x, this.y - 50, .5); s.options.sfx.play('armor'); return }
+    if (this.untargetable > 0) {
+      if (amount >= 1 && s.clock < this.boneShieldUntil && s.presentationTime >= this.shieldPopAt) { s.shieldFeedback(this); this.shieldPopAt = s.presentationTime + .35 }
+      return
+    }
+    if (s.crew === 1 && amount >= 1 && s.random() < .1) { s.dodgeFeedback(this); this.reaction.dodge = .26; return }
+    if (this.shield && amount >= 1) { this.shield--; s.shieldFeedback(this); s.options.sfx.play('armor'); return }
     const armor = (this.kit.headgear === 'armored' ? this.has('headgear') ? .45 : .3 : 0) + (this.kit.skin === 'metal' ? .2 : 0) + (this.waveBuff === 'guard' ? .15 : 0)
     this.hp -= amount * (1 - Math.min(.65, armor))
     if (amount > 1) {
       this.hit = .16
       this.rig.hurt()
+      const dx = from ? this.x - from.x : -this.rig.facing, dy = from ? this.y - from.y : 0, length = Math.hypot(dx, dy) || 1
+      const weight = 6 + Math.min(20, amount * .45)
+      Object.assign(this.reaction, { x: dx / length * weight, y: dy / length * weight, atX: this.x, atY: this.y, life: .28, stop: reducedMotion() ? 0 : amount >= 35 ? .04 : 0, flash: .1 })
       if (this.kit.trinket === 'smoke-puff' && this.smoke <= 0) {
         this.smoke = 7
         s.effect('fx/poof/0', this.x, this.y - 50, 1.4, 2)
@@ -156,8 +167,8 @@ export class Hero {
     if (s.clock - this.lastKill > 5) this.streak = 0
     this.updateZones(dt)
     if (this.scare > 0) { this.scare -= dt; if (this.scare <= 0) { this.fx('special', 'scare/0', this, 1, 1.6); for (const e of this.near(310)) s.status(e, 'stun', 2.5); if (this.has('special')) this.heal(this.maxHp * .3) } }
-    if (!this.alive) { this.respawn -= dt; if (this.respawn <= 0) this.revive(); this.rig.update(dt); return }
-    if (this.rig.dancing) { this.rig.update(dt); return }
+    if (!this.alive) { this.respawn -= dt; if (this.respawn <= 0) this.revive(); this.rig.update(dt, 1, !s.presentationFrozen); return }
+    if (this.rig.dancing) { this.rig.update(dt, 1, !s.presentationFrozen); return }
     let rate = 1
     if (!this.rig.busy) {
       const dx = this.target.x - this.x, dy = this.target.y - this.y, distance = Math.hypot(dx, dy)
@@ -184,7 +195,7 @@ export class Hero {
     if (this.kit.headgear === 'oddity' && this.oddity <= 0 && this.near(350).length) { this.oddity = this.has('headgear') ? 4 : 8; this.oddityEffect() }
     if (this.pep > 0 && Math.floor(s.clock * 2) !== Math.floor((s.clock - dt) * 2)) for (const t of s.towers) if (t && distanceSq(this, t) < 440 ** 2) this.fx('special', 'aura/0', { x: t.x, y: t.y - 95 }, .55, .8)
     if (this.kit.trinket === 'heart' || !this.near(150).length) this.hp = Math.min(this.maxHp, this.hp + dt * (this.kit.trinket === 'heart' ? 6 : 3))
-    this.rig.update(dt, this.rig.clip === 'walk' ? rate : this.rig.clip.startsWith('attack-') ? this.attackRate() : 1)
+    this.rig.update(dt, this.rig.clip === 'walk' ? rate : this.rig.clip.startsWith('attack-') ? this.attackRate() : 1, !s.presentationFrozen && this.reaction.stop <= 0)
   }
   private attackRate() {
     const duration = this.scene.options.assets.rig.clips[this.rig.clip].ms / 1000
@@ -200,9 +211,8 @@ export class Hero {
       critical = this.scene.random() < chance
       if (critical) damage *= 2
     }
-    const landed = s.damage(e, damage, magic ? 'magic' : this.kit.weapon === 'egg-lob' && basic ? 'egg' : 'physical', true, true)
+    const landed = s.damage(e, damage, magic ? 'magic' : this.kit.weapon === 'egg-lob' && basic ? 'egg' : 'physical', true, true, { from: this, crit: critical })
     if (basic && landed && s.textures.get(`hero-${this.kit.costume}`).has('wpn/hit/0')) s.effect(`hero-${this.kit.costume}:wpn/hit/0`, e.x, e.y - 45, .3, .7)
-    if (critical && landed) s.effect('fx/crit/0', e.x, e.y - 80, .4, .8)
     if (!landed || !basic || !e.active) return
     if (this.kit.weaponMod === 'fire' || this.kit.headgear === 'hellfire') this.dot(e, 'burn', this.has('headgear') && this.kit.headgear === 'hellfire' ? 6 : 3)
     if (this.kit.toxic) this.dot(e, 'poison', 4)

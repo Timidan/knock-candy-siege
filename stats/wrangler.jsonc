@@ -1,0 +1,11 @@
+{
+  "name": "siege-stats",
+  "main": "index.mjs",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": true,
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "siege-stats",
+    "database_id": "a26db068-4cf2-4a7a-8b3d-cd6b22dd5141"
+  }]
+}

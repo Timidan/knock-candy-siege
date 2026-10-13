@@ -77,7 +77,7 @@ export async function loadLevelAssets(pack: AssetPack, level: number, signal: Ab
   if (!geometry) throw new Error('The map could not be loaded. Please retry.')
   // props3 carries the batch 3 props, the portal, the map effects, the darkness light and the daily icons.
   const newProps = !!(geometry.portals || geometry.zones || geometry.dark || geometry.props.some(p => p.kind === 'bell' || p.kind === 'grate' || p.kind === 'bonfire'))
-  const keys = ['units2', 'fx2', 'towers3', 'items', ...(geometry.props.some(p => p.use) || geometry.ambient ? ['props'] : []), ...(newProps || daily ? ['props3'] : [])]
+  const keys = ['units2', 'fx2', 'fx3', 'towers3', 'items', ...(geometry.props.some(p => p.use) || geometry.ambient ? ['props'] : []), ...(newProps || daily ? ['props3'] : [])]
   const normal = `/siege/levels/${geometry.background}`, wide = normal.replace(/\.webp$/, '-wide.webp')
   const backgroundImage = loadImage(wide, signal).catch(() => loadImage(normal, signal))
   const [background, ...atlases] = await Promise.all([backgroundImage, ...keys.map(key => loadAtlas(key, signal))])

@@ -30,11 +30,14 @@ import { holderUrl } from '../chain'
 import { reopenShop } from './shopChain'
 import { SHOP_ITEMS, canDance } from './data/shop'
 import { ShareCard } from './ShareCard'
+import { STATS_URL, setStatsEnabled, statsEnabled, track, trackRunEnd } from './telemetry'
+import type { RunEnd } from './telemetry'
 import './siege.css'
 
 type Run = { id: number; home: boolean; serial: number; level: number; mode: Mode; daily: Daily | null; seed: number; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; assets: AssetPack; street: StreetBonuses; stars: Record<string, number> }
 type Menu = 'title' | 'levels' | 'hero' | 'pause' | 'settings' | 'book' | 'result' | 'intro' | 'shop' | 'street' | null
 if (import.meta.env.DEV) selfCheck()
+track('session') // once per page load: this module is evaluated once
 function Modal({ children, label, onEscape, className = '' }: { children: ReactNode; label: string; onEscape: () => void; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => { const dialog = ref.current; dialog?.showModal(); dialog?.querySelector<HTMLElement>('[data-initial-focus]')?.focus(); return () => dialog?.close() }, [])
@@ -74,6 +77,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const [save, setSave] = useState<Save>(readSave)
   const saveRef = useRef(save)
   const [saveWarning, setSaveWarning] = useState(false)
+  const [shareStats, setShareStats] = useState(statsEnabled)
   const [menu, setMenu] = useState<Menu>(() => reopenShop() ? 'shop' : 'title')
   const menuNow = useRef(menu); menuNow.current = menu
   const [returnMenu, setReturnMenu] = useState<Menu>('title')
@@ -195,14 +199,20 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   useEffect(() => {
     if (!run || !assets || !host.current || !sfx.current) return
     setReady(false)
+    // Stats: run_start once the level is playable; one run_end per run, as a win, a loss or a quit (leaving a loaded run before it ends).
+    const info = { level: run.mode === 'level' ? String(run.level) : run.mode, hero: run.id }
+    let started = false, finished = false
+    const endRun = (end: RunEnd) => { if (started && !finished) { finished = true; trackRunEnd(world, info, end) } }
+    const quit = () => endRun({ won: false, quit: true, stars: 0, score: 0, wave: world.wave, seconds: world.clock })
     const world = new SiegeScene({ assets: run.assets, level: run.level, mode: run.mode, daily: run.daily, seed: run.seed, stars: run.stars, street: run.street, seen: saveRef.current.seen, onDiscover: keys => persist({ ...saveRef.current, seen: [...new Set([...saveRef.current.seen, ...keys])] }), hero: run.id, home: run.home, tutorial: run.tutorial, costume: run.costume, owned: run.owned, victoryDance: run.victoryDance, settings: saveRef.current.settings, sfx: sfx.current,
       onShop: () => { setReturnMenu('pause'); setMenu('shop') },
       onFullscreen: canFullscreen ? () => { void fullscreen() } : undefined,
       onPause: () => setMenu('pause'),
       onIntro: kind => { setIntro(kind); setMenu('intro') },
       onTutorial: () => persist({ ...saveRef.current, tutorial: true }),
-      onReady: () => { setReady(true) },
+      onReady: () => { setReady(true); if (!started) { started = true; track('run_start', info) } },
       onEnd: result => {
+        endRun({ ...result, quit: false })
         setOutcome(result); setMenu('result')
         const now = saveRef.current
         // Each mode keeps its own best: stars and score per level, the best endless wave, and the best score of each daily.
@@ -225,8 +235,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     const resize = () => game.scale.refresh()
     const observer = new ResizeObserver(resize); observer.observe(host.current)
     window.addEventListener('orientationchange', resize)
+    window.addEventListener('pagehide', quit)
     document.addEventListener('visibilitychange', hide)
-    return () => { observer.disconnect(); window.removeEventListener('orientationchange', resize); document.removeEventListener('visibilitychange', hide); scene.current = null; game.destroy(true); setReady(false) }
+    return () => { quit(); window.removeEventListener('pagehide', quit); observer.disconnect(); window.removeEventListener('orientationchange', resize); document.removeEventListener('visibilitychange', hide); scene.current = null; game.destroy(true); setReady(false) }
   }, [run, assets])
   useEffect(() => {
     const world = scene.current
@@ -299,6 +310,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <div className="row"><Sticker tone="gold" onClick={() => subMenu('shop')}>Shop · $KNOCK</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker></div>
         {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK available</button>}
         <small>20 jars. Your Chog. One very long night.</small>
+        {STATS_URL && <a className="siege-text-button" href="/stats" style={{ width: 'fit-content', lineHeight: '44px' }}>Live stats</a>}
       </div>}
       {menu === 'levels' && <>
         <span className="siege-eyebrow">CHOG TOWN · AFTER DARK</span><h2>Pick your porch</h2>
@@ -370,6 +382,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.shake} onChange={event => updateSettings({ ...save.settings, shake: event.target.checked })} /><span>Screen shake<small>Reduced-motion preferences always take priority.</small></span></label>
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.autoFullscreen} onChange={event => updateSettings({ ...save.settings, autoFullscreen: event.target.checked })} /><span>Full screen on Play<small>On phones, enter full screen and request landscape. On iPhone, show Home Screen steps once.</small></span></label>
           <label className="siege-toggle"><input type="checkbox" disabled={!shop.owned.includes(21)} checked={save.settings.gold && shop.owned.includes(21)} onChange={event => updateSettings({ ...save.settings, gold: event.target.checked })} /><span>Golden towers<small>{shop.owned.includes(21) ? 'Dress all four classic towers in gold.' : 'Available in the $KNOCK shop.'}</small></span></label>
+          {STATS_URL && <label className="siege-toggle"><input type="checkbox" checked={shareStats} onChange={event => { setStatsEnabled(event.target.checked); setShareStats(event.target.checked) }} /><span>Share anonymous play stats<small>Your runs count toward the public live stats. A random id per browser. No wallet or IP address is stored; a salted IP hash is kept for one day only to stop spam.</small></span></label>}
         </div>
         <Sticker tone="orange" onClick={() => setMenu(returnMenu)}>Done</Sticker>
       </>}

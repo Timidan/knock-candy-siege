@@ -144,16 +144,18 @@ export class Rig {
     this.face.setTexture(key).setDisplaySize(256 * this.headScale, 320 * this.headScale).setFlipX(left)
   }
   // A hit flash without interrupting the current clip: bosses take far too many hits to flinch at each one.
-  flash() { this.hitTime = .1 }
+  flash() { this.hitTime = .1; for (const image of this.flashes) image.setTintFill(0xffffff); this.face.setTintFill(0xffffff) }
   hurt() {
     this.hitTime = .14
+    for (const image of this.flashes) image.setTintFill(0xffffff)
+    this.face.setTintFill(0xffffff)
     const release = this.data.clips[this.clip].events.release
     if (!this.busy || this.clip.startsWith('attack-') && this.time >= (Array.isArray(release) ? release[0] : release ?? Infinity)) this.play('hurt')
   }
   emote() {
     this.dance(this.kit.emote)
   }
-  update(dt: number, rate = 1) {
+  update(dt: number, rate = 1, render = true) {
     const clip = this.data.clips[this.clip], before = this.time
     this.time += dt * 1000 * rate; this.fade = Math.min(1, this.fade + dt / .12)
     for (const name in clip.events) {
@@ -170,36 +172,40 @@ export class Rig {
         }
       }
     }
-    const next = localPose(this.data, this.costume, this.clip, reducedMotion() && clip.loop ? 0 : this.time, this.pose)
-    for (const part in next) {
-      const p = this.from && this.fade < 1 ? mix(this.from[part], next[part], this.fade, next[part]) : next[part]
-      next[part] = p
-      const container = part === 'root' ? this.puppet : this.parts[part]
-      container.setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx, p.sy).setAlpha(Math.max(0, Math.min(1, p.a)))
+    // Releases and busy/clip clocks above always advance. A combat pause only holds the puppet.
+    if (render) {
+      const next = localPose(this.data, this.costume, this.clip, reducedMotion() && clip.loop ? 0 : this.time, this.pose)
+      for (const part in next) {
+        const p = this.from && this.fade < 1 ? mix(this.from[part], next[part], this.fade, next[part]) : next[part]
+        next[part] = p
+        const container = part === 'root' ? this.puppet : this.parts[part]
+        container.setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx, p.sy).setAlpha(Math.max(0, Math.min(1, p.a)))
+      }
+      this.pose = next
+      this.root.setScale(this.facing * this.size, this.size)
+      if (this.accessory) {
+        const p = compose(next['arm-back'], this.accessory.hand, this.accessoryPose)
+        this.accessory.image.setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx * this.headScale * 2, p.sy * this.headScale * 2).setAlpha(p.a)
+      }
+      const left = this.facing < 0, ref = this.sharpHead?.left === left ? this.sharpHead : this.heads.head(this.kit.id, left)
+      if (this.face.texture.key !== ref.key || this.face.frame.name !== ref.frame) this.face.setTexture(ref.key, ref.frame).setDisplaySize(256 * this.headScale, 320 * this.headScale)
+      this.face.setFlipX(left)
+      if (this.aura && this.auraFrames?.length) {
+        const ref = this.auraFrames[reducedMotion() ? 0 : Math.floor(this.scene.time.now * 6 / 1000) % this.auraFrames.length], p = next.head
+        this.aura.setTexture(ref.key, ref.frame).setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx * this.headScale * 2, p.sy * this.headScale * 2).setAlpha(p.a)
+      }
+      this.sparkle?.setAlpha(reducedMotion() ? 1 : .4 + .6 * Math.max(0, Math.sin(this.scene.time.now / 180)))
+      const cycle = this.costume === 'tickle' ? this.skin.cycle : undefined
+      const color = cycle ? cycle[Math.floor(this.scene.time.now / 500) % cycle.length] : this.costume === 'tickle' ? this.skin.tint : this.skin.face ?? this.skin.tint
+      let tint = parseInt(color.slice(1), 16)
+      if (this.skin.shine) { const c = Phaser.Display.Color.ValueToColor(tint), shine = (Math.sin(this.scene.time.now / 450) + 1) * .2; tint = Phaser.Display.Color.GetColor(c.red + (255 - c.red) * shine, c.green + (255 - c.green) * shine, c.blue + (255 - c.blue) * shine) }
+      this.hitTime = Math.max(0, this.hitTime - dt)
+      this.face.clearTint()
+      for (const image of this.flashes) image.clearTint()
+      for (const image of this.skins) image.setTint(tint)
+      if (this.hitTime > 0) { for (const image of this.flashes) image.setTintFill(0xffffff); this.face.setTintFill(0xffffff) }
+      if (this.signature && !this.signature.update(dt)) { this.signature.destroy(); this.signature = undefined; this.face.setVisible(true) }
     }
-    this.pose = next
-    this.root.setScale(this.facing * this.size, this.size)
-    if (this.accessory) {
-      const p = compose(next['arm-back'], this.accessory.hand, this.accessoryPose)
-      this.accessory.image.setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx * this.headScale * 2, p.sy * this.headScale * 2).setAlpha(p.a)
-    }
-    const left = this.facing < 0, ref = this.sharpHead?.left === left ? this.sharpHead : this.heads.head(this.kit.id, left)
-    if (this.face.texture.key !== ref.key || this.face.frame.name !== ref.frame) this.face.setTexture(ref.key, ref.frame).setDisplaySize(256 * this.headScale, 320 * this.headScale)
-    this.face.setFlipX(left)
-    if (this.aura && this.auraFrames?.length) {
-      const ref = this.auraFrames[reducedMotion() ? 0 : Math.floor(this.scene.time.now * 6 / 1000) % this.auraFrames.length], p = next.head
-      this.aura.setTexture(ref.key, ref.frame).setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx * this.headScale * 2, p.sy * this.headScale * 2).setAlpha(p.a)
-    }
-    this.sparkle?.setAlpha(reducedMotion() ? 1 : .4 + .6 * Math.max(0, Math.sin(this.scene.time.now / 180)))
-    const cycle = this.costume === 'tickle' ? this.skin.cycle : undefined
-    const color = cycle ? cycle[Math.floor(this.scene.time.now / 500) % cycle.length] : this.costume === 'tickle' ? this.skin.tint : this.skin.face ?? this.skin.tint
-    let tint = parseInt(color.slice(1), 16)
-    if (this.skin.shine) { const c = Phaser.Display.Color.ValueToColor(tint), shine = (Math.sin(this.scene.time.now / 450) + 1) * .2; tint = Phaser.Display.Color.GetColor(c.red + (255 - c.red) * shine, c.green + (255 - c.green) * shine, c.blue + (255 - c.blue) * shine) }
-    this.hitTime = Math.max(0, this.hitTime - dt)
-    for (const image of this.flashes) image.clearTint()
-    for (const image of this.skins) image.setTint(tint)
-    if (this.hitTime > 0) for (const image of this.flashes) image.setTint(0xffaaaa)
-    if (this.signature && !this.signature.update(dt)) { this.signature.destroy(); this.signature = undefined; this.face.setVisible(true) }
     if (this.pendingDance && !clip.loop && this.time >= clip.ms) this.startDance(this.pendingDance)
   }
 }

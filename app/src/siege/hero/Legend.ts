@@ -33,7 +33,7 @@ export function legendAttack(h: Hero, target: Enemy) {
 export function legendSpecial(h: Hero, enemies: Enemy[], talent: boolean) {
   const s = h.scene, id = h.kit.id, target = enemies[0]
   if (id === 561) { fx(h, 'special/0', h, 1.1, 1.8); for (const e of h.near(300)) { h.hitEnemy(e, 70, true); h.dot(e, 'burn', talent ? 7 : 4) } } // Flare Up
-  else if (id === 900) { h.untargetable = talent ? 6 : 4; fx(h, 'special/0', h, h.untargetable, 1.4) } // Bone Shield blocks every hit
+  else if (id === 900) { h.untargetable = talent ? 6 : 4; h.boneShieldUntil = s.clock + h.untargetable; fx(h, 'special/0', h, h.untargetable, 1.4) } // Bone Shield blocks every hit
   else if (id === 942) { // Existential Dread: a wide cone of fear
     fx(h, 'special/0', { x: h.x + h.rig.facing * 120, y: h.y }, 1, 2.2)
     for (const e of h.lineTargets(target ?? { x: h.x + h.rig.facing * 200, y: h.y }, 650, 280)) s.status(e, 'fear', talent ? 5 : 3)
@@ -90,5 +90,5 @@ export function legendUltimate(h: Hero, enemies: Enemy[], talent: boolean) {
   } else if (id === 1881) { // Midas Rain: gold everywhere, and candy for every hit
     fx(h, 'ultimate/0', { x: 960, y: 480 }, 1.8, 3.6)
     for (const e of enemies) { h.hitEnemy(e, 85 * power, true); s.income(3); s.effect('fx/coin', e.x, e.y - 60, .7, .25, 'coin', 261, 82) }
-  } else { h.devil = talent ? 12 : 8; s.jars = Math.max(1, s.jars - 1); fx(h, 'ultimate/0', h, 1.4, 2.2); s.hud.toast('Deal with the Devil! Double damage, for one jar.') } // Deal With the Devil
+  } else { h.devil = talent ? 12 : 8; s.jarsLost += s.jars > 1 ? 1 : 0; s.jars = Math.max(1, s.jars - 1); fx(h, 'ultimate/0', h, 1.4, 2.2); s.hud.toast('Deal with the Devil! Double damage, for one jar.') } // Deal With the Devil
 }

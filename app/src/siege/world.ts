@@ -4,20 +4,23 @@ import type { BossState } from './Boss'
 
 export type Statuses = Record<Status, number>
 export const clearStatuses = (): Statuses => ({ slow: 0, stun: 0, burn: 0, poison: 0, reveal: 0, fear: 0, freeze: 0, charm: 0, confuse: 0, root: 0, mark: 0, bleed: 0, wrap: 0, ground: 0 })
-export type UnitArt = { root: Phaser.GameObjects.Container; body: Phaser.GameObjects.Image; face: Phaser.GameObjects.Image; icons: Phaser.GameObjects.Image[]; statusImage: Phaser.GameObjects.Image; drawFrame: number; faceId: number; faceLeft: boolean; hitTint: boolean; statusName?: Status; statusFrame: number }
+// These clocks and offsets belong only to drawing. Never read them from combat rules.
+export type Reaction = { x: number; y: number; life: number; stop: number; flash: number; dodge: number; atX: number; atY: number }
+export const reaction = (): Reaction => ({ x: 0, y: 0, life: 0, stop: 0, flash: 0, dodge: 0, atX: 0, atY: 0 })
+export type UnitArt = { root: Phaser.GameObjects.Container; body: Phaser.GameObjects.Image; face: Phaser.GameObjects.Image; icons: Phaser.GameObjects.Image[]; statusImage: Phaser.GameObjects.Image; drawFrame: number; faceId: number; faceLeft: boolean; hitTint: boolean; statusName?: Status; statusFrame: number; reaction: Reaction; age: number; blockUntil: number; blockX: number; blockY: number; popAt: number; deflectAt: number; missAt: number; statusSlot: number }
 export type Enemy = Point & {
   returning: number; casting: number; poisonStacks: number; active: boolean; generation: number; wave: number; kind: EnemyKind; id: number; mods: Modifier[]; path: number; distance: number; speed: number;
   hp: number; maxHp: number; candy: number; jars: number; status: Statuses; age: number; hit: number; attack: number; skill: number; lucky: boolean; revived: boolean; armour: boolean; visible: boolean; art: UnitArt; slowPower: number; heroDot: boolean; sigCooldown: number
   // route: edge swarms walk their own line to the porch; boss: legends and the Great Pumpkin; shield/gold: seconds left of Sanctuary or a golden touch; lit: standing in light on a dark map
   route?: Route; boss?: BossState; shield: number; gold: number; lit: boolean
 }
-export type Guard = Point & { hp: number; maxHp: number; respawn: number; cooldown: number; slow: number; image: Phaser.GameObjects.Image }
-export type Tower = Point & { kind: TowerKind; level: number; spec: Specialisation | null; rank: number; spent: number; targeting: Targeting; cooldown: number; stun: number; image: Phaser.GameObjects.Image; guards: Guard[]; pop: number; boost: boolean; gold: number }
+export type Guard = Point & { hp: number; maxHp: number; respawn: number; cooldown: number; slow: number; image: Phaser.GameObjects.Image; poseUntil?: number; blockUntil?: number; recoilX?: number; recoilY?: number }
+export type Tower = Point & { kind: TowerKind; level: number; spec: Specialisation | null; rank: number; spent: number; targeting: Targeting; cooldown: number; stun: number; image: Phaser.GameObjects.Image; guards: Guard[]; pop: number; boost: boolean; gold: number; shotAt?: number; aimX?: number; aimY?: number }
 // Temporary fighters (zombie Chogs, risen enemies) block and fight like guards; a blocker is a wall that only stops the march.
 export type Ally = Guard & { life: number; damage: number }
 export type Blocker = Point & { life: number; radius: number; image: Phaser.GameObjects.Image }
-export type Projectile = Point & { active: boolean; target: Enemy | null; generation: number; life: number; duration: number; fromX: number; fromY: number; endX: number; endY: number; damage: number; kind: TowerKind | 'hero'; splash: number; image: Phaser.GameObjects.Image; arc?: number; frame?: string; frameCount?: number; onHit?: (enemy: Enemy) => void; after?: () => void }
-export type Effect = { active: boolean; image: Phaser.GameObjects.Image; text: Phaser.GameObjects.Text | null; life: number; duration: number; x: number; y: number; toX: number; toY: number; size: number; name: string; mode: 'burst' | 'coin' | 'emote' | 'jar' | 'travel'; count: number; angle: number; width?: number; height?: number }
+export type Projectile = Point & { active: boolean; target: Enemy | null; generation: number; life: number; duration: number; fromX: number; fromY: number; endX: number; endY: number; damage: number; kind: TowerKind | 'hero'; splash: number; image: Phaser.GameObjects.Image; drawn?: boolean; arc?: number; frame?: string; frameCount?: number; onHit?: (enemy: Enemy) => void; after?: () => void }
+export type Effect = { active: boolean; image: Phaser.GameObjects.Image; text: Phaser.GameObjects.Text | null; life: number; duration: number; x: number; y: number; toX: number; toY: number; size: number; name: string; mode: 'burst' | 'coin' | 'emote' | 'jar' | 'travel' | 'steal' | 'pop'; count: number; angle: number; width?: number; height?: number; delay: number; flip: boolean }
 export type DamageNumber = { active: boolean; text: Phaser.GameObjects.BitmapText; life: number; x: number; y: number }
 export type Trap = Point & { kind: TrapKind; life: number; armed: boolean; image: Phaser.GameObjects.Image }
 

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Address, Hash } from 'viem'
+import { track } from './telemetry'
 
 export const BANK_URL = (import.meta.env.VITE_CANDY_BANK_URL || '').replace(/\/$/, '')
 type Claim = { state: 'none' | 'queued' | 'paid' | 'failed'; tx?: Hash }
@@ -24,6 +25,7 @@ export function useCandyBank(address: Address | null, refreshBalance: () => Prom
   const accept = (owner: Address, claim: Claim) => {
     if (current.current !== owner) return
     if (claim.state === 'paid' && status.current?.state !== 'paid') void refresh.current()
+    if (claim.state === 'paid' && status.current?.state === 'queued') track('grant') // seen going from queued to paid, so reloads never recount it
     status.current = claim
     setData({ address: owner, claim, busy: false, error: claim.state === 'failed' ? 'The grant could not be paid. Please check again later.' : '' })
   }

@@ -15,8 +15,8 @@ import { eliteBonus, modifiersFor, traitsFor, MODIFIERS } from './data/traits'
 import { reducedMotion } from './data/save'
 import type { Settings } from './data/save'
 import { Sfx } from './Sfx'
-import { Route, clearStatuses, distanceSq } from './world'
-import type { Ally, Blocker, DamageNumber, Effect, Enemy, Projectile, Tower, Trap, UnitArt } from './world'
+import { Route, clearStatuses, distanceSq, reaction } from './world'
+import type { Ally, Blocker, DamageNumber, Effect, Enemy, Guard, Projectile, Reaction, Tower, Trap, UnitArt } from './world'
 import { Hud } from './Hud'
 import { Darkness } from './Darkness'
 import type { Light } from './Darkness'
@@ -54,6 +54,8 @@ export type SceneOptions = { assets: AssetPack; level: number; mode: Mode; daily
 const WITCHING_WARNING = 3
 const STATUS_KEYS = Object.keys(clearStatuses()) as Status[]
 const DRAW_STATUSES: Status[] = ['freeze', 'charm', 'confuse', 'root', 'mark', 'bleed', 'fear', 'burn', 'poison', 'slow']
+type HitCue = { from?: Point; kind?: 'egg' | 'tp' | 'magic' | 'seed' | 'hero'; crit?: boolean }
+const STATUS_POP: Partial<Record<Status, number>> = { burn: 0xffaa62, poison: 0xa8df8b, slow: 0x95dafa, stun: 0xffd56a, fear: 0xc2a4ef, charm: 0xffa9d0 }
 export class SiegeScene extends Phaser.Scene {
   options: SceneOptions
   art!: Art
@@ -89,7 +91,7 @@ export class SiegeScene extends Phaser.Scene {
   blockers: Blocker[] = []
   hazards: { x: number; y: number; r: number; life: number; pulse: number }[] = []
   fallen: { kind: EnemyKind; path: number }[] = []
-  corpses: { holder: Phaser.GameObjects.Container | null; rig?: Rig; life: number; atlas: string }[] = []
+  corpses: { holder: Phaser.GameObjects.Container | null; rig?: Rig; life: number; atlas: string; flee?: { x: number; y: number; dx: number; dy: number } }[] = []
   bossArt = new Map<string, ArtState>()
   bossOwned = new Set<string>()
   bossSheet?: AssetPack['atlases'][number]
@@ -138,10 +140,19 @@ export class SiegeScene extends Phaser.Scene {
   candy = STARTING_CANDY
   jars = 20
   kills = 0
+  killsByKind: Record<string, number> = {}
+  bossesDefeated: string[] = []
+  jarsLost = 0
   earlyCalls = 0
   wave = 0
   speed = 1
   slowBeat = 0
+  // Wall-clock presentation only. Neither tick, the accumulator, nor rig releases wait for hit-stop.
+  presentationTime = 0
+  hitPause = 0
+  private nextHitPause = 0
+  private impactProjectile: Projectile | null = null
+  get presentationFrozen() { return this.hitPause > 0 && this.motion && this.settings.shake }
   private combos = new Set<string>()
   private signatures: { player: Signature; enemy?: Enemy; generation?: number; bubble?: boolean }[] = []
   clock = 0
@@ -358,8 +369,7 @@ export class SiegeScene extends Phaser.Scene {
       frame: spec === 'rotten' ? 'proj/rotten-egg' : spec === 'golden' ? 'proj/golden-egg' : `proj/${TOWERS[t.kind].projectile}`, duration: t.kind === 'tp' ? .5 : .23, arc: t.kind === 'tp' ? 130 : 30,
       onHit: e => {
         const crit = spec === 'golden' && this.random() < .35
-        const landed = this.damage(e, damage * (crit ? 3 : 1), t.kind === 'egg' ? 'egg' : t.kind === 'lantern' ? 'magic' : 'physical')
-        if (crit) this.effect('fx/crit/0', e.x, e.y - 75, .5)
+        const landed = this.damage(e, damage * (crit ? 3 : 1), t.kind === 'egg' ? 'egg' : t.kind === 'lantern' ? 'magic' : 'physical', true, false, { crit })
         if (!landed) return
         if (spec === 'rotten' && e.active) { e.poisonStacks = Math.min(5, e.poisonStacks + 1); this.status(e, 'poison', 5); this.effect('fx/poison-cloud/0', e.x, e.y - 35, .5, .65) }
         if (t.kind === 'tp' && e.active) { this.status(e, 'wrap', 3); this.status(e, 'slow', 2); e.slowPower = .5 }
@@ -407,6 +417,7 @@ export class SiegeScene extends Phaser.Scene {
     this.sugarRush = Math.max(0, this.sugarRush - dt); this.bonfire = Math.max(0, this.bonfire - dt)
     for (const p of this.props) {
       p.cooldown = Math.max(0, p.cooldown - dt); p.animation = Math.max(0, p.animation - dt)
+      if (this.presentationFrozen) continue
       const kind = p.data.kind!, step = (n: number) => Math.min(n - 1, Math.floor((1 - p.animation) * n))
       const name = kind === 'lamp' ? p.animation ? `fall/${step(4)}` : p.used ? 'down' : '0' : kind === 'shop' ? p.animation ? `use/${step(6)}` : String(Math.floor(this.clock * 5) % 4)
         : kind === 'bell' ? p.animation ? `ring/${step(6)}` : '0' : kind === 'grate' ? p.animation ? `open/${step(4)}` : '0' : kind === 'bonfire' ? this.bonfire > 0 ? `burn/${Math.floor(this.clock * 8) % 6}` : '0'
@@ -414,6 +425,7 @@ export class SiegeScene extends Phaser.Scene {
       this.art.set(p.image, `prop/${kind}/${name}`)
       p.label.setText(kind === 'lamp' && p.used ? 'Lamp down' : kind === 'bonfire' && this.bonfire > 0 ? `Burning · ${Math.ceil(this.bonfire)}s` : p.cooldown > 0 ? `${Math.ceil(p.cooldown)}s` : kind === 'lamp' ? 'Drop lamp' : kind === 'shop' ? 'Sugar rush · 50' : kind === 'bell' ? 'Ring the bell' : kind === 'grate' ? 'Open the grate' : kind === 'bonfire' ? 'Light the bonfire' : this.bridgeUp ? 'Lower bridge' : 'Raise bridge')
     }
+    if (this.presentationFrozen) return
     for (const portal of this.portals) for (const image of portal.images) this.art.set(image, `prop/portal/${Math.floor(this.clock * 8) % 6}`)
     for (const z of this.zones) this.art.set(z.image, `fx/toxic/${Math.floor(this.clock * 4) % 4}`)
     this.boostRings.forEach((ring, i) => this.art.set(ring, `fx/boost/${Math.floor(this.clock * 6 + i) % 4}`))
@@ -502,7 +514,7 @@ export class SiegeScene extends Phaser.Scene {
     const icons = [0, 1].map(i => this.art.image(-19 + i * 38, -150, 'mod/wind').setDisplaySize(30, 30).setVisible(false))
     const status = this.art.image(0, -85, 'status/burn/0').setVisible(false).setName('status')
     const root = this.add.container(0, 0, [body, face, ...icons, status]).setDepth(100)
-    return { root, body, face, icons, statusImage: status, drawFrame: -1, faceId: id, faceLeft: false, hitTint: false, statusFrame: -1 }
+    return { root, body, face, icons, statusImage: status, drawFrame: -1, faceId: id, faceLeft: false, hitTint: false, statusFrame: -1, reaction: reaction(), age: 0, blockUntil: 0, blockX: 0, blockY: 0, popAt: 0, deflectAt: 0, missAt: 0, statusSlot: 0 }
   }
   private makePools() {
     for (let i = 0; i < LIMITS.enemies; i++) {
@@ -511,7 +523,7 @@ export class SiegeScene extends Phaser.Scene {
       this.enemies.push({ returning: 0, casting: 0, poisonStacks: 0, active: false, generation: 0, wave: 0, kind: 'treater', id: 1, mods: [], path: 0, distance: 0, speed: 0, x: 0, y: 0, hp: 0, maxHp: 0, candy: 0, jars: 1, status: clearStatuses(), age: 0, hit: 0, attack: 0, skill: 0, lucky: false, revived: false, armour: false, visible: true, art, slowPower: .5, heroDot: false, sigCooldown: 0, shield: 0, gold: 0, lit: true })
     }
     for (let i = 0; i < LIMITS.projectiles; i++) this.projectiles.push({ active: false, target: null, generation: 0, life: 0, duration: 1, x: 0, y: 0, fromX: 0, fromY: 0, endX: 0, endY: 0, damage: 0, kind: 'egg', splash: 0, image: this.art.image(0, 0, 'proj/egg').setDepth(2100).setVisible(false) })
-    for (let i = 0; i < LIMITS.effects; i++) this.effects.push({ active: false, image: this.art.image(0, 0, 'fx/poof/0').setDepth(2200).setVisible(false), text: null, life: 0, duration: 0, x: 0, y: 0, toX: 0, toY: 0, size: 1, name: '', mode: 'burst', count: 1, angle: 0 })
+    for (let i = 0; i < LIMITS.effects; i++) this.effects.push({ active: false, image: this.art.image(0, 0, 'fx/poof/0').setDepth(2200).setVisible(false), text: null, life: 0, duration: 0, x: 0, y: 0, toX: 0, toY: 0, size: 1, name: '', mode: 'burst', count: 1, angle: 0, delay: 0, flip: false })
     const texture = this.textures.createCanvas('siege-digits', 1024, 64)!, context = texture.context
     const chars: Record<number, object> = {}
     context.font = '38px "Luckiest Guy", sans-serif'; context.textAlign = 'center'; context.textBaseline = 'top'; context.fillStyle = '#ffffff'
@@ -542,6 +554,7 @@ export class SiegeScene extends Phaser.Scene {
     enemy.art.face.setTexture(ref.key, ref.frame).setVisible(true)
     enemy.art.root.setVisible(true).setAlpha(1).setScale(1)
     enemy.art.body.clearTint(); enemy.art.face.clearTint(); enemy.art.drawFrame = -1; enemy.art.faceId = -1; enemy.art.hitTint = false; enemy.art.statusFrame = -1
+    this.resetReaction(enemy)
     enemy.art.icons.forEach((icon, i) => { icon.setVisible(!!mods[i]); if (mods[i]) this.art.set(icon, `mod/${mods[i]}`) })
     this.routeFor(enemy).at(distance, enemy)
     this.waveAlive[wave] = (this.waveAlive[wave] ?? 0) + 1
@@ -579,6 +592,7 @@ export class SiegeScene extends Phaser.Scene {
     if (!this.ready) return
     if (this.quality.update(this.game.loop.rawDelta, !this.paused && !this.ended && !this.focus.active)) this.applyQuality()
     const real = Math.min(delta / 1000, .06)
+    if (!this.paused) { this.presentationTime += real; this.hitPause = Math.max(0, this.hitPause - real) }
     this.hudTime += real; this.portraitTime += real
     if (this.portraitTime > .2) { this.art.refresh(); this.portraitTime = 0 }
     if (this.hudTime > .12) { this.hud.refresh(); this.hudTime = 0 }
@@ -620,7 +634,7 @@ export class SiegeScene extends Phaser.Scene {
     // Keep the rain lesson targets alive until the player casts; an upgraded Egg Stand would pick them off.
     if (this.tutorialStep !== 4) { this.updateTowers(dt); this.hero.update(dt) }
     this.updateLights(); this.darkness?.update(this.sources, dt, this.bonfire > 0)
-    this.updateSignatures(dt)
+    if (!this.presentationFrozen) this.updateSignatures(dt)
     this.crowns.length = 0
     for (const enemy of this.enemies) if (enemy.active && enemy.mods.includes('crown')) this.crowns.push(enemy)
     for (const enemy of this.enemies) if (enemy.active) this.updateEnemy(enemy, dt)
@@ -629,7 +643,7 @@ export class SiegeScene extends Phaser.Scene {
     this.updateProjectiles(dt)
     this.updateTraps(dt); updateConsumables(this, dt)
     this.updateEffects(dt)
-    updateCorpses(this, dt)
+    if (!this.presentationFrozen) updateCorpses(this, dt)
     if (this.jars <= 0) this.finish(false)
     else if (this.wave === this.waveCount && !this.schedule.length && !this.enemies.some(e => e.active)) this.finish(true)
   }
@@ -651,9 +665,8 @@ export class SiegeScene extends Phaser.Scene {
       a.life -= dt; a.cooldown -= dt
       if (a.life <= 0 || a.hp <= 0) { this.effect('fx/poof/0', a.x, a.y - 40, .5); a.image.destroy(); this.allies.splice(i, 1); continue }
       const target = this.target(a, 170, 'close', true)
-      if (target && a.cooldown <= 0) { this.damage(target, a.damage, 'physical'); a.cooldown = .9; this.art.set(a.image, 'guard/knight/attack/0') }
-      else this.art.set(a.image, `guard/knight/walk/${Math.floor(this.clock * 7) % 6}`)
-      a.image.setPosition(a.x, a.y - 35).setDepth(a.y + 10)
+      if (target && a.cooldown <= 0) { this.damage(target, a.damage, 'physical', true, false, { from: a }); a.cooldown = .9; a.poseUntil = this.presentationTime + .22 }
+      this.drawGuard(a, 'knight')
     }
     for (let i = this.blockers.length - 1; i >= 0; i--) { const wall = this.blockers[i]; wall.life -= dt; wall.image.setAlpha(Math.min(1, wall.life)); if (wall.life <= 0) { wall.image.destroy(); this.blockers.splice(i, 1) } }
   }
@@ -725,7 +738,7 @@ export class SiegeScene extends Phaser.Scene {
     if (e.mods.includes('toxic')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (guard.hp > 0 && distanceSq(e, guard) < 110 ** 2) guard.hp -= dt * 12
     if (this.hero.hp > 0 && distanceSq(e, this.hero) < 90 ** 2) {
       if (e.mods.includes('toxic')) this.hero.hurt(10 * dt * this.hero.enemyDamage(e))
-      if (e.attack <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear) { this.hero.hurt((e.boss ? 24 : 11) * this.hero.enemyDamage(e)); e.attack = 1 }
+      if (e.attack <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear) { this.hero.hurt((e.boss ? 24 : 11) * this.hero.enemyDamage(e), e); e.attack = 1 }
     }
     const slow = e.status.slow && !e.mods.includes('burning') ? e.slowPower : 1
     const candle = e.mods.includes('candle') ? (Math.floor(e.age / 3) % 2 ? .65 : 1.5) : 1
@@ -748,7 +761,8 @@ export class SiegeScene extends Phaser.Scene {
     this.routeFor(e).at(e.distance, e)
     if (decoy) { const pull = Math.max(0, 1 - Math.abs(e.distance - lure) / 70); e.x += (decoy.x - e.x) * pull; e.y += (decoy.y - e.y) * pull }
     if (e.distance >= this.routeFor(e).length) {
-      if (e.kind === 'goblin') { this.effect('enemy/goblin/grab/0', e.x, e.y - 50, .7); this.exitPortrait(e, 'grab', .7, 1); this.effect('fx/grab/0', e.x, e.y - 75, .7) }
+      this.stealFeedback(e)
+      this.jarsLost += Math.min(this.jars, e.jars)
       this.jars = Math.max(0, this.jars - e.jars)
       this.effect('ui/jar', e.x, e.y - 60, 1.2, .65, 'jar', e.x + 150, e.y - 170)
       if (!e.boss) this.signature(e, true)
@@ -756,10 +770,25 @@ export class SiegeScene extends Phaser.Scene {
       this.removeEnemy(e)
     }
   }
-  private clash(e: Enemy, guard: { x: number; y: number; hp: number }) {
+  private clash(e: Enemy, guard: Guard) {
     if (guard.hp <= 0 || distanceSq(e, guard) >= 66 ** 2) return false
-    if (e.attack <= 0 && !e.status.stun && !e.status.freeze) { guard.hp -= (e.mods.includes('knife') ? 45 : e.boss ? 48 : 16) * this.hero.enemyDamage(e); e.attack = .8; this.effect('fx/splat/0', guard.x, guard.y - 30, .25, .4) }
+    e.art.blockUntil = this.presentationTime + .08; e.art.blockX = guard.x; e.art.blockY = guard.y; guard.blockUntil = this.presentationTime + .08
+    if (e.attack <= 0 && !e.status.stun && !e.status.freeze) {
+      guard.hp -= (e.mods.includes('knife') ? 45 : e.boss ? 48 : 16) * this.hero.enemyDamage(e); e.attack = .8
+      const dx = guard.x - e.x, dy = guard.y - e.y, length = Math.hypot(dx, dy) || 1
+      guard.poseUntil = this.presentationTime + .24; guard.recoilX = dx / length * 5; guard.recoilY = dy / length * 5
+      this.kick(e.art.reaction, e, -dx / length * 9, -dy / length * 9, 0)
+      this.effect('combat/block/0', (e.x + guard.x) / 2, (e.y + guard.y) / 2 - 48, .24, .72)
+      if (this.presentationTime >= e.art.popAt) { this.combatPop('block', guard.x, guard.y - 106); e.art.popAt = this.presentationTime + 1.2 }
+    }
     return true
+  }
+  private drawGuard(guard: Guard, kind: 'knight' | 'jack') {
+    if (this.presentationFrozen) return
+    const attack = Math.max(0, (guard.poseUntil ?? 0) - this.presentationTime), holding = (guard.blockUntil ?? 0) > this.presentationTime
+    this.art.set(guard.image, attack || holding ? `guard/${kind}/attack/${Math.min(2, Math.floor((.24 - Math.min(.24, attack)) * 13))}` : `guard/${kind}/walk/${Math.floor(this.presentationTime * 7) % 6}`)
+    const recoil = this.motion ? attack / .24 : 0
+    guard.image.setPosition(guard.x + (guard.recoilX ?? 0) * recoil, guard.y - 35 + (guard.recoilY ?? 0) * recoil).setAlpha(1).setDepth(guard.y + 10)
   }
   private updateTowers(dt: number) {
     for (const tower of this.towers) if (tower) {
@@ -772,15 +801,14 @@ export class SiegeScene extends Phaser.Scene {
           guard.slow = Math.max(0, guard.slow - dt); guard.cooldown -= dt * (guard.slow ? .5 : 1) * this.hero.towerSpeed(tower) * (this.sugarRush > 0 ? 1.6 : 1)
           if (guard.hp <= 0) { guard.respawn -= dt; guard.image.setAlpha(.2); if (guard.respawn <= 0) { guard.hp = guard.maxHp; guard.respawn = 8; this.effect('fx/poof/0', guard.x, guard.y - 40, .5) }; continue }
           const target = this.target(guard, 150, 'close', true)
-          if (target && guard.cooldown <= 0) { this.damage(target, config.damage * this.towerBuff(tower) * (tower.spec === 'knights' ? 1.4 : 1), 'physical'); if (tower.spec === 'vines') { this.status(target, 'root', 1 + tower.rank * .3); this.effect('fx/vines/0', target.x, target.y, .8) }; guard.cooldown = config.interval; this.art.set(guard.image, `guard/${tower.spec === 'knights' ? 'jack' : 'knight'}/attack/0`); if (!target.mods.includes('slippery')) target.distance = Math.max(0, target.distance - 5) }
-          else this.art.set(guard.image, `guard/${tower.spec === 'knights' ? 'jack' : 'knight'}/walk/${Math.floor(this.clock * 7) % 6}`)
-          guard.image.setPosition(guard.x, guard.y - 35).setAlpha(1).setDepth(guard.y + 10)
+          if (target && guard.cooldown <= 0) { this.damage(target, config.damage * this.towerBuff(tower) * (tower.spec === 'knights' ? 1.4 : 1), 'physical', true, false, { from: guard }); if (tower.spec === 'vines') { this.status(target, 'root', 1 + tower.rank * .3); this.effect('fx/vines/0', target.x, target.y, .8) }; guard.cooldown = config.interval; guard.poseUntil = this.presentationTime + .24; if (!target.mods.includes('slippery')) target.distance = Math.max(0, target.distance - 5) }
+          this.drawGuard(guard, tower.spec === 'knights' ? 'jack' : 'knight')
         }
       } else if (tower.cooldown <= 0) {
         const target = this.target(tower, config.range, tower.targeting, tower.kind === 'cauldron' || tower.kind === 'catapult', tower.kind === 'roost', tower.kind === 'lighthouse')
         // The Scream: half the shots go wide.
-        if (target && this.missTime > 0 && this.random() < .5) { tower.cooldown = config.interval; this.effect('fx/poof/0', tower.x, tower.y - 120, .4, .8) }
-        else if (target && this.towerAttack(tower, target)) { tower.cooldown = config.interval; tower.pop = .15; this.options.sfx.tower(tower.kind) }
+        if (target && this.missTime > 0 && this.random() < .5) { tower.cooldown = config.interval; this.towerShot(tower, target); this.combatPop('miss', tower.x, tower.y - 175); this.effect('fx/poof/0', tower.x, tower.y - 120, .4, .8) }
+        else if (target && this.towerAttack(tower, target)) { tower.cooldown = config.interval; tower.pop = .15; this.towerShot(tower, target); this.options.sfx.tower(tower.kind) }
       }
     }
   }
@@ -802,20 +830,17 @@ export class SiegeScene extends Phaser.Scene {
     const p = this.projectiles.find(item => !item.active)
     if (!p) return false
     Object.assign(p, { active: true, target, generation: target.generation, fromX: x, fromY: y, x, y, endX: target.x, endY: target.y - 45, life: 0, duration: options?.duration ?? (kind === 'tp' ? .5 : .23), damage, kind, splash, arc: options?.arc ?? (kind === 'tp' ? 130 : 30), frame: options?.frame, frameCount: options ? this.art.count(options.frame) : 1, onHit: options?.onHit, after: options?.after })
-    this.art.set(p.image, options?.frame ?? `proj/${kind === 'hero' ? 'seed' : TOWERS[kind].projectile}`); p.image.setVisible(true).setPosition(x, y).setDisplaySize(kind === 'tp' ? 42 : 30, kind === 'tp' ? 42 : 30)
-    if (options) p.image.setScale(1).setRotation(Math.atan2(target.y - y, target.x - x))
+    p.drawn = false
     return true
   }
   private updateProjectiles(dt: number) {
     for (const p of this.projectiles) if (p.active) {
       p.life += dt
-      if (p.frame && p.frameCount! > 1) this.art.set(p.image, p.frame.replace(/\/\d+$/, `/${Math.floor(p.life * 12) % p.frameCount!}`))
       if (p.target?.active && p.target.generation === p.generation) { p.endX = p.target.x; p.endY = p.target.y - 45 }
       const t = Math.min(1, p.life / p.duration)
       p.x = Phaser.Math.Linear(p.fromX, p.endX, t); p.y = Phaser.Math.Linear(p.fromY, p.endY, t) - Math.sin(t * Math.PI) * (p.arc ?? 30)
-      p.image.setPosition(p.x, p.y).setRotation(p.kind === 'hero' || p.kind === 'roost' ? Math.atan2(p.endY - p.fromY, p.endX - p.fromX) : t * 5)
       if (t >= 1) {
-        p.active = false; p.image.setVisible(false)
+        p.active = false
         const validTarget = p.target?.active && p.target.generation === p.generation
         const hit = (e: Enemy) => {
           if (!e.visible || e.status.charm > 0) return
@@ -827,31 +852,119 @@ export class SiegeScene extends Phaser.Scene {
           if (p.kind === 'tp') { this.status(e, 'slow', 2); this.status(e, 'wrap', 3); e.slowPower = .5 }
 
         }
-        if (p.splash) for (const e of this.enemies) { if (e.active && distanceSq(e, { x: p.endX, y: p.endY + 45 }) <= p.splash ** 2) hit(e) }
-        else if (p.target?.active && p.target.generation === p.generation) hit(p.target)
-        if (validTarget) p.after?.()
-        const heroHit = `hero-${this.hero.kit.costume}:wpn/hit/0`
-        const hasHeroHit = p.kind === 'hero' && this.textures.get(`hero-${this.hero.kit.costume}`).has('wpn/hit/0')
-        this.effect(hasHeroHit ? heroHit : p.kind === 'tp' ? 'fx/tp-wrap/0' : 'fx/splat/0', p.endX, p.endY, .32, p.splash ? 1.3 : .55)
+        this.impactProjectile = p
+        try {
+          if (p.splash) for (const e of this.enemies) { if (e.active && distanceSq(e, { x: p.endX, y: p.endY + 45 }) <= p.splash ** 2) hit(e) }
+          else if (p.target?.active && p.target.generation === p.generation) hit(p.target)
+          if (validTarget) p.after?.()
+        } finally { this.impactProjectile = null }
         this.options.sfx.play('splat')
       }
     }
   }
-  damage(e: Enemy, amount: number, type: 'magic' | 'physical' | 'egg', feedback = true, hero = false): boolean {
+  resetReaction(e: Enemy) {
+    Object.assign(e.art.reaction, reaction())
+    Object.assign(e.art, { age: 0, blockUntil: 0, popAt: 0, deflectAt: 0, missAt: 0, statusSlot: 0 })
+  }
+  private kick(v: Reaction, at: Point, x: number, y: number, stop: number) {
+    v.x = x; v.y = y; v.atX = at.x; v.atY = at.y; v.life = .28; v.stop = this.motion ? stop : 0
+  }
+  // All travel uses a copy of the incoming direction, never path progress or unit coordinates.
+  private hitDirection(e: Enemy, cue?: HitCue) {
+    const p = this.impactProjectile
+    const dx = p ? p.endX - p.fromX : cue?.from ? e.x - cue.from.x : 0
+    const dy = p ? p.endY - p.fromY + Math.PI * (p.arc ?? 30) : cue?.from ? e.y - cue.from.y : 1
+    const length = Math.hypot(dx, dy) || 1
+    return { x: dx / length, y: dy / length }
+  }
+  combatPop(name: string, x: number, y: number) { return this.effect(`combat/pop/${name}`, x, y, .65, .95, 'pop') }
+  dodgeFeedback(at: Point) {
+    this.effect('combat/dodge/0', at.x, at.y - 58, .36, 1.1, 'travel', at.x - (this.motion ? 38 : 0), at.y - 58)
+    this.combatPop('miss', at.x, at.y - 142)
+  }
+  shieldFeedback(at: Point) {
+    this.effect('combat/shield/0', at.x, at.y - 75, .4, 1.9)
+    this.effect('combat/block/0', at.x + 35, at.y - 82, .22, .7)
+    this.combatPop('block', at.x, at.y - 166)
+  }
+  private deflectFeedback(e: Enemy, cue?: HitCue) {
+    if (this.presentationTime < e.art.deflectAt) return
+    e.art.deflectAt = this.presentationTime + .18
+    const d = this.hitDirection(e, cue), x = e.x, y = e.y - (e.boss ? 95 : 55)
+    this.effect('combat/block/0', x, y, .22, .8)
+    const streak = this.effect('combat/ricochet/0', x - d.x * 24, y - d.y * 24, .28, 1)
+    if (streak) streak.angle = Math.atan2(-d.y, -d.x) + Math.PI / 4
+    this.effect('proj/egg', x, y, .3, .6, 'travel', x - d.x * (this.motion ? 95 : 0), y - d.y * (this.motion ? 95 : 0) - (this.motion ? 35 : 0))
+    this.combatPop('tink', x, y - 76)
+    this.options.sfx.play('armor')
+  }
+  private hitFeedback(e: Enemy, amount: number, type: 'magic' | 'physical' | 'egg', hero: boolean, cue: HitCue | undefined, deflected: boolean) {
+    const p = this.impactProjectile, v = e.art.reaction, d = this.hitDirection(e, cue)
+    const weight = Math.min(1, amount / 90), heavy = amount >= 35
+    this.kick(v, e, d.x * (5 + weight * 23) * (e.boss ? .5 : 1), d.y * (5 + weight * 23) * (e.boss ? .5 : 1), heavy ? .03 + weight * .02 : 0)
+    v.flash = .095
+    e.art.body.setTintFill(0xffffff); e.art.face.setTintFill(0xffffff); e.art.hitTint = true
+    e.boss?.rig?.flash()
+    if (e.boss?.sprite) e.boss.sprite.setTintFill(0xffffff)
+    if (!deflected) {
+      const kind = cue?.kind ?? (type === 'magic' ? 'magic' : type === 'egg' ? 'egg' : p?.kind === 'tp' ? 'tp' : hero ? 'hero' : 'seed')
+      const hit = this.effect(`combat/impact-${kind}/0`, e.x, e.y - (e.boss ? 100 : 55), .26, .7 + weight * .65)
+      if (hit && kind !== 'tp') hit.angle = Math.atan2(d.y, d.x)
+    }
+    if (cue?.crit) this.effect('combat/crit/0', e.x, e.y - (e.boss ? 125 : 72), .38, 1.5)
+    // Multiple pellets / splash recipients share a beat, never repeatedly extend it.
+    if ((cue?.crit || e.boss) && this.motion && this.settings.shake && this.presentationTime >= this.nextHitPause) {
+      this.hitPause = cue?.crit ? .05 : .035; this.nextHitPause = this.presentationTime + .24
+      this.shake(.0015 + weight * .0035 + (cue?.crit ? .001 : 0))
+    }
+  }
+  private towerShot(t: Tower, target: Enemy) {
+    const dx = target.x - t.x, dy = target.y - 45 - (t.y - 125), length = Math.hypot(dx, dy) || 1
+    t.shotAt = this.presentationTime; t.aimX = dx / length; t.aimY = dy / length
+    if (t.kind === 'egg' || t.kind === 'tp' || t.kind === 'lantern') {
+      const muzzle = this.effect(`combat/muzzle-${t.kind}/0`, t.x + t.aimX * 24, t.y - 125 + t.aimY * 24, .18, .85)
+      if (muzzle) { muzzle.angle = Math.atan2(dy, dx); muzzle.delay = this.motion ? .035 : 0; muzzle.image.setVisible(!muzzle.delay) }
+    }
+  }
+  private stealFeedback(e: Enemy) {
+    const route = this.routeFor(e), before = route.points[Math.max(0, route.points.length - 6)]
+    const dx = before.x - e.x, dy = before.y - e.y, length = Math.hypot(dx, dy) || 1
+    const runX = this.motion ? dx / length * 145 : 0, runY = this.motion ? dy / length * 145 : 0
+    const b = e.boss
+    if (b?.holder) {
+      b.rig?.play('walk')
+      if (b.rig) b.rig.facing = runX < 0 ? -1 : 1
+      if (b.sprite) b.sprite.setFlipX(runX < 0)
+      this.corpses.push({ holder: b.holder, rig: b.rig, life: .75, atlas: this.bossOwned.has(b.atlas) ? b.atlas : '', flee: { x: e.x, y: e.y, dx: runX, dy: runY } }); b.holder = null
+    } else {
+      const body = this.effect(`enemy/${e.kind}/walk/0`, e.x, e.y - 50, .75, 1, 'steal', e.x + runX, e.y - 50 + runY)
+      if (body) { body.flip = runX < 0; body.image.setFlipX(body.flip) }
+      const a = this.art.anchor(e.kind), ref = this.heads.window(e.id, runX < 0)
+      const x = e.x + (a.x - 64) * (runX < 0 ? -1 : 1), y = e.y - 50 + a.y - 64
+      this.effect(`${ref.key}:${ref.frame}`, x, y, .75, a.r * 2 / e.art.face.width, 'steal', x + runX, y + runY)
+    }
+    this.effect('combat/impact-hero/0', e.x + 24, e.y - 60, .23, .6)
+    const lost = Math.min(this.jars, e.jars)
+    if (lost > 0) this.combatPop(`jar-${Math.min(10, lost)}`, Math.max(this.view.left + 90, e.x - 205), e.y - (b ? 215 : 142))
+  }
+  damage(e: Enemy, amount: number, type: 'magic' | 'physical' | 'egg', feedback = true, hero = false, cue?: HitCue): boolean {
     if (!e.active || e.returning) return false
-    if (feedback && e.mods.includes('smoke') && this.random() < .2) { this.effect('fx/poof/0', e.x, e.y - 50, .4, .75); return false }
+    if (feedback && e.mods.includes('smoke') && this.random() < .2) { if (this.presentationTime >= e.art.missAt) { this.dodgeFeedback(e); e.art.reaction.dodge = .22; e.art.missAt = this.presentationTime + .25 }; return false }
+    const deflected = type === 'egg' && (e.kind === 'pumpkin' || e.armour)
     if (type !== 'magic') { if (e.kind === 'pumpkin' && type === 'egg') amount *= .2; if (e.armour) amount *= .65 }
     if (e.status.mark > 0) amount *= 1.5
     if (this.crew === 4 && ENEMIES[e.kind].flying) amount *= 1.25
     // Testudo and the Pumpkin's split absorb the hit; Sanctuary's shield turns it aside.
-    if (e.boss && bossAbsorbs(this, e, feedback)) return false
-    if (e.shield > 0) { if (feedback) this.effect('fx/crit/0', e.x, e.y - 80, .3, .7); return false }
+    if (e.boss && bossAbsorbs(this, e, feedback)) { if (feedback) { if (type === 'egg') this.deflectFeedback(e, cue); else this.shieldFeedback(e) }; return false }
+    if (e.shield > 0) { if (feedback && this.presentationTime >= e.art.deflectAt) { this.shieldFeedback(e); e.art.deflectAt = this.presentationTime + .3 }; return false }
     if (hero) { this.hero.dealt += Math.min(e.hp, amount); this.hero.addCharge(Math.min(e.hp, amount) * .022) }
     e.hp -= amount
     if (feedback) {
       e.hit = .16
       if (!e.mods.includes('slippery') && !e.boss) e.distance = Math.max(0, e.distance - Math.min(9, amount * .13))
-      this.number(Math.ceil(amount), e.x, e.y - (e.boss ? 210 : 120), type === 'magic' ? 0xd3b0ff : 0xfff1c6)
+      if (deflected) this.deflectFeedback(e, cue)
+      this.hitFeedback(e, amount, type, hero, cue, deflected)
+      this.number(Math.ceil(amount), e.x, e.y - (e.boss ? 210 : 120), cue?.crit ? 0xffd15a : type === 'magic' ? 0xd3b0ff : 0xfff1c6, cue?.crit)
       if (amount >= e.maxHp * .4 && !e.boss) this.signature(e, e.hp <= 0)
     }
     if (e.hp <= 0) {
@@ -859,6 +972,7 @@ export class SiegeScene extends Phaser.Scene {
       if (e.mods.includes('lucky') && !e.lucky) { e.lucky = true; e.hp = 1; this.effect('fx/levelup/0', e.x, e.y - 50, .5); return true }
       if (e.mods.includes('skull') && !e.revived) { e.revived = true; e.hp = e.maxHp * .4; this.status(e, 'stun', .7); this.effect('fx/poof/0', e.x, e.y - 50, .6); return true }
       this.kills++; this.income(this.hero.killIncome(e.candy) * (this.options.street.chog ? 1.1 : 1)); this.hero.onKill(e)
+      this.killsByKind[e.kind] = (this.killsByKind[e.kind] ?? 0) + 1
       // The last few fallen ground enemies can be raised again (Brainz).
       if (!e.boss && !e.route && e.path >= 0) { this.fallen.push({ kind: e.kind, path: e.path }); if (this.fallen.length > 8) this.fallen.shift() }
       if (e.boss) bossDeath(this, e)
@@ -912,7 +1026,14 @@ export class SiegeScene extends Phaser.Scene {
     if (!e.active || e.returning || (status === 'slow' && e.mods.includes('burning'))) return
     // Bosses shrug off most control: no fear, charm or twisters, and the rest lasts about a third as long.
     if (e.boss) { if (status === 'fear' || status === 'charm' || status === 'ground') return; if (['slow', 'stun', 'freeze', 'root', 'wrap', 'confuse'].includes(status)) duration *= .35 }
+    const applied = e.status[status] <= 0 && duration > 0
     e.status[status] = Math.max(e.status[status], duration)
+    if (applied && STATUS_POP[status]) {
+      const x = e.x + (e.art.statusSlot++ % 3 - 1) * 42, y = e.y - (e.boss ? 190 : 132)
+      const ring = this.effect('combat/ring/0', x, y, .5, .62)
+      ring?.image.setTint(STATUS_POP[status]!)
+      this.effect(`status/${status === 'stun' ? 'freeze' : status}/0`, x, y, .6, .48, 'emote')
+    }
     if (status === 'charm') this.combo('charm', e)
   }
   income(amount: number) { this.candy += Math.round(amount * this.candyScale) }
@@ -1118,60 +1239,89 @@ export class SiegeScene extends Phaser.Scene {
     let effect: Effect | undefined
     for (let i = 0; i < limit; i++) if (!this.effects[i].active) { effect = this.effects[i]; break }
     if (!effect) return
-    Object.assign(effect, { active: true, life: 0, duration, x, y, toX, toY, size, name, mode, count: this.art.count(name), angle: 0, width: undefined, height: undefined })
-    this.art.set(effect.image, name); effect.image.setVisible(true).setAlpha(1).setScale(size).setPosition(x, y).setRotation(0).clearTint()
+    Object.assign(effect, { active: true, life: 0, duration, x, y, toX, toY, size, name, mode, count: this.art.count(name), angle: 0, width: undefined, height: undefined, delay: 0, flip: false })
+    this.art.set(effect.image, name); effect.image.setVisible(true).setAlpha(1).setScale(size).setPosition(x, y).setRotation(0).setFlipX(false).clearTint()
     return effect
   }
-  number(value: number, x: number, y: number, color: number) {
+  number(value: number, x: number, y: number, color: number, critical = false) {
     let number: DamageNumber | undefined
     for (let i = 0; i < (this.settings.lite || this.quality.tier >= 2 ? LIMITS.numbers / 2 : LIMITS.numbers); i++) if (!this.numbers[i].active) { number = this.numbers[i]; break }
     if (!number) return
-    Object.assign(number, { active: true, life: 0, x: x + this.visualRandom() * 20 - 10, y }); number.text.setText(String(value)).setVisible(true).setTint(color).setAlpha(1).setPosition(x, y)
+    Object.assign(number, { active: true, life: 0, x: x + this.visualRandom() * 20 - 10, y }); number.text.setText(critical ? `${value}!` : String(value)).setFontSize(critical ? 50 : 34).setVisible(true).setTint(color).setAlpha(1).setPosition(x, y)
   }
   private updateEffects(dt: number) {
+    if (this.presentationFrozen) return
     for (const e of this.effects) if (e.active) {
       // An effect drawn from a dropped boss atlas ends with it.
       const split = e.name.indexOf(':')
       if (split > 0 && !this.textures.exists(e.name.slice(0, split))) { e.active = false; e.image.setVisible(false); continue }
+      if (e.delay > 0) { e.delay -= dt; if (e.delay > 0) continue; e.image.setVisible(true) }
       e.life += dt; const t = Math.min(1, e.life / e.duration)
       if (e.mode === 'coin' || e.mode === 'jar') { const ease = t * t; e.image.setPosition(Phaser.Math.Linear(e.x, e.toX, ease), Phaser.Math.Linear(e.y, e.toY, ease) - Math.sin(t * Math.PI) * 80).setRotation(t * 4).setAlpha(1 - Math.max(0, t - .8) * 5) }
-      else {
+      else if (e.mode === 'steal') {
+        const run = Math.max(0, (t - .27) / .73), grab = run === 0
+        const name = grab && e.name === 'enemy/goblin/walk/0' ? `enemy/goblin/grab/${Math.min(3, Math.floor(t / .27 * 4))}` : e.name.replace(/\/\d+$/, `/${Math.floor(run * 12) % e.count}`)
+        this.art.set(e.image, name)
+        e.image.setPosition(e.x + (e.toX - e.x) * run, e.y + (e.toY - e.y) * run - (this.motion ? Math.sin(run * Math.PI * 6) * 4 : 0)).setScale(e.size * (grab && this.motion ? 1.08 : 1), e.size * (grab && this.motion ? .87 : 1)).setAlpha(1 - Math.max(0, t - .65) / .35)
+      } else {
         this.art.set(e.image, e.name.replace(/\/\d+$/, `/${Math.min(e.count - 1, Math.floor(t * e.count))}`))
         const bounce = this.motion ? e.mode === 'emote' ? Phaser.Math.Easing.Back.Out(Math.min(1, t * 5)) : 1 + Math.sin(t * Math.PI) * .35 : 1
         e.image.setScale(e.size * bounce).setRotation(e.angle).setAlpha(1 - Math.max(0, t - .65) / .35)
       }
       if (e.mode === 'travel') e.image.setPosition(Phaser.Math.Linear(e.x, e.toX, t), Phaser.Math.Linear(e.y, e.toY, t))
+      if (e.mode === 'pop') e.image.setPosition(e.x, e.y - (this.motion ? 28 * Math.sin(t * Math.PI / 2) : 0))
       if (e.width && e.height) e.image.setDisplaySize(e.width, e.height)
       if (t >= 1) { e.active = false; e.image.setVisible(false) }
     }
     for (const n of this.numbers) if (n.active) { n.life += dt; n.text.setPosition(n.x, n.y - n.life * 60).setAlpha(1 - n.life / .8); if (n.life >= .8) { n.active = false; n.text.setVisible(false) } }
     for (let i = this.beam.length - 1; i >= 0; i--) { this.beam[i].life -= dt; if (this.beam[i].life <= 0) this.beam.splice(i, 1) }
   }
-  private drawUnits(_dt: number) {
+  private advanceReaction(v: Reaction, dt: number) {
+    const held = v.stop > 0 && this.motion
+    v.stop = Math.max(0, v.stop - dt)
+    if (!held) { v.life = Math.max(0, v.life - dt); v.flash = Math.max(0, v.flash - dt); v.dodge = Math.max(0, v.dodge - dt) }
+    return held
+  }
+  private spring(v: Reaction) { return this.motion && v.life > 0 ? (v.life / .28) ** 2 * Math.cos((.28 - v.life) * 16) : 0 }
+  private drawUnits(dt: number) {
+    if (this.presentationFrozen) return
+    for (const p of this.projectiles) {
+      if (!p.active) { if (p.image.visible) p.image.setVisible(false); continue }
+      const name = p.frame ?? `proj/${p.kind === 'hero' ? 'seed' : TOWERS[p.kind].projectile}`
+      this.art.set(p.image, p.frame && p.frameCount! > 1 ? name.replace(/\/\d+$/, `/${Math.floor(p.life * 12) % p.frameCount!}`) : name)
+      if (!p.drawn) { p.drawn = true; if (p.frame) p.image.setScale(1); else p.image.setDisplaySize(p.kind === 'tp' ? 42 : 30, p.kind === 'tp' ? 42 : 30) }
+      p.image.setVisible(true).setPosition(p.x, p.y).setRotation(p.kind === 'hero' || p.kind === 'roost' ? Math.atan2(p.endY - p.fromY, p.endX - p.fromX) : Math.min(1, p.life / p.duration) * 5)
+    }
     this.paint.begin()
     for (const e of this.enemies) if (e.active && !e.returning) {
+      const v = e.art.reaction, held = this.advanceReaction(v, dt), spring = this.spring(v)
+      if (!held) e.art.age += dt
       if (e.boss) { drawBoss(this, e); if (e.boss.child) this.bar(e.x, e.y - 190 * e.boss.scale, e.hp / e.maxHp, 0xffc17a, 80); continue }
-      const frame = e.casting ? Math.min(3, Math.floor((.7 - e.casting) * 6)) : Math.floor(e.age * 9) % 6, bob = this.motion ? Math.sin(e.age * 14) * 3 : 0
+      const frame = e.casting ? Math.min(3, Math.floor((.7 - e.casting) * 6)) : Math.floor(e.art.age * 9) % 6, bob = this.motion ? Math.sin(e.art.age * 14) * 3 : 0
       const route = this.routeFor(e), point = route.points[Math.min(route.points.length - 1, Math.floor(e.distance / route.length * (route.points.length - 1)) + 1)]
       const flip = (point.x < e.x) !== !!e.status.fear, key = frame + (e.casting ? 10 : e.hit ? 20 : 0), art = e.art
-      if (art.drawFrame !== key || art.faceLeft !== flip) {
+      if (!held && (art.drawFrame !== key || art.faceLeft !== flip)) {
         art.drawFrame = key
         const anchor = this.art.anchor(e.kind, frame, !e.casting && e.hit > 0, e.casting ? 'cast' : 'walk')
         this.art.set(art.body, `enemy/${e.kind}/${e.casting ? `cast/${frame}` : e.hit ? 'hurt' : `walk/${frame}`}`)
         art.face.setPosition((anchor.x - 64) * (flip ? -1 : 1), anchor.y - 114).setDisplaySize(anchor.r * 2, anchor.r * 2)
         art.body.setFlipX(flip)
       }
-      if (art.faceId !== e.id || art.faceLeft !== flip) {
+      if (!held && (art.faceId !== e.id || art.faceLeft !== flip)) {
         const face = this.heads.window(e.id, flip)
         art.face.setTexture(face.key, face.frame); art.faceId = e.id; art.faceLeft = flip
       }
       const emoting = this.motion && e.sigCooldown > 3.2, hop = emoting ? Math.abs(Math.sin((5 - e.sigCooldown) * 9)) : 0
-      const spawn = this.motion ? Math.min(1, e.age * 5) : 1, squash = this.motion && e.hit ? .86 : emoting ? 1 - .14 * Math.cos((5 - e.sigCooldown) * 18) : 1
+      const spawn = this.motion ? Math.min(1, e.age * 5) : 1, squash = this.motion && v.life ? 1 - Math.min(.2, .06 + Math.hypot(v.x, v.y) * .005) * Math.max(0, spring) : emoting ? 1 - .14 * Math.cos((5 - e.sigCooldown) * 18) : 1
+      const blocked = this.motion && art.blockUntil > this.presentationTime && !e.status.stun && !e.status.freeze
+      const press = blocked ? Math.sin(art.age * 10) * 4 : 0, gap = blocked ? Math.hypot(art.blockX - e.x, art.blockY - e.y) || 1 : 1
+      const x = (held ? v.atX : e.x) + v.x * spring + (art.blockX - e.x) / gap * press
+      const y = (held ? v.atY : e.y) + v.y * spring + (art.blockY - e.y) / gap * press
       if (e.art.root.depth !== e.y + 20) e.art.root.setDepth(e.y + 20)
-      e.art.root.setPosition(e.x, e.y + bob - hop * 12).setScale(spawn * (2 - squash), spawn * squash)
+      e.art.root.setPosition(x, y + bob - hop * 12).setScale(spawn * (2 - squash), spawn * squash)
       // On a dark map an enemy outside every light vanishes, leaving only two glowing eyes.
       const dim = this.dark && !e.lit && e.status.reveal <= 0 && this.bonfire <= 0
-      const alpha = dim ? 0 : e.visible ? 1 : .22
+      const alpha = dim ? 0 : e.visible ? v.dodge > 0 && this.motion ? .35 + .45 * Math.abs(Math.sin(v.dodge * 38)) : 1 : .22
       if (art.root.alpha !== alpha) art.root.setAlpha(alpha)
       if (dim) {
         const a = e.kind === 'ghost' ? .5 : .95
@@ -1181,27 +1331,31 @@ export class SiegeScene extends Phaser.Scene {
         this.paint.image('dot', e.x + 5.5, e.y - 69.5, 7, 7, 0xfff4b0, a)
         continue
       }
-      if (art.hitTint !== (e.hit > 0)) { art.hitTint = e.hit > 0; if (art.hitTint) { art.body.setTintFill(0xfff0cd); art.face.setTint(0xffffff) } else { art.body.clearTint(); art.face.clearTint() } }
+      if (art.hitTint !== (v.flash > 0)) { art.hitTint = v.flash > 0; if (art.hitTint) { art.body.setTintFill(0xffffff); art.face.setTintFill(0xffffff) } else { art.body.clearTint(); art.face.clearTint() } }
       let statusName: Status | undefined
       for (const name of DRAW_STATUSES) if (e.status[name] > 0) { statusName = name; break }
       statusName ??= e.status.wrap ? 'root' : e.status.stun ? 'freeze' : undefined
-      const statusFrame = Math.floor(this.clock * 8) % 4
+      const statusFrame = Math.floor(art.age * 8) % 4
       if (art.statusName !== statusName || art.statusFrame !== statusFrame) {
         art.statusName = statusName; art.statusFrame = statusFrame; art.statusImage.setVisible(!!statusName)
         if (statusName) this.art.set(art.statusImage, `status/${statusName}/${statusFrame}`)
       }
-      this.bar(e.x, e.y - 124, e.hp / e.maxHp, e.visible ? 0x92dcb0 : 0xb9a5e1, 64)
+      this.bar(x, y - 124, e.hp / e.maxHp, e.visible ? 0x92dcb0 : 0xb9a5e1, 64)
       if (e.armour) this.paint.image('armour', e.x - 46, e.y - 17, 92, 34, 0xfbe394, .6)
     }
     for (const sig of this.signatures) if (sig.enemy) sig.player.root.setPosition(sig.enemy.art.face.x, sig.enemy.art.face.y)
     for (const tower of this.towers) if (tower) {
       const bob = this.motion ? Math.sin(this.clock * 2 + tower.x) * 2 : 0, pop = this.motion ? 1 + Math.sin(tower.pop / .4 * Math.PI) * .1 : 1
-      tower.image.setPosition(tower.x, tower.y - 90 + bob).setDisplaySize(144 * pop, 180 / pop).setTint(tower.gold > 0 ? 0xffd45e : tower.stun ? 0xb9a4df : 0xffffff)
+      const since = this.presentationTime - (tower.shotAt ?? -99), windup = this.motion && !tower.stun && tower.cooldown > 0 && tower.cooldown < .16 ? 1 - tower.cooldown / .16 : 0
+      const shot = this.motion && since < .27 ? since < .035 ? -.5 : Math.sin((since - .035) / .235 * Math.PI) : 0
+      const squeeze = 1 + windup * .045 - shot * .1
+      tower.image.setPosition(tower.x - (tower.aimX ?? 0) * shot * 10, tower.y - 90 + bob - (tower.aimY ?? 0) * shot * 10).setDisplaySize(144 * pop / squeeze, 180 / pop * squeeze).setTint(tower.gold > 0 ? 0xffd45e : tower.stun ? 0xb9a4df : 0xffffff)
       for (const guard of tower.guards) if (guard.hp > 0) this.bar(guard.x, guard.y - 80, guard.hp / guard.maxHp, 0xffc17a, 45)
     }
     const hero = this.hero
+    const held = this.advanceReaction(hero.reaction, dt), spring = this.spring(hero.reaction)
     if (hero.rig.root.depth !== hero.y + 25) hero.rig.root.setDepth(hero.y + 25)
-    hero.rig.root.setPosition(hero.x, hero.y).setAlpha(hero.hp > 0 ? 1 : .4)
+    hero.rig.root.setPosition((held ? hero.reaction.atX : hero.x) + hero.reaction.x * spring, (held ? hero.reaction.atY : hero.y) + hero.reaction.y * spring).setAlpha(hero.hp > 0 ? hero.reaction.dodge > 0 && this.motion ? .35 + .65 * Math.abs(Math.sin(hero.reaction.dodge * 40)) : 1 : .4)
     this.heroRing.setPosition(hero.x, hero.y).setAlpha(hero.hp > 0 ? .8 : .2)
     if (!this.ended) this.bar(hero.x, hero.y - 172, hero.hp / hero.maxHp, 0xffdc7b, 82)
     for (const beam of this.beam) {
@@ -1322,4 +1476,5 @@ export class SiegeScene extends Phaser.Scene {
     const count = (list: Phaser.GameObjects.GameObject[]): number => list.reduce((total, object) => total + 1 + (object instanceof Phaser.GameObjects.Container || object instanceof Phaser.GameObjects.Layer ? count(object.list) : 0), 0)
     return { quality: this.quality.tier, renderScale: this.renderScale, fps: Math.round(this.game.loop.actualFps), objects: count(this.children.list), enemies: this.enemies.filter(e => e.active).length, draws: this.statsPrevious, textureMB: this.textureMB() }
   }
+  runStats() { return { killsByKind: { ...this.killsByKind }, bossesDefeated: [...this.bossesDefeated], wavesCleared: this.rewarded.size, jarsLost: this.jarsLost, durationS: this.clock } }
 }
