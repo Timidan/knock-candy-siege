@@ -3,6 +3,7 @@ import { Art, loadImage } from './assets'
 import { ChogHeads } from './chogHead'
 import { ShapePool, circle, plate } from './renderShapes'
 import { Quality } from './Quality'
+import { haptic } from './haptics'
 import type { AssetPack } from './assets'
 import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind } from './data/config'
@@ -629,11 +630,15 @@ export class SiegeScene extends Phaser.Scene {
     }
     for (let i = 0; i < LIMITS.projectiles; i++) this.projectiles.push({ active: false, target: null, generation: 0, life: 0, duration: 1, x: 0, y: 0, fromX: 0, fromY: 0, endX: 0, endY: 0, damage: 0, kind: 'egg', splash: 0, image: this.art.image(0, 0, 'proj/egg').setDepth(2100).setVisible(false) })
     for (let i = 0; i < LIMITS.effects; i++) this.effects.push({ active: false, image: this.art.image(0, 0, 'fx/poof/0').setDepth(2200).setVisible(false), text: null, life: 0, duration: 0, x: 0, y: 0, toX: 0, toY: 0, size: 1, name: '', mode: 'burst', count: 1, angle: 0, delay: 0, flip: false })
-    const texture = this.textures.createCanvas('siege-digits', 1024, 64)!, context = texture.context
+    const texture = this.textures.createCanvas('siege-digits', 2048, 128)!, context = texture.context
     const chars: Record<number, object> = {}
-    context.font = '38px "Luckiest Guy", sans-serif'; context.textAlign = 'center'; context.textBaseline = 'top'; context.fillStyle = '#ffffff'
-    for (const [i, char] of [...'0123456789+-!'].entries()) { context.fillText(char, i * 48 + 24, 5); chars[char.charCodeAt(0)] = { x: i * 48, y: 0, width: 48, height: 52, centerX: 24, centerY: 26, xOffset: 0, yOffset: 0, xAdvance: 32, kerning: {}, data: {}, u0: i * 48 / 1024, v0: 0, u1: (i + 1) * 48 / 1024, v1: 52 / 64 } }
-    texture.refresh(); this.cache.bitmapFont.add('siege-digits', { data: { font: 'siege-digits', size: 40, lineHeight: 52, chars }, texture: 'siege-digits', frame: null })
+    context.font = '76px "Luckiest Guy", sans-serif'; context.textAlign = 'center'; context.textBaseline = 'top'; context.fillStyle = '#ffffff'
+    for (const [i, char] of [...'0123456789+-!,'].entries()) {
+      const width = char === ',' ? 48 : 96
+      context.fillText(char, i * 96 + width / 2, 10)
+      chars[char.charCodeAt(0)] = { x: i * 96, y: 0, width, height: 104, centerX: width / 2, centerY: 52, xOffset: 0, yOffset: 0, xAdvance: char === ',' ? 32 : 64, kerning: {}, data: {}, u0: i * 96 / 2048, v0: 0, u1: (i * 96 + width) / 2048, v1: 104 / 128 }
+    }
+    texture.refresh(); this.cache.bitmapFont.add('siege-digits', { data: { font: 'siege-digits', size: 80, lineHeight: 104, chars }, texture: 'siege-digits', frame: null })
     this.rewardText = this.add.bitmapText(0, 0, 'siege-digits', '', 44).setOrigin(.5).setDepth(2310).setTint(0xffdc83).setVisible(false)
     for (let i = 0; i < LIMITS.numbers; i++) this.numbers.push({ active: false, text: this.add.bitmapText(0, 0, 'siege-digits', '', 34).setOrigin(.5).setDepth(2300).setVisible(false), life: 0, x: 0, y: 0 })
   }
@@ -1037,7 +1042,11 @@ export class SiegeScene extends Phaser.Scene {
     const length = Math.hypot(dx, dy) || 1
     return { x: dx / length, y: dy / length }
   }
-  combatPop(name: string, x: number, y: number) { return this.effect(`combat/pop/${name}`, x, y, .65, .95, 'pop') }
+  combatPop(name: string, x: number, y: number) {
+    const pop = this.effect(`combat/pop/${name}`, x, y, .65, name === 'crit' ? 1.65 : 1.4, 'pop')
+    if (pop && this.motion && !this.settings.lite && this.quality.tier < 2) pop.image.setScale(pop.size * .5)
+    return pop
+  }
   dodgeFeedback(at: Point) {
     this.effect('combat/dodge/0', at.x, at.y - 58, .36, 1.1, 'travel', at.x - (this.motion ? 38 : 0), at.y - 58)
     this.combatPop('miss', at.x, at.y - 142)
@@ -1073,7 +1082,7 @@ export class SiegeScene extends Phaser.Scene {
       const hit = this.effect(`combat/impact-${kind}/0`, e.x, e.y - (e.boss ? 100 : 55), .26, .7 + weight * .65)
       if (hit && kind !== 'tp') hit.angle = Math.atan2(d.y, d.x)
     }
-    if (cue?.crit) { this.effect('combat/crit/0', e.x, e.y - (e.boss ? 125 : 72), .38, 1.5); this.options.sfx.play('crit') }
+    if (cue?.crit) { this.combatPop('crit', e.x, e.y - (e.boss ? 210 : 140)); this.effect('combat/crit/0', e.x, e.y - (e.boss ? 125 : 72), .38, 1.5); this.options.sfx.play('crit') }
     // Multiple pellets / splash recipients share a beat, never repeatedly extend it.
     if ((cue?.crit || e.boss) && this.motion && this.settings.shake && this.presentationTime >= this.nextHitPause) {
       this.hitPause = cue?.crit ? .05 : .035; this.nextHitPause = this.presentationTime + .24
@@ -1108,6 +1117,7 @@ export class SiegeScene extends Phaser.Scene {
     this.effect('combat/impact-hero/0', e.x + 24, e.y - 60, .23, .6)
     const lost = Math.min(this.jars, e.jars)
     if (lost > 0) {
+      haptic('jar')
       this.combatPop(`jar-${Math.min(10, lost)}`, Math.max(this.view.left + 90, e.x - 205), e.y - (b ? 215 : 142))
       this.hud.porchAlarm(lost)
       const porch = this.options.assets.geometry.porch
@@ -1465,7 +1475,11 @@ export class SiegeScene extends Phaser.Scene {
         e.image.setScale(e.size * bounce).setRotation(e.angle).setAlpha(1 - Math.max(0, t - .65) / .35)
       }
       if (e.mode === 'travel') e.image.setPosition(Phaser.Math.Linear(e.x, e.toX, t), Phaser.Math.Linear(e.y, e.toY, t))
-      if (e.mode === 'pop') e.image.setPosition(e.x, e.y - (this.motion ? 28 * Math.sin(t * Math.PI / 2) : 0))
+      if (e.mode === 'pop') {
+        const motion = this.motion && !this.settings.lite && this.quality.tier < 2, punch = Math.min(1, e.life / .15)
+        const scale = punch < .6 ? .5 + .75 * punch / .6 : 1.25 - .25 * (punch - .6) / .4
+        e.image.setScale(e.size * (motion ? scale : 1)).setPosition(e.x, e.y - (motion ? 56 * Math.min(1, e.life / .3) : 0))
+      }
       if (e.width && e.height) e.image.setDisplaySize(e.width, e.height)
       if (t >= 1) { e.active = false; e.image.setVisible(false); if (e.mode === 'coin') this.hud.candyArrived() }
     }

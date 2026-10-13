@@ -11,14 +11,15 @@ import { NIGHTS } from './data/endless'
 import { bossLead, bossFraction } from './Boss'
 import type { BossState } from './Boss'
 import type { Enemy } from './world'
-import { plate, circle, shapeTexture, setSweep } from './renderShapes'
+import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner } from './renderShapes'
 
-type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; hot?: boolean }
+type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; hot?: boolean }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
 // icons and numbers at .85 so they stay readable.
 const REST = .85, PLATE = .75
+const candyFormat = new Intl.NumberFormat('en-US')
 // One reveal per level in this page session, including scene teardown/restarts; never touches the player's save.
 const revealedLevels = new Set<number>()
 type RuleMoment = { x: number; y: number; key: string; enemy: Enemy; generation: number; icon: string; copy: string; age: number }
@@ -50,7 +51,7 @@ export class Hud {
   private ultimateReady = false
   private ultimateBurst = 1
   private keyHints = matchMedia('(any-pointer: fine)').matches
-  private perks: { button: Button; x: number; pill: Phaser.GameObjects.Container }[] = []
+  private perks: Button[] = []
   private perkRoot: Phaser.GameObjects.Container
   private perkAge = -1
   private talentCard: Phaser.GameObjects.Container
@@ -121,6 +122,8 @@ export class Hud {
     const bottom = this.bottom = scene.add.container(0, 0).setDepth(3000)
     this.topRight = scene.add.container(0, 0).setDepth(3000)
     this.bottomRight = scene.add.container(0, 0).setDepth(3000)
+    bottom.add(hudPlate(scene, 640, 330, '#836EF9').setPosition(12, 746))
+    this.bottomRight.add(hudPlate(scene, 478, 330, '#FF7A00').setPosition(1392, 746))
     this.supplies = scene.add.container(0, 0).setDepth(3210).setVisible(false)
     this.entrances = scene.add.container(0, 0).setDepth(3000)
     this.bossLetterbox = scene.add.container(0, 0).setDepth(3325).setVisible(false)
@@ -132,7 +135,7 @@ export class Hud {
     this.jarRoot = scene.add.container(74, 82); top.add(this.jarRoot)
     this.jarRoot.add([plate(scene, -36, -38, 168, 76, 22, 0x513a52, .6, 0xc7a2cb, 2).setAlpha(PLATE), scene.art.image(0, -1, 'ui/jar').setDisplaySize(49, 60)])
     this.jars = scene.add.bitmapText(44, 0, 'siege-digits', '', 44).setOrigin(0, .5); this.jarRoot.add(this.jars)
-    this.jarLoss = this.text(90, 53, '', 44, '#ff6974').setOrigin(.5).setStroke('#241b30', 5).setVisible(false); this.jarRoot.add(this.jarLoss)
+    this.jarLoss = this.text(90, 53, '', 44, '#EF4444').setOrigin(.5).setStroke('#241b30', 5).setVisible(false); this.jarRoot.add(this.jarLoss)
     this.alarm = scene.art.image(0, 0, 'teach/alarm').setOrigin(0).setDepth(2990).setVisible(false)
     scene.hudLayer.add(this.alarm)
     this.candyRoot = scene.add.container(261, 82); top.add(this.candyRoot)
@@ -140,7 +143,7 @@ export class Hud {
     this.candyRoot.add([this.candyPlate, scene.art.image(0, 0, 'ui/candy').setDisplaySize(56, 56)])
     this.candy = scene.add.bitmapText(46, 0, 'siege-digits', '', 44).setOrigin(0, .5); this.candyRoot.add(this.candy)
     top.add(this.text(548, 53, 'WAVE', 34).setOrigin(.5))
-    this.wave = this.text(548, 100, '', 40).setOrigin(.5); top.add(this.wave)
+    this.wave = this.text(548, 100, '', 40).setOrigin(.5).setResolution(2); top.add(this.wave)
     const daily = scene.options.mode === 'daily' ? scene.options.daily : null
     if (daily) {
       const night = NIGHTS[daily.theme], icon = this.button(top, 548, 182, night.icon, 78, () => this.toast(`Daily #${daily.number} · ${night.name}\n${night.text}`))
@@ -153,15 +156,15 @@ export class Hud {
     }
     const pause = this.button(this.topRight, 1832, 88, 'ui/pause', 128, () => { scene.cancel(); scene.pauseGame() })
     pause.root.setData('tutorialSkip', true)
-    this.portrait = this.button(bottom, 100, 984, `hero/frame/${scene.options.home ? 'home' : 'guest'}`, 152, () => scene.selectHero())
+    this.portrait = this.button(bottom, 100, 984, `hero/frame/${scene.options.home ? 'home' : 'guest'}`, 152, () => scene.selectHero(), false, false, '#FFD23F')
     const heads = scene.heads, ref = heads.head(scene.options.hero)
     this.portrait.icon.setTexture(ref.key, ref.frame).setOrigin(heads.pivot.x / 256, heads.pivot.y / 320).setPosition(0, -3).setDisplaySize(145, 181.25)
     this.portrait.root.add(plate(scene, -68, 80, 136, 22, 9, 0x171020, 1, 0xffdf9a, 3))
     this.health = plate(scene, -63, 85, 126, 12, 5, 0xffffff); this.portrait.root.add(this.health)
     // A legend's special and ultimate icons come from its own atlas.
     const legendArt = scene.hero.kit.legend ? `hero-${scene.hero.kit.costume}:` : ''
-    this.ability = this.button(bottom, 266, 984, legendArt ? `${legendArt}special/2` : `kit/special/${scene.hero.kit.special}`, 132, () => { scene.cancel(); scene.heroAbility(); this.toast(scene.abilityName()) })
-    this.ultimate = this.button(bottom, 266, 830, legendArt ? `${legendArt}ultimate/3` : `kit/ultimate/${scene.hero.kit.ultimate}`, 132, () => { scene.cancel(); scene.command({ type: 'ultimate' }) })
+    this.ability = this.button(bottom, 266, 984, legendArt ? `${legendArt}special/2` : `kit/special/${scene.hero.kit.special}`, 132, () => { scene.cancel(); scene.heroAbility(); this.toast(scene.abilityName()) }, false, false, '#FFD23F')
+    this.ultimate = this.button(bottom, 266, 830, legendArt ? `${legendArt}ultimate/3` : `kit/ultimate/${scene.hero.kit.ultimate}`, 132, () => { scene.cancel(); scene.command({ type: 'ultimate' }) }, false, false, '#FFD23F')
     this.ultimateRing = scene.art.image(0, 0, 'combat/ring/0').setTint(0xffd477).setVisible(false)
     this.ultimateKey = this.text(0, -47, 'R', 24).setOrigin(.5).setStroke('#241b30', 4).setVisible(this.keyHints)
     this.ultimate.root.addAt(this.ultimateRing, 0); this.ultimate.root.add(this.ultimateKey)
@@ -175,24 +178,34 @@ export class Hud {
     this.talentCard = scene.add.container(960, 165).setDepth(3345).setVisible(false)
     this.perkRoot = scene.add.container(0, 0).setDepth(2995).setVisible(false)
     scene.hudLayer.add(this.perkRoot)
-    if (revealedLevels.has(scene.options.level)) this.perkAge = 2.5
-    let pillY = 0
+    if (revealedLevels.has(scene.options.level)) this.perkAge = 3.7
+    this.perkRoot.add(hudPlate(scene, 920, 274, '#836EF9', true))
+    this.perkRoot.add(this.text(30, 40, `CHOG #${scene.options.hero} · TRAITS ACTIVE`, 32, '#FFD23F'))
+    // Compact copy describes the resolved kit, never a made-up NFT bonus.
+    const shortEffects: Record<string, string> = {
+      'rainbow-trail': 'Trail slows + hurts', 'sweet-tooth': 'Candy heals', honk: 'Every 10th hit confuses',
+      pity: 'Nearby foes −10% speed', cheerful: 'Nearby towers +5% damage', royal: 'Nearby towers +15% damage',
+      'degen-luck': '10% double candy', 'bucket-shield': 'Block first hit / wave', chill: 'Slow immune · soften hits',
+      oddity: 'Unique combat effect', 'lucky-frog': 'One revive / level', 'snack-bag': '+1 jar / wave',
+      'smoke-puff': 'Blind foes when hit', pump: 'Kill streak speed', dump: 'Slow nearby foes',
+      heart: 'Regenerate health', multi: 'Random buff / wave', 'rare-tone': 'One status resistance', common: 'Your Chog’s colour',
+    }
     for (const [i, slot] of (['passive', 'headgear', 'trinket', 'skin'] as const).entries()) {
       const family = scene.hero.kit[slot], info = scene.options.assets.kits.slots[slot][family]
       if (family === 'none') continue
-      const button = this.button(top, 96 + i * 138, 180, `kit/${slot}/${family}`, 84, () => this.toast(`${info.name} · ${info.effect || 'Your portrait’s own colour'}`))
-      button.icon.setDisplaySize(48, 48)
-      button.root.setVisible(this.perkAge >= 2.5)
-      const copy = this.text(82, 0, `${info.name} · ${info.effect || 'Your portrait’s own colour'}`, 32, '#fff0d5', true).setWordWrapWidth(510)
-      const height = Math.max(72, copy.height + 20), pill = scene.add.container(0, pillY).setVisible(false)
-      copy.y = height / 2
-      pill.add([plate(scene, 0, 0, 620, height, 24, 0x241b30, .96, 0xffd68a, 2), scene.art.image(40, height / 2, `kit/${slot}/${family}`).setDisplaySize(48, 48), copy])
-      this.perkRoot.add(pill); pillY += height + 8
-      this.perks.push({ button, x: button.root.x, pill })
+      const button = this.button(top, 96 + i * 138, 180, `kit/${slot}/${family}`, 84, () => this.toast(`${info.name} · ${info.effect || 'Your portrait’s own colour'}`), false, false, '#836EF9')
+      button.icon.setDisplaySize(48, 48); button.root.setVisible(this.perkAge >= 3.7)
+      const n = this.perks.length, x = 28 + n % 2 * 442, y = 79 + Math.floor(n / 2) * 88
+      const pill = scene.add.container(x, y)
+      pill.add([plate(scene, 0, 0, 424, 76, 32, 0x2e1a47, 1, 0x836ef9, 2), scene.art.image(40, 38, `kit/${slot}/${family}`).setDisplaySize(50, 50)])
+      pill.add(this.text(78, 23, info.name, 27, '#fff5d6'))
+      const effect = this.text(78, 53, shortEffects[family] || info.effect, 28, '#d9d0ff', true)
+      if (effect.width > 326) effect.setScale(326 / effect.width, 1)
+      pill.add(effect); this.perkRoot.add(pill); this.perks.push(button)
     }
-    this.rain = this.button(bottom, 416, 984, 'fx/candy-rain/1', 132, () => scene.selectSpell('rain'))
-    this.boo = this.button(bottom, 566, 984, 'fx/boo/2', 132, () => scene.selectSpell('boo'))
-    this.emoteButton = this.button(bottom, 100, 830, 'emote/lol/0', 124, () => scene.toggleEmotes())
+    this.rain = this.button(bottom, 416, 984, 'fx/candy-rain/1', 132, () => scene.selectSpell('rain'), false, false, '#836EF9')
+    this.boo = this.button(bottom, 566, 984, 'fx/boo/2', 132, () => scene.selectSpell('boo'), false, false, '#836EF9')
+    this.emoteButton = this.button(bottom, 100, 830, 'emote/lol/0', 124, () => scene.toggleEmotes(), false, false, '#FFD23F')
     this.trapButtons = {} as Record<TrapKind, Button>
     for (const [i, kind] of (['pumpkin', 'bowl', 'gum'] as const).entries()) {
       const b = this.button(this.bottomRight, 1488 + i * 152, 984, `trap/${kind}/0`, 132, p => scene.selectTrap(kind, scene.viewToWorld(p)))
@@ -201,21 +214,21 @@ export class Hud {
     this.suppliesButton = this.button(this.bottomRight, 1792, 824, 'item/pumpkin-bomb', 120, () => {
       const open = !this.suppliesOpen; scene.cancel(); this.suppliesOpen = open; this.supplies.setVisible(open)
       if (open) this.toast('Supplies · drag an item to the road, or select it and tap a target.'); this.refresh()
-    })
+    }, false, false, '#22C55E')
     this.suppliesButton.root.add(this.text(0, -82, 'SUPPLIES', 30).setOrigin(.5).setStroke('#241b30', 5))
     this.supplies.add(plate(scene, -380, -80, 760, 172, 24, 0x241b30, .97, 0xc7a2cb, 3).setAlpha(PLATE))
     for (const [i, kind] of (Object.keys(CONSUMABLES) as ConsumableKind[]).entries()) {
-      const b = this.button(this.supplies, (i - 2) * 146, 0, `item/${kind}`, 124, p => scene.selectConsumable(kind, scene.viewToWorld(p)))
+      const b = this.button(this.supplies, (i - 2) * 146, 0, `item/${kind}`, 124, p => scene.selectConsumable(kind, scene.viewToWorld(p)), false, false, '#22C55E')
       this.cost(b, CONSUMABLES[kind].cost); this.itemButtons[kind] = b
     }
     this.preview = scene.add.container(0, 0).setDepth(3250).setVisible(false)
     const entrances = [...scene.routes, ...scene.flyRoutes]
     entrances.forEach(() => {
       const index = this.calls.length
-      const b = this.button(this.entrances, 0, 0, 'ui/speed-1', 144, () => this.callPreview(index))
+      const b = this.button(this.entrances, 0, 0, 'ui/speed-1', 144, () => this.callPreview(index), false, false, '#22C55E')
       b.icon.setPosition(0, -20).setDisplaySize(64, 64)
       b.label.setPosition(0, 31).setFontSize(36)
-      const early = this.text(0, -25, 'EARLY', 28, '#35253d').setOrigin(.5).setVisible(false)
+      const early = this.text(0, -25, 'EARLY', 28, '#FFD23F').setOrigin(.5).setVisible(false)
       const bounty = scene.art.image(40, 24, 'ui/candy').setDisplaySize(34, 34).setVisible(false)
       b.root.add([early, bounty]); this.calls.push(Object.assign(b, { early, bounty }))
     })
@@ -228,14 +241,14 @@ export class Hud {
     skip.label.setText('SKIP').setFontSize(34)
     this.toastText = this.text(1030, 968, '', 34, '#35253d', true).setOrigin(.5).setAlign('center').setWordWrapWidth(710).setPadding(22, 12).setBackgroundColor('#ffefd0').setStroke('#ffefd0', 2).setDepth(3320).setVisible(false)
     this.waveBanner = scene.add.container(960, -130).setDepth(3320).setVisible(false)
-    this.waveBanner.add(scene.art.image(0, 0, 'ui/banner-wave').setDisplaySize(768, 224))
-    this.bannerText = this.text(0, -5, '', 40, '#35253d').setOrigin(.5).setAlign('center').setWordWrapWidth(570)
+    this.waveBanner.add(comicBanner(scene).setDisplaySize(768, 184))
+    this.bannerText = this.text(0, -5, '', 40, '#FFD23F').setResolution(2).setOrigin(.5).setAlign('center').setWordWrapWidth(570)
     this.waveBanner.add(this.bannerText)
     // One reusable badge; rule events queue behind it, never stack over combat.
     this.ruleRoot = scene.add.container(0, 0).setDepth(3310).setVisible(false)
-    this.ruleIcon = scene.art.image(-280, 0, 'mod/metal').setDisplaySize(62, 62)
-    this.ruleText = this.text(-230, 0, '', 34, '#fff0d5', true).setWordWrapWidth(530)
-    this.ruleRoot.add([plate(scene, -330, -62, 660, 124, 22, 0x241b30, .96, 0xffd68a, 3), this.ruleIcon, this.ruleText])
+    this.ruleIcon = scene.art.image(-282, 0, 'enemy/pumpkin/walk/0').setDisplaySize(92, 92)
+    this.ruleText = this.text(-210, 0, '', 34, '#fff5d6').setWordWrapWidth(508).setStroke('#1B0F2B', 3)
+    this.ruleRoot.add([comicBanner(scene), circle(scene, 48, 0x2e1a47, 1, 0xffb800, 2).setPosition(-282, 0), this.ruleIcon, this.ruleText])
     scene.hudLayer.add(this.ruleRoot)
     this.hand = scene.art.image(0, 0, 'teach/hand').setOrigin(.5, .94).setDisplaySize(104, 140).setDepth(3350)
     this.statsText = this.text(1130, 24, '', 34, '#fff0d5', true).setOrigin(.5, 0).setWordWrapWidth(850).setAlign('center').setPadding(8).setBackgroundColor('#20162cdd').setDepth(3600).setVisible(new URLSearchParams(location.search).has('siegeStats'))
@@ -245,7 +258,7 @@ export class Hud {
   layout() {
     const s = this.scene, v = s.view, centre = (v.left + v.right) / 2
     this.top.setPosition(v.left, v.top)
-    this.perkRoot.setPosition(v.left + 180, v.top + 258)
+    this.perkRoot.setPosition(centre - 460, v.top + 268)
     this.alarm.setDisplaySize(v.width, v.height)
     this.topRight.setPosition(v.right - 1920, v.top)
     this.bottom.setPosition(v.left, v.bottom - 1080 - 24)
@@ -290,7 +303,7 @@ export class Hud {
     this.ruleQueue.push({ x: enemy.x, y: enemy.y, key, enemy, generation: enemy.generation, icon, copy, age: 0 })
   }
   private animateRules(dt: number) {
-    const s = this.scene, v = s.view, motion = !reducedMotion()
+    const s = this.scene, v = s.view, motion = !reducedMotion() && !s.settings.lite && s.quality.tier < 2
     if (!this.rule) {
       this.ruleQueue = this.ruleQueue.filter(rule => {
         const alive = rule.enemy.active && rule.enemy.generation === rule.generation
@@ -300,15 +313,15 @@ export class Hud {
       const index = this.ruleQueue.findIndex(rule => { const p = s.worldToView(rule); return p.x >= v.left + 30 && p.x <= v.right - 30 && p.y >= v.top && p.y <= v.bottom })
       if (index < 0) return
       this.rule = this.ruleQueue.splice(index, 1)[0]; this.taughtRules.add(this.rule.key)
-      s.art.set(this.ruleIcon, this.rule.icon); this.ruleIcon.setDisplaySize(62, 62)
-      this.ruleText.setText(this.rule.copy); this.ruleRoot.setVisible(true); s.options.sfx.play('callout')
+      s.art.set(this.ruleIcon, this.rule.key === 'trait' ? this.rule.icon : `enemy/${this.rule.enemy.kind}/walk/0`); this.ruleIcon.setDisplaySize(92, 92)
+      this.ruleText.setText(this.rule.copy.replace(' · ', '!\n')).setScale(1); this.ruleText.setScale(Math.min(1, 104 / this.ruleText.height)); this.ruleRoot.setVisible(true); s.options.sfx.play('callout')
     }
     const rule = this.rule
     rule.age += dt
     // Keep the full reading time at the last position if the unit dies or its pool slot is reused.
     if (rule.enemy.active && rule.enemy.generation === rule.generation) { rule.x = rule.enemy.x; rule.y = rule.enemy.y }
     const p = s.worldToView(rule)
-    this.ruleRoot.setPosition(Phaser.Math.Clamp(p.x, v.left + 350, v.right - 350), Phaser.Math.Clamp(p.y - 180, v.top + 285, v.bottom - 240))
+    this.ruleRoot.setPosition(Phaser.Math.Clamp(p.x, v.left + 376, v.right - 376), Phaser.Math.Clamp(p.y - 180, v.top + 285, v.bottom - 240))
     const enter = Math.min(1, rule.age / .22), exit = Math.max(0, (rule.age - 2.42) / .18)
     this.ruleRoot.setScale(motion ? Phaser.Math.Easing.Back.Out(enter) * (1 - exit * .15) : 1).setAlpha(Math.min(1, enter * 3) * (1 - exit))
     if (rule.age >= 2.6) { this.ruleRoot.setVisible(false); this.rule = null }
@@ -316,20 +329,21 @@ export class Hud {
   candyTargetPosition() { const p = this.candyRoot.getWorldTransformMatrix(); return { x: p.tx, y: p.ty } }
   private animatePerks(dt: number) {
     const s = this.scene
-    if (this.perkAge >= 2.5) return
+    if (this.perkAge >= 3.7) return
     if (this.perkAge < 0) {
       if (s.focus.active || this.tutorialCard.visible || s.paused || this.talentCard.visible || this.bossBannerRoot) return
       revealedLevels.add(s.options.level); this.perkAge = 0
     }
     this.perkAge += dt
-    const motion = !reducedMotion() && !s.settings.lite && s.quality.tier < 2
-    const from = this.portrait.root.getWorldTransformMatrix(), age = this.perkAge
-    this.perkRoot.setVisible(age < 2.5).setAlpha(Math.min(1, (2.5 - age) / .25))
-    this.perks.forEach(({ button, x, pill }, i) => {
-      const elapsed = age - i * .15, t = motion ? Phaser.Math.Easing.Back.Out(Phaser.Math.Clamp(elapsed / .35, 0, 1)) : 1
-      button.root.setVisible(elapsed >= 0).setPosition(Phaser.Math.Linear(from.tx - this.top.x, x, t), Phaser.Math.Linear(from.ty - this.top.y, 180, t))
-      pill.setVisible(elapsed >= .35).setAlpha(Phaser.Math.Clamp((elapsed - .35) / .12, 0, 1))
-    })
+    const age = this.perkAge, motion = !reducedMotion() && !s.settings.lite && s.quality.tier < 2
+    const enter = Phaser.Math.Clamp(age / .35, 0, 1), exit = Phaser.Math.Clamp((age - 3.35) / .35, 0, 1)
+    const x = (s.view.left + s.view.right) / 2 - 460, y = s.view.top + 268
+    const portrait = this.portrait.root.getWorldTransformMatrix()
+    const shrink = motion ? Phaser.Math.Easing.Cubic.InOut(exit) : 0, scale = 1 - shrink * .94
+    this.perkRoot.setVisible(age < 3.7).setAlpha(Math.min(1, enter * 4) * (1 - Math.max(0, (exit - .7) / .3)))
+      .setScale(motion ? (.86 + .14 * Phaser.Math.Easing.Back.Out(enter)) * scale : 1)
+      .setPosition(Phaser.Math.Linear(x, portrait.tx - 460 * .06, shrink), Phaser.Math.Linear(y, portrait.ty - 137 * .06, shrink) - (motion ? (1 - Phaser.Math.Easing.Back.Out(enter)) * 46 : 0))
+    if (age >= 3.7) for (const button of this.perks) button.root.setVisible(true)
   }
   candyArrived() {
     const s = this.scene
@@ -358,18 +372,19 @@ export class Hud {
     object.setScale(x, y)
     this.scene.tweens.add({ targets: object, scaleX: x * 1.1, scaleY: y * 1.1, duration: 120, yoyo: true, ease: 'Sine.Out' })
   }
-  private button(parent: Phaser.GameObjects.Container, x: number, y: number, frame: string, size: number, action: (pointer: Phaser.Input.Pointer) => void, slot = false, previewUnavailable = false): Button {
-    const s = this.scene, root = s.add.container(x, y)
+  private button(parent: Phaser.GameObjects.Container, x: number, y: number, frame: string, size: number, action: (pointer: Phaser.Input.Pointer) => void, slot = false, previewUnavailable = false, accent = '#FF7A00'): Button {
+    const s = this.scene, root = s.add.container(x, y), front = s.add.container(0, 0)
+    const lip = circle(s, size / 2 - 4, Phaser.Display.Color.HexStringToColor(accent).color, .8, 0x10091b, 3).setPosition(0, 12)
     const glow = circle(s, size / 2 + 3, 0xffffff, 0, 0xffffff, 6).setTint(0xffdf92).setVisible(false)
     const sweep = s.add.image(0, 0, 'siege-shapes', 'white').setVisible(false)
     const icon = s.art.image(0, 0, frame || 'ui/candy').setVisible(!!frame)
     const scale = size * .65 / Math.max(icon.width, icon.height); icon.setScale(scale)
-    const label = this.text(0, 0, '', 40, '#35253d').setOrigin(.5).setAlign('center')
-    const face = s.art.image(0, 0, slot ? 'ui/radial-slot' : 'ui/btn-round').setDisplaySize(size, size)
-    root.add([glow, face, icon, sweep, label]); parent.add(root)
+    const label = this.text(0, 0, '', 40, slot ? '#35253d' : '#fff5d6').setResolution(2).setOrigin(.5).setAlign('center')
+    const face = (slot ? s.art.image(0, 0, 'ui/radial-slot') : hudDisc(s, size, accent)).setDisplaySize(size, size)
+    front.add([face, icon, sweep, label]); root.add([glow, lip, front]); parent.add(root)
     const hitSize = Math.max(120, size)
     root.setSize(hitSize, hitSize).setInteractive(new Phaser.Geom.Circle(hitSize / 2, hitSize / 2, hitSize / 2), Phaser.Geom.Circle.Contains)
-    const b: Button = { root, face, icon, label, sweep, glow, size, enabled: true }
+    const b: Button = { root, face, front, lip, icon, label, sweep, glow, size, enabled: true }
     this.buttons.add(b); root.once('destroy', () => this.buttons.delete(b))
     // Touch fires over on press and out on release, so this also lights a pressed control.
     root.on('pointerover', () => { b.hot = true; this.shade(b) }).on('pointerout', () => { b.hot = false; this.shade(b) })
@@ -379,10 +394,10 @@ export class Hud {
       if ((!b.enabled && !previewUnavailable) || s.paused || s.ended) return
       void s.options.sfx.unlock()
       action(p)
-      // Actions still run on down (including trap drag). Compress only the face, so the hit area stays fixed.
+      // Actions still run on down (including trap drag). Lower the face over its lip; the hit area stays fixed.
       if (root.active && root.input?.enabled && b.enabled && !s.paused && !s.ended) {
         b.pressed = p.id
-        face.setDisplaySize(size * 1.06, size * .9)
+        front.y = 10; face.setDisplaySize(size, size)
         this.shade(b)
       }
     })
@@ -392,7 +407,7 @@ export class Hud {
     for (const b of this.buttons) if (b.pressed !== undefined && (pointerId === undefined || b.pressed === pointerId)) this.release(b)
   }
   private release(b: Button) {
-    b.pressed = undefined; b.face.setDisplaySize(b.size, b.size); this.shade(b)
+    b.pressed = undefined; b.front.y = 0; b.face.setDisplaySize(b.size, b.size); this.shade(b)
   }
   private enabled(b: Button, enabled: boolean) {
     if (!enabled && b.pressed !== undefined) this.release(b)
@@ -406,7 +421,7 @@ export class Hud {
     const rest = allowed && b.enabled && (skip || !s.focus?.active) && !this.lit(b)
     b.root.setAlpha(rest ? REST : allowed ? b.enabled ? 1 : .65 : .38)
     if (this.bossBannerRoot) b.root.setAlpha(.35)
-    b.face.setAlpha(rest ? PLATE / REST : 1)
+    b.face.setAlpha(rest ? PLATE / REST : 1); b.lip.setAlpha(rest ? PLATE / REST : 1)
     b.icon.setTint(allowed && b.enabled ? 0xffffff : 0x777777)
   }
   // Open popups and the tutorial card are in use; docked controls light up when hovered, pressed or selected.
@@ -421,7 +436,7 @@ export class Hud {
     const y = b.size / 2 - 8, width = refund ? 136 : 114
     b.root.add(plate(this.scene, -width / 2, y - 22, width, 44, 16, 0xffdf95, 1, 0x34233b, 3))
     b.root.add(this.scene.art.image(-width / 2 + 22, y, 'ui/candy').setDisplaySize(28, 28))
-    b.costLabel = this.text(16, y, `${refund ? '+' : ''}${value}`, 34, '#35253d').setOrigin(.5)
+    b.costLabel = this.text(16, y, `${refund ? '+' : ''}${value}`, 34, '#35253d').setResolution(2).setOrigin(.5)
     b.root.add(b.costLabel)
   }
   private open(panel: Phaser.GameObjects.Container) {
@@ -445,7 +460,8 @@ export class Hud {
       if (reducedMotion() || first) this.candyRoll.value = s.candy
       else s.tweens.add({ targets: this.candyRoll, value: s.candy, duration: 300, ease: 'Cubic.Out' })
     }
-    if (reducedMotion() || this.candy.text === '') this.candy.setText(String(Math.round(this.candyRoll.value)))
+    if (reducedMotion() || this.candy.text === '') this.candy.setText(candyFormat.format(Math.round(this.candyRoll.value))).setScale(1)
+    this.candy.setScale(Math.min(1, 150 / this.candy.getTextBounds().local.width))
     this.jars.setText(String(s.jars)); this.wave.setText(s.level.endless ? String(s.wave) : `${s.wave}/${s.waveCount}`)
     s.art.set(this.speed.icon, `ui/speed-${s.speed}`)
     this.enabled(this.portrait, s.hero.hp > 0)
@@ -604,7 +620,7 @@ export class Hud {
     rig.play('idle'); rig.emote(); signature.root.add(rig.root); rig.root.setPosition(0, 36).setScale(.9)
     this.dancePreviews.push({ rig, scale: .9, clip: s.options.assets.dances[s.hero.kit.emote].clip })
     signature.label.setText('Signature').setFontFamily(BODY).setFontSize(30).setPosition(0, 57).setColor('#ffe3ae').setStroke('#241b30', 4)
-    signature.root.bringToTop(signature.label)
+    signature.front.remove(signature.label); signature.root.add(signature.label)
     const page = this.button(this.wheel, -90, 370, '', 128, () => { this.emotePage = (this.emotePage + 1) % 3; this.emotes() })
     page.label.setText(`${this.emotePage + 1}/3 →`).setFontSize(30)
     const shop = this.button(this.wheel, 90, 370, 'ui/knock-coin', 128, () => { s.cancel(); s.setPaused(true); s.options.onShop() })
@@ -755,8 +771,8 @@ export class Hud {
   }
   animate(time: number, dt = 1 / 60) {
     const motion = !reducedMotion(), s = this.scene
-    const value = String(Math.round(this.candyRoll.value))
-    if (this.candy.text !== value) { this.candy.setText(value); if (motion) this.candy.y = -6 }
+    const value = candyFormat.format(Math.round(this.candyRoll.value))
+    if (this.candy.text !== value) { this.candy.setText(value).setScale(1); this.candy.setScale(Math.min(1, 150 / this.candy.getTextBounds().local.width)); if (motion) this.candy.y = -6 }
     this.candy.y = motion ? this.candy.y * Math.exp(-17.26 * dt) : 0
     this.toastText.setVisible(time < this.toastUntil)
     if (this.toastText.visible) this.toastText.setText(this.toastPages[Math.floor((time - this.toastStart) / this.toastSeconds)] ?? '')

@@ -3,6 +3,7 @@ import type { Enemy } from '../world'
 import { distanceSq } from '../world'
 import type { Point } from '../data/config'
 import { WEAPONS } from '../data/kits'
+import { haptic } from '../haptics'
 
 // The ten hand-made kits from legends.json. Each legend's art lives in its own hero atlas (`hero-legend-<id>`), so effects are named from there.
 const frame = (h: Hero, name: string) => `hero-${h.kit.costume}:${name}`
@@ -90,5 +91,5 @@ export function legendUltimate(h: Hero, enemies: Enemy[], talent: boolean) {
   } else if (id === 1881) { // Midas Rain: gold everywhere, and candy for every hit
     fx(h, 'ultimate/0', { x: 960, y: 480 }, 1.8, 3.6)
     for (const e of enemies) { h.hitEnemy(e, 85 * power, true); s.income(3); s.effect('fx/coin', e.x, e.y - 60, .7, .25, 'coin') }
-  } else { h.devil = talent ? 12 : 8; s.jarsLost += s.jars > 1 ? 1 : 0; s.jars = Math.max(1, s.jars - 1); fx(h, 'ultimate/0', h, 1.4, 2.2); s.hud.toast('Deal with the Devil! Double damage, for one jar.') } // Deal With the Devil
+  } else { h.devil = talent ? 12 : 8; if (s.jars > 1) haptic('jar'); s.jarsLost += s.jars > 1 ? 1 : 0; s.jars = Math.max(1, s.jars - 1); fx(h, 'ultimate/0', h, 1.4, 2.2); s.hud.toast('Deal with the Devil! Double damage, for one jar.') } // Deal With the Devil
 }

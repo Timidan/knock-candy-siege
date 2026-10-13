@@ -37,6 +37,52 @@ export function circle(scene: Phaser.Scene, radius: number, fill: number, alpha 
   return scene.add.image(0, 0, key)
 }
 
+// HUD-only 2x bakes. These canvases upload once; animation uses image transforms.
+export function hudPlate(scene: Phaser.Scene, width: number, height: number, accent: string, traits = false) {
+  const key = `siege-hud-plate-${width}-${height}-${accent}-${traits}`, pad = traits ? 28 : 8
+  if (!scene.textures.exists(key)) {
+    const texture = scene.textures.createCanvas(key, (width + pad * 2) * 2, (height + pad * 2) * 2)!, c = texture.context
+    c.scale(2, 2); c.translate(pad, pad)
+    c.beginPath(); c.roundRect(0, 0, width, height, traits ? 28 : 32)
+    if (traits) { c.shadowColor = accent; c.shadowBlur = 22 }
+    c.fillStyle = traits ? '#1C0D30' : 'rgba(27,15,43,.72)'; c.fill()
+    c.strokeStyle = accent; c.lineWidth = traits ? 3 : 2.5; c.stroke(); c.shadowBlur = 0
+    c.beginPath(); c.roundRect(16, 8, width - 32, 3, 1.5); c.fillStyle = traits ? '#b3a3ff' : 'rgba(255,255,255,.24)'; c.fill()
+    texture.refresh()
+  }
+  return scene.add.image(-pad, -pad, key).setOrigin(0).setScale(.5)
+}
+
+export function hudDisc(scene: Phaser.Scene, size: number, accent: string) {
+  const key = `siege-hud-disc-${size}-${accent}`, side = size + 8
+  if (!scene.textures.exists(key)) {
+    const texture = scene.textures.createCanvas(key, side * 2, side * 2)!, c = texture.context
+    c.scale(2, 2); c.translate(side / 2, side / 2)
+    const fill = c.createLinearGradient(0, -size / 2, 0, size / 2)
+    fill.addColorStop(0, '#43255f'); fill.addColorStop(1, '#1B0F2B')
+    c.beginPath(); c.arc(0, 0, size / 2 - 3, 0, Math.PI * 2); c.fillStyle = fill; c.fill()
+    c.strokeStyle = '#10091b'; c.lineWidth = 7; c.stroke()
+    c.strokeStyle = accent; c.lineWidth = 3; c.stroke()
+    c.beginPath(); c.arc(0, 0, size / 2 - 10, -Math.PI * .86, -Math.PI * .14)
+    c.strokeStyle = '#ffffff55'; c.lineWidth = 2.5; c.stroke()
+    texture.refresh()
+  }
+  return scene.add.image(0, 0, key).setDisplaySize(side, side)
+}
+
+export function comicBanner(scene: Phaser.Scene) {
+  const key = 'siege-comic-banner'
+  if (!scene.textures.exists(key)) {
+    const texture = scene.textures.createCanvas(key, 1440, 280)!, c = texture.context
+    c.scale(2, 2)
+    c.beginPath(); c.moveTo(30, 7); c.lineTo(714, 7); c.lineTo(690, 133); c.lineTo(6, 133); c.closePath()
+    c.fillStyle = '#1C0D30'; c.fill(); c.strokeStyle = '#FFB800'; c.lineWidth = 5; c.stroke()
+    c.beginPath(); c.moveTo(38, 17); c.lineTo(696, 17); c.strokeStyle = '#FFD23F66'; c.lineWidth = 3; c.stroke()
+    texture.refresh()
+  }
+  return scene.add.image(0, 0, key).setScale(.5)
+}
+
 // A cooldown mask is at most 150px, refreshed only when its HUD value changes
 // (8 Hz maximum). Keeping one tiny mask per active button avoids a 17 MB sheet
 // of mostly unused percentage frames. It is still a single sprite at render time.

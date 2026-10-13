@@ -7,6 +7,7 @@ import { bossConfig } from './data/bosses'
 import { resolveKit } from './data/kits'
 import { Rig } from './hero/Rig'
 import { reducedMotion } from './data/save'
+import { haptic } from './haptics'
 import { loadAtlas } from './assets'
 import type { AssetPack } from './assets'
 
@@ -180,7 +181,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
     s.hud.toast('Golden Touch! Two towers are silenced.')
   } else if (id === 1884) { // Pact
     // The first Pact takes three jars; beating Lil' Devil breaks the bargain and returns them.
-    if (!b.stolen) { b.stolen = Math.max(0, Math.min(3, s.jars - 1)); s.jarsLost += b.stolen; s.jars -= b.stolen; s.effect('ui/jar', e.x, e.y - 90, 1.2, .7, 'jar', e.x + 150, e.y - 170) }
+    if (!b.stolen) { b.stolen = Math.max(0, Math.min(3, s.jars - 1)); s.jarsLost += b.stolen; s.jars -= b.stolen; if (b.stolen) haptic('jar'); s.effect('ui/jar', e.x, e.y - 90, 1.2, .7, 'jar', e.x + 150, e.y - 170) }
     for (let i = 0; i < 5; i++) s.schedule.push({ time: s.clock + .1 + i * .15, kind: 'bat', path: 0, route: e.path, wave: e.wave, distance: Math.max(0, e.distance + 20 + i * 30), risen: true })
     s.schedule.sort((p, q) => p.time - q.time); fx('ultimate/0', e.x, e.y - 60, 1.6, 1.8); s.hud.toast(b.stolen ? 'The Pact! Imps pour out. Beat Lil’ Devil to win your jars back.' : 'The Pact! Imps pour out.')
   }
@@ -256,6 +257,7 @@ export function bossDeath(s: SiegeScene, e: Enemy) {
   for (let i = 0; i < count; i++) { const coin = i % 3 === 0; s.effect(coin ? 'fx/coin' : 'fx/candy-burst/0', e.x + (s.visualRandom() - .5) * 220, e.y - 120 - s.visualRandom() * 90, .7 + i * .035, coin ? .3 : .9, coin ? 'coin' : 'burst', 261, 82) }
   s.shake(last ? .014 : .007)
   if (last) {
+    haptic('boss')
     s.options.sfx.music('level')
     s.bossesDefeated.push(String(b.id))
     s.hud.banner(`${b.name.toUpperCase()}  ·  DEFEATED`); s.options.sfx.play('candy-cascade')
