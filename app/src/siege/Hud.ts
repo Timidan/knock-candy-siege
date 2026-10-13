@@ -19,13 +19,26 @@ const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
 // icons and numbers at .85 so they stay readable.
 const REST = .85, PLATE = .75
+type RuleMoment = { x: number; y: number; key: string; enemy: Enemy; generation: number; icon: string; copy: string; age: number }
 export class Hud {
   scene: SiegeScene
-  hand: Phaser.GameObjects.Text
+  hand: Phaser.GameObjects.Image
   private radialRoot: Phaser.GameObjects.Container
   private wheel: Phaser.GameObjects.Container
+  private ruleRoot: Phaser.GameObjects.Container
+  private ruleIcon: Phaser.GameObjects.Image
+  private ruleText: Phaser.GameObjects.Text
+  private ruleQueue: RuleMoment[] = []
+  private taughtRules = new Set<string>()
+  private rule: RuleMoment | null = null
+  private candyRoot: Phaser.GameObjects.Container
+  private candyPlate: Phaser.GameObjects.Image
   private candy: Phaser.GameObjects.BitmapText
   private jars: Phaser.GameObjects.BitmapText
+  private jarRoot: Phaser.GameObjects.Container
+  private jarLoss: Phaser.GameObjects.Text
+  private alarm: Phaser.GameObjects.Image
+  private alarmAge = 1
   private wave: Phaser.GameObjects.Text
   private portrait: Button
   private ability: Button
@@ -87,10 +100,16 @@ export class Hud {
     this.radialRoot = scene.add.container(0, 0).setDepth(3200)
     this.wheel = scene.add.container(0, 0).setDepth(3300)
     top.add(plate(scene, 24, 24, 620, 222, 28, 0x241b30, .96, 0xc7a2cb, 4).setAlpha(PLATE))
-    top.add(scene.art.image(74, 81, 'ui/jar').setDisplaySize(49, 60))
-    this.jars = scene.add.bitmapText(118, 82, 'siege-digits', '', 44).setOrigin(0, .5); top.add(this.jars)
-    top.add(scene.art.image(261, 82, 'ui/candy').setDisplaySize(56, 56))
-    this.candy = scene.add.bitmapText(307, 82, 'siege-digits', '', 44).setOrigin(0, .5); top.add(this.candy)
+    this.jarRoot = scene.add.container(74, 82); top.add(this.jarRoot)
+    this.jarRoot.add([plate(scene, -36, -38, 168, 76, 22, 0x513a52, .6, 0xc7a2cb, 2).setAlpha(PLATE), scene.art.image(0, -1, 'ui/jar').setDisplaySize(49, 60)])
+    this.jars = scene.add.bitmapText(44, 0, 'siege-digits', '', 44).setOrigin(0, .5); this.jarRoot.add(this.jars)
+    this.jarLoss = this.text(90, 53, '', 44, '#ff6974').setOrigin(.5).setStroke('#241b30', 5).setVisible(false); this.jarRoot.add(this.jarLoss)
+    this.alarm = scene.art.image(0, 0, 'teach/alarm').setOrigin(0).setDepth(2990).setVisible(false)
+    scene.hudLayer.add(this.alarm)
+    this.candyRoot = scene.add.container(261, 82); top.add(this.candyRoot)
+    this.candyPlate = plate(scene, -38, -38, 236, 76, 22, 0x513a52, .6, 0xffdf92, 2).setAlpha(PLATE)
+    this.candyRoot.add([this.candyPlate, scene.art.image(0, 0, 'ui/candy').setDisplaySize(56, 56)])
+    this.candy = scene.add.bitmapText(46, 0, 'siege-digits', '', 44).setOrigin(0, .5); this.candyRoot.add(this.candy)
     top.add(this.text(548, 53, 'WAVE', 34).setOrigin(.5))
     this.wave = this.text(548, 100, '', 40).setOrigin(.5); top.add(this.wave)
     const daily = scene.options.mode === 'daily' ? scene.options.daily : null
@@ -161,7 +180,13 @@ export class Hud {
     this.waveBanner.add(scene.art.image(0, 0, 'ui/banner-wave').setDisplaySize(768, 224))
     this.bannerText = this.text(0, -5, '', 40, '#35253d').setOrigin(.5).setAlign('center').setWordWrapWidth(570)
     this.waveBanner.add(this.bannerText)
-    this.hand = this.text(0, 0, '☟', 74, '#ffe396', true).setOrigin(.5).setStroke('#281f31', 5).setDepth(3350)
+    // One reusable badge; rule events queue behind it, never stack over combat.
+    this.ruleRoot = scene.add.container(0, 0).setDepth(3310).setVisible(false)
+    this.ruleIcon = scene.art.image(-280, 0, 'mod/metal').setDisplaySize(62, 62)
+    this.ruleText = this.text(-230, 0, '', 34, '#fff0d5', true).setWordWrapWidth(530)
+    this.ruleRoot.add([plate(scene, -330, -62, 660, 124, 22, 0x241b30, .96, 0xffd68a, 3), this.ruleIcon, this.ruleText])
+    scene.hudLayer.add(this.ruleRoot)
+    this.hand = scene.art.image(0, 0, 'teach/hand').setOrigin(.5, .94).setDisplaySize(104, 140).setDepth(3350)
     this.statsText = this.text(1130, 24, '', 34, '#fff0d5', true).setOrigin(.5, 0).setWordWrapWidth(850).setAlign('center').setPadding(8).setBackgroundColor('#20162cdd').setDepth(3600).setVisible(new URLSearchParams(location.search).has('siegeStats'))
     this.pulsing = [this.ability, this.ultimate, this.rain, this.boo, ...this.calls]
     scene.hudLayer.add([top, bottom, this.topRight, this.bottomRight, this.entrances, this.radialRoot, this.wheel, this.talentCard, this.preview, this.supplies, this.tutorialCard, this.toastText, this.waveBanner, this.hand, this.statsText])
@@ -169,6 +194,7 @@ export class Hud {
   layout() {
     const s = this.scene, v = s.view, centre = (v.left + v.right) / 2
     this.top.setPosition(v.left, v.top)
+    this.alarm.setDisplaySize(v.width, v.height)
     this.topRight.setPosition(v.right - 1920, v.top)
     this.bottom.setPosition(v.left, v.bottom - 1080 - 24)
     this.bottomRight.setPosition(v.right - 1920, v.bottom - 1080 - 24)
@@ -193,6 +219,55 @@ export class Hud {
   }
   private text(x: number, y: number, value: string, size: number, color = '#fff0d5', body = false) {
     return this.scene.add.text(x, y, value, { fontFamily: body ? BODY : DISPLAY, fontSize: `${size}px`, color, resolution: 1, padding: { top: 6, bottom: 6 } }).setOrigin(0, .5)
+  }
+  porchAlarm(lost: number) {
+    this.alarmAge = 0
+    this.jarLoss.setText(`−${lost}`).setAlpha(1).setVisible(true)
+    this.animateAlarm(0)
+  }
+  private animateAlarm(dt: number) {
+    const s = this.scene, motion = !reducedMotion()
+    this.alarmAge += dt
+    const t = this.alarmAge
+    this.alarm.setVisible(t < .35 && motion && !s.settings.lite && s.quality.tier < 2).setAlpha(.45 * Math.max(0, 1 - t / .35))
+    this.jarRoot.x = 74 + (motion && s.settings.shake && t < .3 ? Math.sin(t * Math.PI * 40) * 8 : 0)
+    this.jarLoss.setVisible(t < .8).setAlpha(Math.min(1, Math.max(0, (.8 - t) / .25)))
+  }
+  ruleMoment(key: string, enemy: Enemy, icon: string, copy: string) {
+    if (this.taughtRules.has(key) || this.ruleQueue.some(rule => rule.key === key)) return
+    this.ruleQueue.push({ x: enemy.x, y: enemy.y, key, enemy, generation: enemy.generation, icon, copy, age: 0 })
+  }
+  private animateRules(dt: number) {
+    const s = this.scene, v = s.view, motion = !reducedMotion()
+    if (!this.rule) {
+      this.ruleQueue = this.ruleQueue.filter(rule => {
+        const alive = rule.enemy.active && rule.enemy.generation === rule.generation
+        if (alive) { rule.x = rule.enemy.x; rule.y = rule.enemy.y }
+        return alive || rule.key !== 'trait'
+      })
+      const index = this.ruleQueue.findIndex(rule => { const p = s.worldToView(rule); return p.x >= v.left + 30 && p.x <= v.right - 30 && p.y >= v.top && p.y <= v.bottom })
+      if (index < 0) return
+      this.rule = this.ruleQueue.splice(index, 1)[0]; this.taughtRules.add(this.rule.key)
+      s.art.set(this.ruleIcon, this.rule.icon); this.ruleIcon.setDisplaySize(62, 62)
+      this.ruleText.setText(this.rule.copy); this.ruleRoot.setVisible(true)
+    }
+    const rule = this.rule
+    rule.age += dt
+    // Keep the full reading time at the last position if the unit dies or its pool slot is reused.
+    if (rule.enemy.active && rule.enemy.generation === rule.generation) { rule.x = rule.enemy.x; rule.y = rule.enemy.y }
+    const p = s.worldToView(rule)
+    this.ruleRoot.setPosition(Phaser.Math.Clamp(p.x, v.left + 350, v.right - 350), Phaser.Math.Clamp(p.y - 180, v.top + 285, v.bottom - 240))
+    const enter = Math.min(1, rule.age / .22), exit = Math.max(0, (rule.age - 2.42) / .18)
+    this.ruleRoot.setScale(motion ? Phaser.Math.Easing.Back.Out(enter) * (1 - exit * .15) : 1).setAlpha(Math.min(1, enter * 3) * (1 - exit))
+    if (rule.age >= 2.6) { this.ruleRoot.setVisible(false); this.rule = null }
+  }
+  candyTargetPosition() { const p = this.candyRoot.getWorldTransformMatrix(); return { x: p.tx, y: p.ty } }
+  candyArrived() {
+    const s = this.scene
+    s.tweens.killTweensOf([this.candyRoot, this.candyPlate])
+    this.candyRoot.setScale(1); this.candyPlate.setTint(0xffe39a).setAlpha(1)
+    s.tweens.add({ targets: this.candyPlate, alpha: PLATE, duration: 240, onComplete: () => this.candyPlate.clearTint() })
+    if (!reducedMotion()) s.tweens.add({ targets: this.candyRoot, scaleX: 1.12, scaleY: .88, duration: 90, yoyo: true, ease: 'Sine.Out' })
   }
   hide() { this.scene.hudLayer.setVisible(false) }
   nudgeTarget(target: FocusTarget) {
@@ -305,7 +380,10 @@ export class Hud {
       if (s.wave && wave) setSweep(s, b.sweep, s.countdown / wave.countdown, b.size / 2 - 3, 6)
     })
     const step = TUTORIAL[s.tutorialStep]
-    if (step) { this.tutorialCard.setVisible(true); this.tutorialText.setText(`${s.tutorialStep + 1}/7  ${step.title}\n${step.text}`) }
+    if (step) {
+      const copy = s.tutorialStep === 0 ? (s.selected !== 0 ? step.text : s.previewTower === 'egg' ? 'Tap again to build' : 'Tap Egg Stand') : `${step.title}\n${step.text}`
+      this.tutorialCard.setVisible(true); this.tutorialText.setText(`${s.tutorialStep + 1}/7  ${copy}`)
+    }
     else if (this.tutorialCard.visible && this.tutorialCard.alpha === 1) this.close(this.tutorialCard)
     for (const item of this.radialButtons) this.enabled(item.button, s.candy >= item.cost && (!item.kind || !s.towerLock(item.kind)))
     for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown); this.enabled(b, s.itemCooldown[kind] <= 0 && s.candy >= CONSUMABLES[kind].cost) }
@@ -343,6 +421,7 @@ export class Hud {
             s.previewTower = kind
             for (const item of this.radialButtons) { item.button.glow.setVisible(false); item.button.label.setText(item.kind && s.towerLock(item.kind) ? 'LOCKED' : '') }
             b.glow.setVisible(true).setTint(0xffe296)
+            this.refresh()
             b.label.setText('✓').setPosition(43, -43).setFontFamily(BODY).setColor('#ffe296').setStroke('#241b30', 4)
             this.toast(`${config.name} · ${config.description}\n${config.levels[0].cost} candy · Tap again to build${s.options.assets.geometry.pads[s.selected]?.boost ? '\nBoosted pad: +20% range and damage' : ''}`)
           }
@@ -562,12 +641,14 @@ export class Hud {
   animate(time: number, dt = 1 / 60) {
     const motion = !reducedMotion(), s = this.scene
     const value = String(Math.round(this.candyRoll.value))
-    if (this.candy.text !== value) { this.candy.setText(value); if (motion) this.candy.y = 76 }
-    this.candy.y += (82 - this.candy.y) * .25
+    if (this.candy.text !== value) { this.candy.setText(value); if (motion) this.candy.y = -6 }
+    this.candy.y += (0 - this.candy.y) * .25
     this.toastText.setVisible(time < this.toastUntil)
     if (this.toastText.visible) this.toastText.setText(this.toastPages[Math.floor((time - this.toastStart) / this.toastSeconds)] ?? '')
     for (const b of this.pulsing) b.glow.setVisible(b.enabled).setAlpha(motion ? .55 + Math.sin(time * 4) * .25 : .65)
     this.portrait.glow.setVisible(s.heroSelected).setTint(0xffe296)
+    this.animateAlarm(dt)
+    this.animateRules(dt)
     this.animateBoss(dt)
     for (const preview of this.dancePreviews) {
       if (!preview.rig.root.active || !this.wheel.visible) continue

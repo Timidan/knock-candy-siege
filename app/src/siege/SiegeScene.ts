@@ -77,6 +77,11 @@ export class SiegeScene extends Phaser.Scene {
   seed: number
   discovered: Set<string>
   props: { data: LevelProp; image: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; cooldown: number; used: boolean; animation: number }[] = []
+  private pathPreview: { route: Route; path: number; start: number; span: number; skips: { at: number; to: number }[]; images: Phaser.GameObjects.Image[]; alpha: number; selected: boolean }[] = []
+  private previewWave = -1
+  private previewBridge = false
+  private previewTravel = 0
+  private previewHideUntil = 0
   private ambience: { image: Phaser.GameObjects.Image; kind: string; x: number; y: number; n: number }[] = []
   // Batch 3a: portals, toxic pools, boosted pads, the darkness layer and the bonfire.
   gone = false
@@ -128,6 +133,11 @@ export class SiegeScene extends Phaser.Scene {
   pads: Phaser.GameObjects.Image[] = []
   projectiles: Projectile[] = []
   effects: Effect[] = []
+  private candyFlights: number[] = []
+  private rewardText!: Phaser.GameObjects.BitmapText
+  private rewardAt = -Infinity
+  private rewardValue = 0
+  private rewardPoint = { x: 0, y: 0 }
   numbers: DamageNumber[] = []
   traps: Trap[] = []
   items: PlacedItem[] = []
@@ -248,6 +258,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.dark) this.darkness = new Darkness(this)
     this.hud = new Hud(this)
     this.focus = new TutorialFocus(this)
+    this.createPathPreview()
     this.layout()
     this.scale.on('resize', this.layout, this)
     this.discover((['weapon', 'special', 'ultimate', 'passive', 'headgear', 'trinket', 'skin', 'suit', 'weaponMod'] as const).filter(slot => this.hero.kit[slot]).map(slot => `kit/${slot === 'weaponMod' ? 'weapon-mod' : slot}/${this.hero.kit[slot]}`))
@@ -529,6 +540,7 @@ export class SiegeScene extends Phaser.Scene {
     context.font = '38px "Luckiest Guy", sans-serif'; context.textAlign = 'center'; context.textBaseline = 'top'; context.fillStyle = '#ffffff'
     for (const [i, char] of [...'0123456789+-!'].entries()) { context.fillText(char, i * 48 + 24, 5); chars[char.charCodeAt(0)] = { x: i * 48, y: 0, width: 48, height: 52, centerX: 24, centerY: 26, xOffset: 0, yOffset: 0, xAdvance: 32, kerning: {}, data: {}, u0: i * 48 / 1024, v0: 0, u1: (i + 1) * 48 / 1024, v1: 52 / 64 } }
     texture.refresh(); this.cache.bitmapFont.add('siege-digits', { data: { font: 'siege-digits', size: 40, lineHeight: 52, chars }, texture: 'siege-digits', frame: null })
+    this.rewardText = this.add.bitmapText(0, 0, 'siege-digits', '', 44).setOrigin(.5).setDepth(2310).setTint(0xffdc83).setVisible(false)
     for (let i = 0; i < LIMITS.numbers; i++) this.numbers.push({ active: false, text: this.add.bitmapText(0, 0, 'siege-digits', '', 34).setOrigin(.5).setDepth(2300).setVisible(false), life: 0, x: 0, y: 0 })
   }
   // Edge swarms (Witching Hour) start just outside the visible view and walk straight at the porch; ghosts weave as they drift.
@@ -561,7 +573,47 @@ export class SiegeScene extends Phaser.Scene {
     const fresh = !this.discovered.has(`enemy/${kind}`)
     this.discover([`enemy/${kind}`, ...mods.map(m => `mod/${m}`)])
     if (fresh && !this.focus.active) { this.setPaused(true); this.options.onIntro(kind) }
+    const modifier = MODIFIERS.find(rule => mods.includes(rule.name))
+    if (modifier) this.hud.ruleMoment('trait', enemy, `mod/${modifier.name}`, `${modifier.name.toUpperCase()} · ${modifier.enemy}`)
     return true
+  }
+  private createPathPreview() {
+    const routes = [...this.routes, ...this.flyRoutes, ...(this.detour ? [this.detour] : [])]
+    this.pathPreview = routes.map((route, path) => {
+      const first = route.points.findIndex(p => p.x >= 0 && p.x <= 1920 && p.y >= 0 && p.y <= 1080)
+      const start = Math.max(0, first) / (route.points.length - 1) * route.length
+      const skips = this.portals.filter(p => p.path === path).map(p => ({ at: p.at, to: p.to })).sort((a, b) => a.at - b.at)
+      return { route, path, start, span: route.length - start - skips.reduce((sum, p) => sum + p.to - p.at, 0), skips, images: Array.from({ length: 10 }, () => this.art.image(0, 0, 'teach/path-dot').setDepth(6).setVisible(false)), alpha: 0, selected: false }
+    })
+  }
+  private drawPathPreview(dt: number) {
+    const wave = this.waveAt(this.wave)
+    if (this.previewWave !== this.wave || this.previewBridge !== this.bridgeUp) {
+      this.previewWave = this.wave; this.previewBridge = this.bridgeUp
+      // Edge-swarm paths do not exist until spawn's random draw; never invent a road or advance that RNG here.
+      const paths = new Set(wave?.groups.filter(g => !g.edge && g.count > 0).map(g => this.roadFor(g.type, g.path ?? 0)))
+      if (wave?.boss) paths.add(this.roadFor('treater', 0))
+      for (const entry of this.pathPreview) entry.selected = paths.has(entry.path)
+    }
+    const preparing = !!wave && !this.ended && this.presentationTime >= this.previewHideUntil && (this.wave === 0 || this.countdown > 0 && !this.schedule.some(e => e.wave === this.wave - 1))
+    const moving = !reducedMotion() && !this.settings.lite && this.quality.tier < 2, count = moving ? 10 : 4
+    if (moving) this.previewTravel += dt * 240
+    for (const entry of this.pathPreview) {
+      entry.alpha = this.ended ? 0 : Phaser.Math.Clamp(entry.alpha + (preparing && entry.selected ? 1 : -1) * dt / .25, 0, 1)
+      for (let i = 0; i < entry.images.length; i++) {
+        const image = entry.images[i], visible = entry.alpha > 0 && i < count
+        image.setVisible(visible)
+        if (!visible) continue
+        const along = moving ? (this.previewTravel + i * entry.span / count) % entry.span : (i + .5) * entry.span / count
+        let distance = entry.start + along
+        for (const skip of entry.skips) if (distance >= skip.at) distance += skip.to - skip.at
+        entry.route.at(distance, image)
+        const at = Math.min(entry.route.points.length - 2, Math.floor(distance / entry.route.length * (entry.route.points.length - 1))), a = entry.route.points[at], b = entry.route.points[at + 1]
+        this.art.set(image, moving ? 'teach/path-dot' : 'teach/path-arrow')
+        const fade = moving ? Math.min(1, along / 100, (entry.span - along) / 100) : 1
+        image.setDisplaySize(moving ? 42 : 54, moving ? 42 : 54).setRotation(Math.atan2(b.y - a.y, b.x - a.x)).setAlpha(entry.alpha * fade * .85)
+      }
+    }
   }
   callWave() {
     if (this.paused || this.ended || this.wave >= this.waveCount || (this.options.tutorial && this.tutorialStep === 0)) return
@@ -569,6 +621,7 @@ export class SiegeScene extends Phaser.Scene {
     const early = this.wave > 0 ? Math.ceil(Math.max(0, this.countdown) * 1.5) : 0
     if (early) { this.earlyCalls++; this.income(early); this.hud.toast(`Early call! +${early} candy`) }
     const data = this.waveAt(this.wave)!
+    this.previewHideUntil = this.presentationTime + .3
     const wave = this.wave++
     this.hero.onWave()
     this.waveAlive[wave] = 0
@@ -596,6 +649,7 @@ export class SiegeScene extends Phaser.Scene {
     this.hudTime += real; this.portraitTime += real
     if (this.portraitTime > .2) { this.art.refresh(); this.portraitTime = 0 }
     if (this.hudTime > .12) { this.hud.refresh(); this.hudTime = 0 }
+    this.drawPathPreview(this.paused ? 0 : real)
     if (this.ended) {
       const clip = this.options.assets.rig.clips[this.hero.rig.clip]
       if (this.hero.rig.clip.startsWith('dance-') && !clip.loop && this.hero.rig.time >= clip.ms) this.hero.rig.play(this.hero.rig.clip)
@@ -806,6 +860,11 @@ export class SiegeScene extends Phaser.Scene {
         }
       } else if (tower.cooldown <= 0) {
         const target = this.target(tower, config.range, tower.targeting, tower.kind === 'cauldron' || tower.kind === 'catapult', tower.kind === 'roost', tower.kind === 'lighthouse')
+        // Explain the exact hidden-target rejection only while an otherwise ready tower is idle.
+        if (!target && tower.kind !== 'roost' && tower.kind !== 'lighthouse') {
+          const ghost = this.enemies.find(e => e.active && !e.returning && e.kind === 'ghost' && !e.visible && !e.status.reveal && !e.status.charm && distanceSq(tower, e) <= config.range ** 2)
+          if (ghost) this.hud.ruleMoment('hidden', ghost, 'enemy/ghost/walk/0', 'HIDDEN · light it with a lantern')
+        }
         // The Scream: half the shots go wide.
         if (target && this.missTime > 0 && this.random() < .5) { tower.cooldown = config.interval; this.towerShot(tower, target); this.combatPop('miss', tower.x, tower.y - 175); this.effect('fx/poof/0', tower.x, tower.y - 120, .4, .8) }
         else if (target && this.towerAttack(tower, target)) { tower.cooldown = config.interval; tower.pop = .15; this.towerShot(tower, target); this.options.sfx.tower(tower.kind) }
@@ -945,7 +1004,12 @@ export class SiegeScene extends Phaser.Scene {
     }
     this.effect('combat/impact-hero/0', e.x + 24, e.y - 60, .23, .6)
     const lost = Math.min(this.jars, e.jars)
-    if (lost > 0) this.combatPop(`jar-${Math.min(10, lost)}`, Math.max(this.view.left + 90, e.x - 205), e.y - (b ? 215 : 142))
+    if (lost > 0) {
+      this.combatPop(`jar-${Math.min(10, lost)}`, Math.max(this.view.left + 90, e.x - 205), e.y - (b ? 215 : 142))
+      this.hud.porchAlarm(lost)
+      const porch = this.options.assets.geometry.porch
+      this.effect('teach/porch-flash', porch.x, porch.y - 90, .35, 3.6)
+    }
   }
   damage(e: Enemy, amount: number, type: 'magic' | 'physical' | 'egg', feedback = true, hero = false, cue?: HitCue): boolean {
     if (!e.active || e.returning) return false
@@ -962,7 +1026,10 @@ export class SiegeScene extends Phaser.Scene {
     if (feedback) {
       e.hit = .16
       if (!e.mods.includes('slippery') && !e.boss) e.distance = Math.max(0, e.distance - Math.min(9, amount * .13))
-      if (deflected) this.deflectFeedback(e, cue)
+      if (deflected) {
+        this.deflectFeedback(e, cue)
+        this.hud.ruleMoment('armour', e, 'mod/metal', 'ARMOURED · eggs bounce, use magic')
+      }
       this.hitFeedback(e, amount, type, hero, cue, deflected)
       this.number(Math.ceil(amount), e.x, e.y - (e.boss ? 210 : 120), cue?.crit ? 0xffd15a : type === 'magic' ? 0xd3b0ff : 0xfff1c6, cue?.crit)
       if (amount >= e.maxHp * .4 && !e.boss) this.signature(e, e.hp <= 0)
@@ -971,14 +1038,15 @@ export class SiegeScene extends Phaser.Scene {
       if (e.boss && bossRevives(this, e)) return true
       if (e.mods.includes('lucky') && !e.lucky) { e.lucky = true; e.hp = 1; this.effect('fx/levelup/0', e.x, e.y - 50, .5); return true }
       if (e.mods.includes('skull') && !e.revived) { e.revived = true; e.hp = e.maxHp * .4; this.status(e, 'stun', .7); this.effect('fx/poof/0', e.x, e.y - 50, .6); return true }
-      this.kills++; this.income(this.hero.killIncome(e.candy) * (this.options.street.chog ? 1.1 : 1)); this.hero.onKill(e)
+      const candyBefore = this.candy
+      this.kills++; this.income(this.hero.killIncome(e.candy) * (this.options.street.chog ? 1.1 : 1))
+      this.rewardFeedback(this.candy - candyBefore, e)
+      this.hero.onKill(e)
       this.killsByKind[e.kind] = (this.killsByKind[e.kind] ?? 0) + 1
       // The last few fallen ground enemies can be raised again (Brainz).
       if (!e.boss && !e.route && e.path >= 0) { this.fallen.push({ kind: e.kind, path: e.path }); if (this.fallen.length > 8) this.fallen.shift() }
       if (e.boss) bossDeath(this, e)
       else {
-        const count = this.settings.lite ? 2 : 4
-        for (let i = 0; i < count; i++) this.effect('fx/coin', e.x + (this.visualRandom() - .5) * 50, e.y - 60, .65 + i * .1, .25, 'coin', 261, 82)
         this.effect(`enemy/${e.kind}/die/0`, e.x, e.y - 50, .3, .9)
         this.exitPortrait(e, 'die', .1, .9)
         this.effect('fx/candy-burst/0', e.x, e.y - 50, .5, .8)
@@ -1115,7 +1183,9 @@ export class SiegeScene extends Phaser.Scene {
     for (let i = this.traps.length - 1; i >= 0; i--) {
       const trap = this.traps[i], config = TRAPS[trap.kind]
       let triggered = false
-      for (const e of this.enemies) if (e.active && !ENEMIES[e.kind].flying && distanceSq(e, trap) < config.radius ** 2 && !(trap.kind === 'bowl' && e.mods.includes('visor'))) {
+      for (const e of this.enemies) if (e.active && distanceSq(e, trap) < config.radius ** 2) {
+        if (ENEMIES[e.kind].flying) { this.hud.ruleMoment('flying', e, 'enemy/bat/walk/0', "FLYING · traps can't reach"); continue }
+        if (trap.kind === 'bowl' && e.mods.includes('visor')) continue
         triggered = true
         this.status(e, config.status, trap.kind === 'pumpkin' ? config.duration : .18)
         if (trap.kind === 'bowl') { e.status.fear = 0; if (e.status.burn > 0) { e.status.burn = 0; this.status(e, 'stun', 3); this.effect('fx/caramel/0', e.x, e.y, .9, 1.2); this.combo('caramel', e) } }
@@ -1234,11 +1304,31 @@ export class SiegeScene extends Phaser.Scene {
   }
   shake(intensity: number) { if (this.settings.shake && this.motion && !reducedMotion()) this.cameras.main.shake(110, intensity) }
   private addBeam(from: Point, to: Point, color: number) { if (this.beam.length < 12) this.beam.push({ from: { x: from.x, y: from.y - 50 }, to: { x: to.x, y: to.y - 30 }, life: .35, color }) }
+  private rewardFeedback(value: number, at: Point) {
+    if (value <= 0) return
+    const now = this.presentationTime
+    if (now - this.rewardAt >= .25) { this.rewardValue = 0; this.rewardAt = now; this.rewardPoint = { x: at.x, y: at.y - 145 } }
+    this.rewardValue += value
+    this.rewardText.setText(`+${this.rewardValue}`).setPosition(this.rewardPoint.x, this.rewardPoint.y).setAlpha(1).setVisible(true)
+    this.effect('fx/coin', at.x, at.y - 60, .65, .6, 'coin')
+  }
   effect(name: string, x: number, y: number, duration: number, size = 1, mode: Effect['mode'] = 'burst', toX = x, toY = y) {
+    // All reward coins (including rain and legends) fly in HUD coordinates.
+    const reward = name === 'fx/coin' && (mode === 'coin' || mode === 'jar')
+    if (reward) {
+      this.candyFlights = this.candyFlights.filter(at => this.presentationTime - at < .25)
+      if (this.candyFlights.length >= 3 || this.effects.filter(e => e.active && e.mode === 'coin').length >= 3) return
+      this.candyFlights.push(this.presentationTime)
+      if (reducedMotion()) { this.hud.candyArrived(); return }
+      const from = this.worldToView({ x, y }), to = this.hud.candyTargetPosition()
+      x = from.x; y = from.y; toX = to.x; toY = to.y; mode = 'coin'
+    }
     const limit = this.settings.lite || this.quality.tier >= 2 ? LIMITS.effects / 2 : LIMITS.effects
     let effect: Effect | undefined
     for (let i = 0; i < limit; i++) if (!this.effects[i].active) { effect = this.effects[i]; break }
     if (!effect) return
+    const layer = reward ? this.hudLayer : this.worldLayer
+    if (effect.image.displayList !== layer) { layer.add(effect.image); effect.image.setDepth(reward ? 3100 : 2200) }
     Object.assign(effect, { active: true, life: 0, duration, x, y, toX, toY, size, name, mode, count: this.art.count(name), angle: 0, width: undefined, height: undefined, delay: 0, flip: false })
     this.art.set(effect.image, name); effect.image.setVisible(true).setAlpha(1).setScale(size).setPosition(x, y).setRotation(0).setFlipX(false).clearTint()
     return effect
@@ -1251,6 +1341,8 @@ export class SiegeScene extends Phaser.Scene {
   }
   private updateEffects(dt: number) {
     if (this.presentationFrozen) return
+    const rewardAge = this.presentationTime - this.rewardAt
+    this.rewardText.setVisible(rewardAge < .8).setAlpha(Math.max(0, 1 - rewardAge / .8)).setPosition(this.rewardPoint.x, this.rewardPoint.y - (reducedMotion() ? 0 : Math.min(1, rewardAge / .4) * 30))
     for (const e of this.effects) if (e.active) {
       // An effect drawn from a dropped boss atlas ends with it.
       const split = e.name.indexOf(':')
@@ -1271,7 +1363,7 @@ export class SiegeScene extends Phaser.Scene {
       if (e.mode === 'travel') e.image.setPosition(Phaser.Math.Linear(e.x, e.toX, t), Phaser.Math.Linear(e.y, e.toY, t))
       if (e.mode === 'pop') e.image.setPosition(e.x, e.y - (this.motion ? 28 * Math.sin(t * Math.PI / 2) : 0))
       if (e.width && e.height) e.image.setDisplaySize(e.width, e.height)
-      if (t >= 1) { e.active = false; e.image.setVisible(false) }
+      if (t >= 1) { e.active = false; e.image.setVisible(false); if (e.mode === 'coin') this.hud.candyArrived() }
     }
     for (const n of this.numbers) if (n.active) { n.life += dt; n.text.setPosition(n.x, n.y - n.life * 60).setAlpha(1 - n.life / .8); if (n.life >= .8) { n.active = false; n.text.setVisible(false) } }
     for (let i = this.beam.length - 1; i >= 0; i--) { this.beam[i].life -= dt; if (this.beam[i].life <= 0) this.beam.splice(i, 1) }

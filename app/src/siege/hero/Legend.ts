@@ -89,6 +89,6 @@ export function legendUltimate(h: Hero, enemies: Enemy[], talent: boolean) {
     for (let i = 0; i < 12 && near.length; i++) s.fire(near[i % near.length].x + (s.random() - .5) * 200, -60, near[i % near.length], 70 * power, 'hero', 90, { frame: frame(h, 'wpn/proj'), duration: .5 + i * .05, arc: 0, onHit: t => h.hitEnemy(t, 70 * power, false, true) })
   } else if (id === 1881) { // Midas Rain: gold everywhere, and candy for every hit
     fx(h, 'ultimate/0', { x: 960, y: 480 }, 1.8, 3.6)
-    for (const e of enemies) { h.hitEnemy(e, 85 * power, true); s.income(3); s.effect('fx/coin', e.x, e.y - 60, .7, .25, 'coin', 261, 82) }
+    for (const e of enemies) { h.hitEnemy(e, 85 * power, true); s.income(3); s.effect('fx/coin', e.x, e.y - 60, .7, .25, 'coin') }
   } else { h.devil = talent ? 12 : 8; s.jarsLost += s.jars > 1 ? 1 : 0; s.jars = Math.max(1, s.jars - 1); fx(h, 'ultimate/0', h, 1.4, 2.2); s.hud.toast('Deal with the Devil! Double damage, for one jar.') } // Deal With the Devil
 }

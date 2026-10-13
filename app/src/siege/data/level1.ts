@@ -34,7 +34,7 @@ export const LEVEL1: LevelConfig = {
 }
 export type TutorialAction = 'build' | 'wave' | 'upgrade' | 'trap' | 'rain' | 'move' | 'emote'
 export const TUTORIAL: { action: TutorialAction; title: string; text: string; target: string }[] = [
-  { action: 'build', title: 'A little egg insurance', text: 'Tap the glowing pad. Tap Egg Stand to preview, then again to build.', target: 'pad' },
+  { action: 'build', title: '', text: 'Tap the glowing pad', target: 'pad' },
   { action: 'wave', title: 'Here comes the neighbourhood', text: 'Tap the path entrance to preview. Tap it again to call the wave.', target: 'wave' },
   { action: 'upgrade', title: 'Give it a little more oomph', text: 'Tap your Egg Stand, then the upgrade icon.', target: 'pad' },
   { action: 'trap', title: 'A surprise underfoot', text: 'Drag the Pumpkin Trap from the bottom right onto the path.', target: 'trap' },
