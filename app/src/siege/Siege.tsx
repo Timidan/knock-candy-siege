@@ -32,6 +32,7 @@ import { holderUrl } from '../chain'
 import { reopenShop } from './shopChain'
 import { SHOP_ITEMS, canDance } from './data/shop'
 import { ShareCard } from './ShareCard'
+import { haptic, setHaptics } from './haptics'
 import { STATS_URL, setStatsEnabled, statsEnabled, track, trackRunEnd } from './telemetry'
 import type { RunEnd } from './telemetry'
 import './siege.css'
@@ -65,6 +66,20 @@ function BossCard({ assets, id, sheet }: { assets: AssetPack; id: string; sheet?
     <p className="siege-hint">{pumpkin ? 'Magic and splash work best. Guards get flattened.' : 'It enters with a flourish, casts on a timer, and gets angrier at half health.'}</p>
   </>
 }
+// Launch stages in order: the base pack, the hero's art, the level's map and art, then the scene. Each has a loading label and a failure line.
+type Stage = 'candy' | 'hero' | 'street' | 'lanterns'
+const STAGES: Record<Stage, [string, string]> = {
+  candy: ['Unpacking the candy…', 'The game art didn’t load.'],
+  hero: ['Packing your hero…', 'Your hero’s art didn’t load.'],
+  street: ['Opening the street…', 'This street’s map didn’t load.'],
+  lanterns: ['Lighting the lanterns…', 'The level didn’t start.'],
+}
+const canVibrate = typeof navigator.vibrate === 'function'
+const StageLabel = ({ stage }: { stage: Stage }) => <p className="siege-stage-label" role="status"><span className="boot-candy" aria-hidden="true" />{STAGES[stage][0]}</p>
+// Every launch failure lands in this one panel, which retries only the stage that failed.
+function RetryPanel({ stage, onRetry, children }: { stage: Stage; onRetry: () => void; children?: ReactNode }) {
+  return <p className="siege-retry" role="alert">{STAGES[stage][1]} Check your connection and try again.<Sticker tone="orange" onClick={onRetry}>Retry</Sticker>{children}</p>
+}
 const stars = (count: number) => <span className="siege-stars" aria-label={`${count} of 3 stars`}>{[1, 2, 3].map(n => <span key={n} className={n <= count ? 'earned-star' : ''} aria-hidden="true">★</span>)}</span>
 // The win fanfare: earned stars start slamming in at these times (ms; siege.css uses the same delays) and land IMPACT ms later.
 const SLAMS = [300, 650, 1000], IMPACT = 200
@@ -78,6 +93,8 @@ function ResultStars({ count, fx, shake, sfx }: { count: number; fx?: AssetPack[
   useEffect(() => {
     if (!reducedMotion()) SLAMS.slice(0, count).forEach((at, i) => sfx.current?.play('star', 1 + i * .12, 1, true, (at + IMPACT) / 1000))
   }, [count, sfx])
+  // The final star's impact also buzzes when Vibration is on; haptics.ts checks the other gates.
+  useEffect(() => { if (!count) return; const timer = setTimeout(() => haptic('star'), SLAMS[count - 1] + IMPACT); return () => clearTimeout(timer) }, [count])
   useEffect(() => {
     // `translate` leaves the card's slide-in transform alone.
     const card = ref.current?.closest('dialog')
@@ -127,8 +144,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const sfx = useRef<Sfx | null>(null)
   const [assets, setAssets] = useState<AssetPack | null>(null)
   const [prepared, setPrepared] = useState<{ id: number; home: boolean; costume: string; assets: AssetPack } | null>(null)
-  const [error, setError] = useState('')
-  const [loadAttempt, setLoadAttempt] = useState(0)
+  // The launch stage that failed (RetryPanel), and the stage the hero picker is still waiting on.
+  const [failed, setFailed] = useState<Stage | null>(null)
+  const [loading, setLoading] = useState<Stage>('hero')
+  const [loadAttempt, setLoadAttempt] = useState(0), [prepAttempt, setPrepAttempt] = useState(0)
   const [save, setSave] = useState<Save>(readSave)
   const saveRef = useRef(save)
   const [saveWarning, setSaveWarning] = useState(false)
@@ -229,11 +248,18 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   useEffect(() => {
     if (!assets || !valid || !pickingHero) { setPrepared(null); return }
     const controller = new AbortController()
-    setPrepared(null); setError('')
+    const signal = controller.signal
+    setPrepared(null); setFailed(null); setLoading('hero')
     const kit = resolveKit(assets.kits, assets.traits, assets.chogs, Number(hero), home)
-    void loadHeroAssets(assets, kit, controller.signal, costume, shop.owned).then(pack => loadLevelAssets(pack, mapLevel, controller.signal, level === DAILY_LEVEL)).then(pack => { if (!controller.signal.aborted) setPrepared({ id: Number(hero), home, costume, assets: pack }) }).catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'Could not load this hero.') })
+    // Hero and level art don't depend on each other, so both load at once. The merge keeps the old order (base, hero, level): Art.frame() takes the first match.
+    const heroArt = loadHeroAssets(assets, kit, signal, costume, shop.owned).then(pack => { if (!signal.aborted) setLoading('street'); return pack }, () => { throw 'hero' })
+    const levelArt = loadLevelAssets(assets, mapLevel, signal, level === DAILY_LEVEL).catch(() => { throw 'street' })
+    const added = (pack: AssetPack) => pack.atlases.filter(atlas => !assets.atlases.includes(atlas))
+    void Promise.all([heroArt, levelArt]).then(([heroPack, levelPack]) => {
+      if (!signal.aborted) setPrepared({ id: Number(hero), home, costume, assets: { ...levelPack, atlases: [...assets.atlases, ...added(heroPack), ...added(levelPack)] } })
+    }).catch(stage => { if (!signal.aborted) setFailed(stage === 'street' ? 'street' : 'hero') })
     return () => controller.abort()
-  }, [assets, hero, home, valid, pickingHero, loadAttempt, costume, ownedKey, level, mapLevel])
+  }, [assets, hero, home, valid, pickingHero, prepAttempt, costume, ownedKey, level, mapLevel])
   // The daily card shows the night's icon from the props sheet.
   useEffect(() => {
     if (menu !== 'levels' || icons) return
@@ -244,8 +270,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const persist = (next: Save) => { saveRef.current = next; setSave(next); setSaveWarning(!writeSave(next)) }
   useEffect(() => {
     const controller = new AbortController()
-    setError('')
-    void loadAssets(controller.signal).then(pack => { if (!controller.signal.aborted) setAssets(pack) }).catch(reason => { if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : 'The level could not be loaded.') })
+    setFailed(null)
+    void loadAssets(controller.signal).then(pack => { if (!controller.signal.aborted) setAssets(pack) }).catch(() => { if (!controller.signal.aborted) setFailed('candy') })
     return () => controller.abort()
   }, [loadAttempt])
   useEffect(() => {
@@ -282,6 +308,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       },
     })
     scene.current = world
+    // create() is async and Phaser doesn't await it, so a failure there (the Chog head art, say) would leave the lanterns unlit for good.
+    const create = world.create.bind(world)
+    world.create = () => create().catch(reason => { console.error(reason); if (scene.current === world) setFailed('lanterns') })
     // Expand from the design buffer without multiplying it by devicePixelRatio.
     const game = new Phaser.Game({ type: Phaser.AUTO, parent: host.current, width: 1920, height: 1080, transparent: true, banner: false,
       // No Pre/Post FX is used; leaving them on allocates ~180 MB of render targets at boot, which can crash a phone tab.
@@ -311,7 +340,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     }).catch(() => { /* Retry when the shop refreshes; the current level stays playable. */ })
     return () => controller.abort()
   }, [ownedKey, ready, assets])
-  useEffect(() => { scene.current?.applySettings(save.settings); sfx.current?.apply(save.settings) }, [save.settings])
+  useEffect(() => { scene.current?.applySettings(save.settings); sfx.current?.apply(save.settings); setHaptics(save.settings.vibration) }, [save.settings])
   const updateSettings = (settings: Settings) => persist({ ...saveRef.current, settings })
   // Closing the last dialog waits for its 120 ms exit; `after` runs once it is gone (the canvas is inert while a modal is open).
   const [closing, setClosing] = useState(false), closeTimer = useRef(0)
@@ -321,6 +350,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   }
   const resume = () => closeMenu(() => { scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() })
   const leaveLevel = () => { setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
+  // Retry only the stage that failed: the base pack, the hero and level art, or the scene (a fresh run object rebuilds the game).
+  const retry = () => { const stage = failed; setFailed(null); if (stage === 'candy') setLoadAttempt(n => n + 1); else if (stage === 'lanterns') setRun(r => r && { ...r }); else setPrepAttempt(n => n + 1) }
   // A story win with a playable level after it leads on to that night's hero picker, keeping the hero and costume.
   const nextLevel = outcome?.won && run?.mode === 'level' && LEVELS[run.level]?.waves.length ? run.level + 1 : 0
   const nextNight = () => { if (!run) return; const id = run.id; leaveLevel(); setLevel(nextLevel); setHero(String(id)); setMenu('hero') }
@@ -366,7 +397,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     {!run && <div className="siege-night" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#24163233, #24163277), url(/siege/levels/level1.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>}
     {onBack && <div className="siege-back"><Sticker onClick={onBack}>← Knock</Sticker></div>}
     <div className="siege-rotate bubble">Turn your phone sideways for the best view</div>
-    {run && !ready && <div className="siege-loading" role="status">Lighting the lanterns…</div>}
+    {run && !ready && <div className="boot"><img className="boot-logo" src="/art/ui/logo.svg" alt="" width="240" height="80" />{failed === 'lanterns' ? <RetryPanel stage="lanterns" onRetry={retry}><Sticker onClick={() => { setFailed(null); leaveLevel() }}>Level select</Sticker></RetryPanel> : <><span className="boot-candy" aria-hidden="true" /><p role="status">{STAGES.lanterns[0]}</p></>}</div>}
     {menu && <Modal key={menu} closing={closing} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={menu === 'result' ? 'siege-modal--result' : menu === 'shop' ? 'siege-modal--shop' : menu === 'hero' ? 'siege-modal--hero' : menu === 'title' ? 'siege-modal--title' : ''}>
       {installTip && <aside className="siege-install-tip" aria-label="Play full screen on iPhone">
         <strong>Add Knock to your Home Screen to play full screen</strong>
@@ -426,7 +457,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
               <Sticker tone="gold" disabled={tryingHolder || starting || shop.busy} onClick={() => void tryHolder()}>{tryingHolder ? 'Preparing holder demo…' : 'Try as a holder'}</Sticker>{hasChog && <strong className="siege-shop-note">$CHOG holder</strong>}
             </div>
             {holderError && <p role="status">{holderError}</p>}
-            {error ? <p role="alert">{error} <Sticker onClick={() => setLoadAttempt(n => n + 1)}>Retry</Sticker></p> : (!assets || !prepared) && <p role="status">Unpacking your hero…</p>}
+            {failed && failed !== 'lanterns' ? <RetryPanel stage={failed} onRetry={retry} /> : (!assets || (valid && !prepared)) && <StageLabel stage={assets ? loading : 'candy'} />}
             <div className="row"><Sticker tone="orange" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)} onClick={() => start()}>{starting ? 'Checking your $CHOG perks…' : 'Let’s make mischief →'}</Sticker><Sticker onClick={() => setMenu('levels')}>← Back</Sticker></div>
             {save.tutorial && level === 1 && <button className="siege-text-button" onClick={() => start(true)} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
             <p>{home ? 'Home advantage: your own Chog starts one level higher and wears a gold frame.' : 'Borrow any Chog. Its real traits are your perks.'}</p>
@@ -461,6 +492,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
           {(['music', 'effects'] as const).map(key => <label key={key}><span>{key === 'music' ? 'Music' : 'Effects'} <b>{Math.round(save.settings[key] * 100)}%</b></span><input type="range" min="0" max="1" step="0.05" value={save.settings[key]} onChange={event => updateSettings({ ...save.settings, [key]: Number(event.target.value) })} /></label>)}
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.lite} onChange={event => updateSettings({ ...save.settings, lite: event.target.checked })} /><span>Lite mode<small>No ambience, half-size portraits and fewer effects. Restart to resize portraits.</small></span></label>
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.shake} onChange={event => updateSettings({ ...save.settings, shake: event.target.checked })} /><span>Screen shake<small>Reduced-motion preferences always take priority.</small></span></label>
+          <label className="siege-toggle"><input type="checkbox" disabled={!canVibrate} checked={save.settings.vibration && canVibrate} onChange={event => { updateSettings({ ...save.settings, vibration: event.target.checked }); if (event.target.checked) { setHaptics(true); haptic('jar') } }} /><span>Vibration<small>{canVibrate ? 'A short buzz when a jar is stolen, a boss falls or the last star lands. Reduced-motion preferences always take priority.' : 'This browser can’t vibrate.'}</small></span></label>
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.autoFullscreen} onChange={event => updateSettings({ ...save.settings, autoFullscreen: event.target.checked })} /><span>Full screen on Play<small>On phones, enter full screen and request landscape. On iPhone, show Home Screen steps once.</small></span></label>
           <label className="siege-toggle"><input type="checkbox" disabled={!shop.owned.includes(21)} checked={save.settings.gold && shop.owned.includes(21)} onChange={event => updateSettings({ ...save.settings, gold: event.target.checked })} /><span>Golden towers<small>{shop.owned.includes(21) ? 'Dress all four classic towers in gold.' : 'Available in the $KNOCK shop.'}</small></span></label>
           {STATS_URL && <label className="siege-toggle"><input type="checkbox" checked={shareStats} onChange={event => { setStatsEnabled(event.target.checked); setShareStats(event.target.checked) }} /><span>Share anonymous play stats<small>Your runs count toward the public live stats. A random id per browser. No wallet or IP address is stored; a salted IP hash is kept for one day only to stop spam.</small></span></label>}
@@ -488,7 +520,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         {run && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} dance={run.victoryDance} result={outcome} />}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
-      {menu === 'shop' && !assets && <p role="status">{error || 'Opening the shop…'}{error && <Sticker onClick={() => setLoadAttempt(n => n + 1)}>Retry</Sticker>}</p>}
+      {menu === 'shop' && !assets && (failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry}><Sticker onClick={() => setMenu(returnMenu)}>← Back</Sticker></RetryPanel> : <StageLabel stage="candy" />)}
       {saveWarning && <p className="siege-save-warning" role="status">This browser couldn’t save progress. Your current game is still safe.</p>}
       {onBack && <button className="siege-text-button" onClick={onBack}>← Back to Knock</button>}
     </Modal>}

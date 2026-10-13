@@ -1,14 +1,21 @@
 import { Sticker } from '../ui'
 import type { CandyBank } from './candyBank'
 
+const grantTx = (tx: string) => <a href={`https://explorer.testnet.chain.robinhood.com/tx/${tx}`} target="_blank" rel="noreferrer">View grant transaction ↗</a>
 export function StarterGrant({ bank, hasWallet }: { bank: CandyBank; hasWallet: boolean }) {
   if (!bank.enabled) return null
-  return <section aria-label="Starter grant" className="siege-shop-note" style={{ padding: 12 }}>
+  const state = bank.claim?.state
+  // Once this wallet has claimed, the grant shrinks to one line so the catalog leads. Unclaimed and failed keep the full panel first.
+  if (hasWallet && !bank.error && (state === 'queued' || state === 'paid')) return <p aria-label="Starter grant" role="status" className="siege-shop-note siege-grant siege-grant--pill">
+    <span>{state === 'paid' ? '✓ Starter grant paid' : 'Starter grant queued · usually paid within a minute. Checking every 5 seconds…'}</span>
+    {bank.claim?.tx && grantTx(bank.claim.tx)}
+  </p>
+  return <section aria-label="Starter grant" className="siege-shop-note siege-grant">
     <strong>A little candy to get started</strong>
-    <p style={{ margin: '8px auto' }}>300 $KNOCK and 0.0005 test ETH for gas, once per wallet. Testnet only; no real value.</p>
+    <p>300 $KNOCK and 0.0005 test ETH for gas, once per wallet. Testnet only; no real value.</p>
     {!hasWallet && <p>Choose a guest wallet or connected wallet above to claim.</p>}
-    {bank.claim?.state === 'queued' ? <p role="status" style={{ margin: '8px auto' }}>Grant queued — usually paid within about a minute. Checking every 5 seconds…</p> : bank.claim?.state === 'paid' ? <p role="status" style={{ margin: '8px auto' }}>Grant paid — your one-time starter grant has been claimed.</p> : <Sticker tone="gold" disabled={!hasWallet || bank.busy || bank.claim?.state !== 'none'} onClick={() => void bank.claimGrant()}>{bank.busy ? 'Checking the Candy Bank…' : 'Claim 300 $KNOCK (one time)'}</Sticker>}
+    {state === 'queued' ? <p role="status">Grant queued — usually paid within about a minute. Checking every 5 seconds…</p> : state === 'paid' ? <p role="status">Grant paid — your one-time starter grant has been claimed.</p> : <Sticker tone="gold" disabled={!hasWallet || bank.busy || state !== 'none'} onClick={() => void bank.claimGrant()}>{bank.busy ? 'Checking the Candy Bank…' : 'Claim 300 $KNOCK (one time)'}</Sticker>}
     {bank.error && <p role="status">{bank.error} <button className="siege-text-button" style={{ color: 'inherit' }} disabled={bank.busy} onClick={bank.check}>Check grant status</button></p>}
-    {bank.claim?.tx && <p style={{ margin: '8px auto' }}><a style={{ color: 'inherit' }} href={`https://explorer.testnet.chain.robinhood.com/tx/${bank.claim.tx}`} target="_blank" rel="noreferrer">View grant transaction ↗</a></p>}
+    {bank.claim?.tx && <p>{grantTx(bank.claim.tx)}</p>}
   </section>
 }

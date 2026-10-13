@@ -73,6 +73,16 @@ function Bars({ rows, empty }: { rows: Row[]; empty: string }) {
     <i aria-hidden="true" style={{ width: `${Math.max(2, row.n / max * 100)}%`, background: row.color }} />
   </li>)}</ul>
 }
+// A shared milestone, not a reward: nothing is promised when the bar fills.
+const GOAL = 100_000
+function Goal({ total }: { total: number }) {
+  const pct = Math.min(100, total / GOAL * 100)
+  return <section className="board stats-goal" aria-labelledby="stats-goal">
+    <h2 id="stats-goal">Community goal: {fmt(GOAL)} monsters stopped</h2>
+    <div className="stats-goal-bar" role="progressbar" aria-labelledby="stats-goal" aria-valuemin={0} aria-valuemax={GOAL} aria-valuenow={Math.min(total, GOAL)} aria-valuetext={`${fmt(total)} of ${fmt(GOAL)}`}>{total > 0 && <span style={{ width: `${pct}%` }} />}</div>
+    <p><b>{fmt(total)}</b> stopped so far · {total >= GOAL ? 'Goal reached!' : `${Math.floor(pct)}%`}. Every player’s stops count. It’s a milestone, with no prize.</p>
+  </section>
+}
 function Tile({ n, label, sub }: { n: number; label: string; sub: string }) {
   return <div className="board stats-tile"><strong>{fmt(n)}</strong><span>{label}</span><small>{sub}</small></div>
 }
@@ -129,6 +139,7 @@ export default function StatsPage() {
         {STATS_URL && <Sticker onClick={() => { setFailed(false); setAttempt(n => n + 1) }}>Try again</Sticker>}
       </> : <h2>Counting candy wrappers…</h2>}
     </section> : <>
+      <Goal total={stats.kills.total} />
       <section className="stats-headline" aria-label="Headline numbers">
         <Tile n={stats.players.allTime} label="Players" sub={`${fmt(stats.players.today)} today · ${fmt(stats.players.last7Days)} this week`} />
         <Tile n={stats.kills.total} label="Monsters stopped" sub={`${fmt(skeletons(stats))} of them skeletons`} />
@@ -152,11 +163,11 @@ export default function StatsPage() {
           <p className="stats-note">Last 14 days, UTC. Today: {plural(stats.players.today, 'player')}.</p>
         </section>
         <section className="board" aria-labelledby="stats-heroes">
-          <h2 id="stats-heroes">Favourite heroes</h2>
-          {stats.heroes.length ? <ol className="stats-heroes">{stats.heroes.map(hero => <li key={hero.id}>
-            <img src={`/chogs-256/${hero.id}.webp`} alt="" width="88" height="88" loading="lazy" onError={event => { event.currentTarget.style.visibility = 'hidden' }} />
+          <h2 id="stats-heroes">Top porch protectors</h2>
+          {stats.heroes.length ? <><ol className="stats-heroes">{stats.heroes.map((hero, index) => <li key={hero.id}>
+            <span className="stats-portrait"><img src={`/chogs-256/${hero.id}.webp`} alt="" width="88" height="88" loading="lazy" onError={event => { event.currentTarget.style.visibility = 'hidden' }} />{index < 3 && <b className="stats-rank" aria-label={`Rank ${index + 1}`}>{index + 1}</b>}</span>
             <span>Chog #{hero.id}</span><b>{plural(hero.runs, 'run')}</b>
-          </li>)}</ol> : <p className="stats-empty">No heroes on porch duty yet.</p>}
+          </li>)}</ol><p className="stats-note">Ranked by runs played.</p></> : <p className="stats-empty">No heroes on porch duty yet.</p>}
         </section>
         <section className="board" aria-labelledby="stats-levels"><h2 id="stats-levels">Most-played porches</h2><Bars rows={levelRows(stats)} empty="No runs yet. Be the first." /></section>
         <section className="board" aria-labelledby="stats-bosses"><h2 id="stats-bosses">Bosses defeated</h2><Bars rows={bossRows(stats, legends)} empty="No boss has fallen yet." /></section>

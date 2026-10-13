@@ -27,6 +27,14 @@
 .stats-actions .sticker { font-size: 1.05rem; padding: 10px 18px; }
 .stats-copied { margin: 12px auto 0; max-width: 560px; color: #ffe1a8; overflow-wrap: anywhere; }
 
+/* The community goal: a candy-corn bar on a night-purple track. */
+.stats-goal { padding: 20px 22px 18px; background: var(--grain), #2e1a47; }
+.stats-goal h2 { font-size: clamp(1.25rem, 3.4vw, 1.7rem) !important; }
+.stats-goal-bar { height: 34px; padding: 4px; border: 3px solid var(--ink); border-radius: 999px; background: #1b0f2b; box-shadow: inset 0 3px 0 #0008; }
+.stats-goal-bar span { display: block; height: 100%; min-width: 22px; border-radius: 999px; background: repeating-linear-gradient(-45deg, #ff7a00 0 10px, #ffd23f 10px 20px, #fff4d6 20px 30px); box-shadow: inset 0 -4px 0 #0003, inset 0 3px 0 #fff8; }
+.stats-goal p { margin: 10px 0 0; color: #d5bbdb; font-size: 17px; }
+.stats-goal b { font: 400 20px var(--font-display); color: #ffe1a8; letter-spacing: .02em; }
+
 .stats-headline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .stats-tile { padding: 22px 12px 16px; text-align: center; background: var(--grain), #3a2848; }
 .stats-tile strong {
@@ -61,10 +69,17 @@
 .stats-days li:last-child span { background: #ff965c; }
 .stats-days small { margin-top: 4px; font-size: 13px; color: #d5bbdb; }
 
-.stats-heroes { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 14px 10px; margin: 0; padding: 0; list-style: none; }
+.stats-heroes { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); align-items: end; gap: 14px 10px; margin: 0; padding: 0; list-style: none; }
 .stats-heroes li { display: grid; justify-items: center; text-align: center; }
-.stats-heroes img { width: min(84px, 100%); height: auto; aspect-ratio: 1; margin-bottom: 6px; border: 3px solid var(--ink); border-radius: 50%; background: #261a35; box-shadow: 3px 4px 0 var(--ink); }
-.stats-heroes li:first-child img { border-color: #ffd477; }
+.stats-heroes .stats-portrait { position: relative; display: block; width: min(84px, 100%); margin-bottom: 6px; }
+.stats-heroes li:nth-child(-n+3) .stats-portrait { width: min(104px, 100%); } /* the podium */
+.stats-heroes img { display: block; width: 100%; height: auto; aspect-ratio: 1; border: 3px solid var(--ink); border-radius: 50%; background: #261a35; box-shadow: 3px 4px 0 var(--ink); }
+.stats-heroes li:nth-child(1) img { border-color: #ffd23f; }
+.stats-heroes li:nth-child(2) img { border-color: #dfe3ee; }
+.stats-heroes li:nth-child(3) img { border-color: #e8914f; }
+.stats-heroes .stats-rank { position: absolute; top: -6px; left: -6px; display: grid; place-items: center; width: 34px; height: 34px; border: 3px solid var(--ink); border-radius: 50%; background: #ffd23f; color: var(--ink); font: 400 19px/1 var(--font-display); box-shadow: 2px 3px 0 var(--ink); }
+.stats-heroes li:nth-child(2) .stats-rank { background: #dfe3ee; }
+.stats-heroes li:nth-child(3) .stats-rank { background: #e8914f; }
 .stats-heroes span { font-size: 16px; }
 .stats-heroes b { font: 400 15px var(--font-display); color: #ffe1a8; letter-spacing: .02em; }
 

@@ -84,7 +84,6 @@
 .siege-text-button { display: block; background: transparent; color: #d3b8dc; text-decoration: underline; text-underline-offset: 4px; font: 17px var(--font-hand); margin: 20px auto 0; min-height: 44px; }
 .siege-save-warning { color: #ffd59a; font-size: 16px !important; }
 .siege-rotate { display: none; position: absolute; left: 50%; top: 12%; transform: translateX(-50%) rotate(-2deg); z-index: 5; width: min(310px, 80%); text-align: center; }
-.siege-loading { position: absolute; inset: 0; display: grid; place-items: center; background: #21172d; font-size: 24px; }
 @keyframes siege-slam { from { transform: scale(2.5); opacity: 0; } 35% { opacity: 1; } to { transform: scale(1); opacity: 1; } }
 @keyframes siege-confetti { from { transform: translate(-50%, -100%) rotate(0); } 85% { opacity: 1; } to { transform: translate(-50%, 100cqh) rotate(var(--spin)); opacity: 0; } }
 @media (orientation: portrait) and (max-width: 900px) { .siege-shell--playing .siege-rotate { display: block; }.siege-shell--playing .siege-back { bottom: 12px; transform: none; }.siege-shell--playing .siege-back .sticker { font-size: 15px; min-height: 44px; }.siege-hero-pick { grid-template-columns: 140px 1fr; gap: 17px; }.siege-portrait { width: 140px; }.siege-portrait > span { height: 130px; } }
@@ -240,14 +239,14 @@
   .siege-modal--hero > .siege-eyebrow, .siege-modal--hero > h2 { display: inline-block; vertical-align: middle; }
   .siege-modal--hero > .siege-eyebrow { margin-right: 14px; font-size: 11px; }
   .siege-modal--hero > h2 { font-size: 22px; margin: 0; }
-  .siege-modal--hero .siege-wallet { margin: 4px 0 8px; padding: 3px 10px; gap: 2px 12px; }
-  .siege-modal--hero .siege-wallet .sticker { min-height: 34px; padding: 6px 10px; font-size: 13px; }
-  .siege-modal--hero .siege-wallet p { font-size: 15px; }
+  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet { margin: 4px 0 8px; padding: 3px 10px; gap: 2px 12px; }
+  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet .sticker { min-height: 34px; padding: 6px 10px; font-size: 13px; }
+  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet p { font-size: 15px; }
   .siege-modal--hero .siege-wallet small, .siege-modal--hero .siege-wallet-sandbox br, .siege-modal--hero .siege-wallet-sandbox span { display: none; }
   .siege-modal--hero .siege-wallet-sandbox { flex-basis: auto; }
-  .siege-modal--hero .siege-wallet-account strong { display: inline; }
-  .siege-modal--hero .siege-wallet-account span { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
-  .siege-modal--hero .siege-wallet .siege-text-button { min-height: 34px; font-size: 15px; }
+  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet-account strong { display: inline; }
+  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet-account span { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet .siege-text-button { min-height: 34px; font-size: 15px; }
   .siege-modal--hero .siege-hero-pick { grid-template-columns: minmax(270px, 1fr) 1.15fr; gap: 18px; margin: 0; }
   .siege-modal--hero .siege-hero-pick .row { margin: 4px 0 8px; gap: 8px 10px; }
   .siege-modal--hero .siege-hero-pick .sticker { min-height: 40px; padding: 8px 12px; font-size: 14px; }
@@ -328,4 +327,32 @@
   .siege-modal--result .row { gap: 6px 8px; }
   .siege-modal--result .row .sticker { padding: 9px 10px; font-size: 14px; }
 }
-.siege-modal p.siege-perks-failed { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin: 4px auto 10px; padding: 8px 12px; border: 2px solid #ffd59a; border-radius: 12px 5px; background: #2a1d38; color: #ffe1a8; font-size: 17px; }
+.siege-modal p.siege-perks-failed, .siege-modal p.siege-retry, .boot p.siege-retry { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; margin: 4px auto 10px; padding: 8px 12px; border: 2px solid #ffd59a; border-radius: 12px 5px; background: #2a1d38; color: #ffe1a8; font-size: 17px; }
+/* The starter grant: the full panel until this wallet claims, then a one-line pill. */
+.siege-grant { padding: 12px; }
+.siege-grant p { margin: 8px auto; }
+.siege-grant a { color: inherit; }
+.siege-modal .siege-grant--pill { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 16px; width: fit-content; max-width: 100%; margin: 8px auto; padding: 6px 18px; border-radius: 999px; font-size: 17px; }
+/* Landscape phones (844 x 390, 740 x 360): a slim header, wallet, grant and balance, and smaller cards, so the first row of items shows without scrolling. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .siege-modal--shop { padding: 8px 16px 12px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 12px); }
+  .siege-shop > h2 { font-size: 22px; margin: 0 0 4px; }
+  .siege-modal--shop .siege-wallet { margin: 2px 0 4px; }
+  .siege-modal--shop .siege-wallet small { flex-basis: auto; font-size: 13px; line-height: 1.2; }
+  .siege-grant:not(.siege-grant--pill) { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; padding: 4px 12px; }
+  .siege-grant > strong { display: none; }
+  .siege-modal .siege-grant p { margin: 0; font-size: 15px; }
+  .siege-grant .sticker { min-height: 34px; padding: 6px 12px; font-size: 13px; }
+  .siege-modal .siege-grant--pill { margin: 4px auto; padding: 3px 14px; font-size: 15px; }
+  .siege-modal--shop .siege-shop-wallet { padding: 3px 12px; }
+  .siege-modal--shop .siege-shop-wallet strong { display: inline; margin: 0 0 0 10px; font-size: 20px; }
+  .siege-modal--shop .siege-shop-wallet .sticker { min-height: 34px; padding: 6px 10px; font-size: 13px; }
+  .siege-modal .siege-shop > p.siege-shop-note { margin: 4px auto; padding: 4px 12px; font-size: 15px; }
+  .siege-modal--shop .siege-shop-layout { margin-top: 6px; gap: 14px; }
+  .siege-modal--shop .siege-shop-item { min-height: 0; padding: 6px 4px; gap: 2px; font-size: 14px; }
+  .siege-modal--shop .siege-shop-item strong { font-size: 15px; }
+  .siege-modal--shop .siege-shop-item .siege-atlas-sprite { zoom: .5; }
+}
+/* A launch stage still loading: the boot shell's candy at text size. */
+.siege-modal p.siege-stage-label { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px auto; }
+.siege-stage-label .boot-candy { --size: 20px; }

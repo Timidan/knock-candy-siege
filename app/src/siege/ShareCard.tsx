@@ -15,77 +15,105 @@ export function shareText(result: Outcome, id: number) {
   if (result.mode === 'daily') return `Daily #${result.daily} in Candy Siege (${LEVELS[result.level - 1].name}, ${NIGHTS[result.theme].name}) with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${gameLink()}`
   return `I ${result.won ? 'held' : 'took on'} ${LEVELS[result.level - 1].name} in Candy Siege with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${gameLink()}`
 }
-export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, dance: string, result: Outcome) {
-  const [portrait, logo, heads] = await Promise.all([loadImage(`/chogs-256/${kit.id}.webp`), loadImage('/art/ui/logo.svg'), loadPreviewHeads(), document.fonts.ready])
+const NIGHT = '#1B0F2B', DUSK = '#2E1A47', MONAD = '#836EF9', PUMPKIN = '#FF7A00', SLIME = '#22C55E', GOLD = '#FFD23F'
+// A star, or with four points and a thin waist, a sparkle.
+function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, points = 5, inner = .48) {
+  ctx.beginPath()
+  for (let i = 0; i < points * 2; i++) { const a = -Math.PI / 2 + i * Math.PI / points, d = i % 2 ? r * inner : r; ctx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d) }
+  ctx.closePath()
+}
+// Only what the Outcome proves: it records no boss kills or jars lost (perks refill jars), so the flex is a full porch at the end.
+function accolade(result: Outcome) {
+  return result.won && result.jars === 20 ? 'PERFECT DEFENSE · ALL 20 JARS SAVED' : `${result.kills.toLocaleString('en-US')} ${result.kills === 1 ? 'CHOG' : 'CHOGS'} STOPPED`
+}
+// A trophy for the NFT: the Chog cheers out of a Monad-purple burst on the right, the result sits on the left. Defeats get a quieter card.
+export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome) {
+  const [portrait, heads] = await Promise.all([loadImage(`/chogs-256/${kit.id}.webp`), loadPreviewHeads(), document.fonts.ready])
   const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350
   const ctx = canvas.getContext('2d')!
-  ctx.fillStyle = '#21162d'; ctx.fillRect(0, 0, 1080, 1350)
-  if (assets.background) { ctx.save(); ctx.globalAlpha = .75; ctx.drawImage(assets.background, (1080 - assets.background.width) / 2, 190); ctx.restore() }
-  const shade = ctx.createLinearGradient(0, 0, 0, 1350); shade.addColorStop(0, '#21162d'); shade.addColorStop(.48, '#21162d55'); shade.addColorStop(.85, '#21162d'); ctx.fillStyle = shade; ctx.fillRect(0, 0, 1080, 1350)
-  ctx.strokeStyle = '#ffe2ad'; ctx.lineWidth = 6; ctx.strokeRect(26, 26, 1028, 1298)
-  const text = (value: string, x: number, y: number, size: number, color = '#ffe3af', font = 'Luckiest Guy') => { ctx.fillStyle = color; ctx.font = `${size}px "${font}", sans-serif`; ctx.fillText(value, x, y) }
-  ctx.drawImage(logo, 70, 65, 212, 212 * logo.height / logo.width)
-  ctx.textAlign = 'right'; text('CHOG TOWN / AFTER DARK', 1005, 103, 24, '#dac4e4', 'Patrick Hand'); ctx.textAlign = 'left'
-  ctx.save(); ctx.translate(74, 242); ctx.rotate(-.04); ctx.shadowColor = '#120c1f'; ctx.shadowOffsetX = 6; ctx.shadowOffsetY = 8
-  text('CANDY', 0, 0, 130); text('SIEGE', 0, 118, 153, '#ff9c6b'); ctx.restore()
-  // The endless and daily cards swap the stars for the wave reached, or the night's icon and number.
-  const endless = result.mode === 'endless', daily = result.mode === 'daily'
-  text(endless ? 'HOW LONG CAN YOU HOLD?' : daily ? `DAILY #${result.daily} · ${NIGHTS[result.theme].name.toUpperCase()}` : result.won ? 'THE PORCH IS YOURS.' : 'ONE MORE NIGHT?', 76, 416, 28, '#d1bbdd', 'Patrick Hand')
-  text(endless ? 'ENDLESS' : LEVELS[result.level - 1].name, 76, 474, 50)
-  if (endless) text(`WAVE ${result.wave}`, 74, 546, 64, '#ffd16f')
-  else text('★'.repeat(result.stars) + '☆'.repeat(3 - result.stars), 74, 546, 58, '#ffd16f', 'sans-serif')
-  const icons = assets.atlases.find(a => a.key === 'props3'), icon = daily ? icons?.data.frames[NIGHTS[result.theme].icon]?.frame : undefined
-  if (icons && icon) ctx.drawImage(icons.image, icon.x, icon.y, icon.w, icon.h, 905, 132, 96, 96)
-  // Keep the original NFT identifiable beside its trait-built character.
-  ctx.save(); ctx.beginPath(); ctx.arc(886, 340, 91, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(portrait, 795, 249, 182, 182); ctx.restore()
-  ctx.strokeStyle = kit.home ? '#ffd477' : '#b69acb'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(886, 340, 94, 0, Math.PI * 2); ctx.stroke()
-  ctx.textAlign = 'center'; text(`Chog #${kit.id}`, 886, 468, 30, '#ffe3af', 'Patrick Hand'); ctx.textAlign = 'left'
-  text(result.score.toLocaleString('en-US'), 72, 671, 95, '#fff0d2'); text('POINTS', 80, 715, 30, '#d7c1e3', 'Patrick Hand')
-  const layer = document.createElement('canvas'); layer.width = layer.height = 1200
-  const lc = layer.getContext('2d')!, clip = assets.dances[dance]?.clip ?? 'dance-gg'
-  const paint = heroPainter(assets, kit, heads, costume || kit.costume)
+  const endless = result.mode === 'endless', daily = result.mode === 'daily', proud = result.won || endless, frame = kit.home ? GOLD : proud ? MONAD : '#5b4a7a'
+  const text = (value: string, x: number, y: number, size: number, color: string, font = 'Luckiest Guy', max?: number) => { ctx.fillStyle = color; ctx.font = `${size}px "${font}", sans-serif`; ctx.fillText(value, x, y, max) }
+  // Display text with a dark outline over an extruded lip, like the game's stickers.
+  const bold = (value: string, x: number, y: number, size: number, color: string, lip: string, max?: number) => {
+    ctx.font = `${size}px "Luckiest Guy", sans-serif`; ctx.lineWidth = size / 9; ctx.strokeStyle = NIGHT; ctx.lineJoin = 'round'
+    ctx.strokeText(value, x, y + size / 16, max); ctx.fillStyle = lip; ctx.fillText(value, x, y + size / 16, max)
+    ctx.strokeText(value, x, y, max); ctx.fillStyle = color; ctx.fillText(value, x, y, max)
+  }
+  ctx.fillStyle = NIGHT; ctx.fillRect(0, 0, 1080, 1350)
+  if (assets.background) { ctx.save(); ctx.globalAlpha = proud ? .3 : .18; ctx.drawImage(assets.background, (1080 - assets.background.width) / 2, 240); ctx.restore() }
+  const shade = ctx.createLinearGradient(0, 0, 0, 1350); shade.addColorStop(0, NIGHT); shade.addColorStop(.5, '#1b0f2b44'); shade.addColorStop(1, NIGHT); ctx.fillStyle = shade; ctx.fillRect(0, 0, 1080, 1350)
+  // A win holds the GG fist pump (the default victory dance); a defeat stands at ease. Neither plays the signature emote, so no Chog sobs on its trophy.
+  const clip = proud ? 'dance-gg' : 'idle', layer = document.createElement('canvas'); layer.width = layer.height = 1200
+  const lc = layer.getContext('2d')!, paint = heroPainter(assets, kit, heads, costume || kit.costume)
   // Double-size parts lift the old 2× cap: draw at 4× and let the fit below bring the hero down to the card.
-  lc.translate(600, 800); lc.scale(paint.sharp ? 4 : 2, paint.sharp ? 4 : 2); paint(lc, clip, assets.rig.clips[clip].ms * .4)
-  // Fit the actual dance silhouette, including horizontal moves such as the worm.
+  lc.translate(600, 800); lc.scale(paint.sharp ? 4 : 2, paint.sharp ? 4 : 2); paint(lc, clip, proud ? 1400 : assets.rig.clips[clip].ms * .4)
+  // Fit the actual silhouette, raised fist included.
   const pixels = lc.getImageData(0, 0, 1200, 1200).data
   let left = 1200, right = 0, top = 1200, bottom = 0
   for (let y = 0; y < 1200; y++) for (let x = 0; x < 1200; x++) if (pixels[(y * 1200 + x) * 4 + 3] > 8) { left = Math.min(left, x); right = Math.max(right, x); top = Math.min(top, y); bottom = Math.max(bottom, y) }
-  // 345 px tall keeps the hero's head under the PORCH KEEPER label (a sharp 4× hero is always scaled down to the box).
-  const w = right - left + 1, h = bottom - top + 1, scale = Math.min(1, 430 / w, 345 / h)
-  ctx.fillStyle = '#30203de6'; ctx.strokeStyle = kit.home ? '#ffd477' : '#b69acb'; ctx.lineWidth = 5
-  ctx.beginPath(); ctx.roundRect(517, 510, 476, 470, [60, 18, 60, 18]); ctx.fill(); ctx.stroke()
-  ctx.strokeStyle = '#80608f'; ctx.lineWidth = 2; ctx.strokeRect(535, 528, 440, 434)
-  ctx.textAlign = 'center'; text('PORCH KEEPER', 755, 580, 28); text('✦', 557, 622, 32); text('✦', 952, 922, 32); ctx.textAlign = 'left'
-  ctx.fillStyle = '#130d2299'; ctx.beginPath(); ctx.ellipse(752, 936, 180, 27, 0, 0, Math.PI * 2); ctx.fill()
-  ctx.drawImage(layer, left, top, w, h, 752 - w * scale / 2, 947 - h * scale, w * scale, h * scale)
-  text(`CHOG #${kit.id}`, 74, 826, 44)
-  text(kit.home ? 'HOME HERO' : 'GUEST HERO', 76, 865, 25, '#d7c1e3', 'Patrick Hand')
-  text('SIGNATURE MOVE', 76, 921, 24, '#d7c1e3', 'Patrick Hand')
-  text(assets.kits.slots.emote[kit.emote].name, 76, 961, 31)
-  ctx.fillStyle = '#ffe9c4'; ctx.beginPath(); ctx.roundRect(65, 1010, 950, 171, 24); ctx.fill()
-  ctx.textAlign = 'center'
-  for (const [i, stat] of [[endless ? String(result.wave) : String(result.jars), endless ? 'WAVE REACHED' : 'JARS SAVED'], [String(result.kills), 'CHOGS STOPPED'], [String(result.heroLevel), 'HERO LEVEL']].entries()) {
-    const x = 225 + i * 315; text(stat[0], x, 1090, 62, '#382541'); text(stat[1], x, 1141, 23, '#624467', 'Patrick Hand')
+  const w = right - left + 1, h = bottom - top + 1, scale = Math.min(1.25, 440 / w, 680 / h), dw = w * scale, dh = h * scale
+  const cx = 810, feet = 1150, lift = proud ? 26 : 0, gy = feet - dh * .55
+  const glow = ctx.createRadialGradient(cx, gy, 20, cx, gy, 600)
+  glow.addColorStop(0, proud ? '#c4b8ff' : '#4d3d70'); glow.addColorStop(.3, proud ? '#836ef9bb' : '#3b2d5a88'); glow.addColorStop(1, '#836ef900')
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, 1080, 1350)
+  if (proud) {
+    const rays = ctx.createRadialGradient(cx, gy, 60, cx, gy, 720); rays.addColorStop(0, '#ffffff40'); rays.addColorStop(1, '#ffffff00')
+    ctx.fillStyle = rays; ctx.beginPath()
+    for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; ctx.moveTo(cx, gy); ctx.arc(cx, gy, 720, a, a + Math.PI / 18); ctx.closePath() }
+    ctx.fill()
   }
-  text('YOUR PORCH. YOUR CHOG. YOUR HIGH SCORE.', 540, 1228, 27, '#ffd8a1', 'Patrick Hand')
-  ctx.textAlign = 'left'; text(new Date(result.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), 68, 1283, 23, '#d7c1e3', 'Patrick Hand')
-  ctx.textAlign = 'right'; ctx.font = '24px "Patrick Hand", sans-serif'; ctx.fillText(gameLink().replace('https://', ''), 1006, 1283, 710)
+  ctx.fillStyle = '#0c061899'; ctx.beginPath(); ctx.ellipse(cx, feet - 6, Math.max(110, dw * .38), 24, 0, 0, Math.PI * 2); ctx.fill()
+  ctx.drawImage(layer, left, top, w, h, cx - dw / 2, feet - lift - dh, dw, dh)
+  if (proud) for (const [x, y, r] of [[cx - 270, gy - 200, 26], [cx + 235, gy - 300, 32], [cx + 250, gy + 150, 18], [cx - 250, gy + 230, 15]]) { star(ctx, x, y, r, 4, .3); ctx.fillStyle = '#fff4d6'; ctx.fill() }
+  ctx.strokeStyle = frame; ctx.lineWidth = 8; ctx.beginPath(); ctx.roundRect(22, 22, 1036, 1306, 44); ctx.stroke()
+  // Left column: the game and level, the stars (or the wave reached), the score and one accolade.
+  const tag = `KNOCK: CANDY SIEGE · ${endless ? 'Endless' : daily ? `Daily #${result.daily} · ${NIGHTS[result.theme].name}` : LEVELS[result.level - 1].name}`.toUpperCase()
+  ctx.font = '30px "Luckiest Guy", sans-serif'
+  const pw = Math.min(ctx.measureText(tag).width + 60, 860)
+  ctx.fillStyle = proud ? MONAD : DUSK; ctx.strokeStyle = NIGHT; ctx.lineWidth = 5; ctx.beginPath(); ctx.roundRect(70, 76, pw, 64, 32); ctx.fill(); ctx.stroke()
+  text(tag, 100, 120, 30, proud ? '#ffffff' : '#d7c1e3', 'Luckiest Guy', pw - 60)
+  const icons = assets.atlases.find(a => a.key === 'props3'), icon = daily ? icons?.data.frames[NIGHTS[result.theme].icon]?.frame : undefined
+  if (icons && icon) ctx.drawImage(icons.image, icon.x, icon.y, icon.w, icon.h, 86 + pw, 64, 88, 88)
+  text(endless ? 'HOW LONG CAN YOU HOLD?' : result.won ? 'THE PORCH IS YOURS.' : 'ONE MORE NIGHT?', 74, 226, 40, '#d7c1e3', 'Patrick Hand')
+  if (endless) bold(`WAVE ${result.wave}`, 70, 440, 120, GOLD, PUMPKIN, 500)
+  else for (let i = 0; i < 3; i++) {
+    const x = 150 + i * 170, y = i === 1 ? 350 : 374, r = i === 1 ? 84 : 74, earned = i < result.stars
+    star(ctx, x, y + 9, r); ctx.fillStyle = NIGHT; ctx.fill()
+    const fill = ctx.createLinearGradient(0, y - r, 0, y + r); fill.addColorStop(0, '#ffe680'); fill.addColorStop(.55, GOLD); fill.addColorStop(1, '#f59e0b')
+    star(ctx, x, y, r); ctx.fillStyle = earned ? fill : '#36234e'; ctx.fill(); ctx.lineWidth = 9; ctx.strokeStyle = NIGHT; ctx.lineJoin = 'round'; ctx.stroke()
+  }
+  bold(result.score.toLocaleString('en-US'), 66, 648, 168, proud ? '#fff4d6' : '#d9c8e6', proud ? PUMPKIN : DUSK, 500)
+  text('POINTS', 74, 708, 38, '#d7c1e3', 'Patrick Hand')
+  const award = accolade(result), perfect = result.won && result.jars === 20
+  ctx.font = '28px "Luckiest Guy", sans-serif'
+  const aw = Math.min(ctx.measureText(award).width + 100, 560)
+  ctx.lineWidth = 5; ctx.strokeStyle = NIGHT
+  ctx.beginPath(); ctx.roundRect(70, 762, aw, 66, 33); ctx.fillStyle = !proud ? '#140a22' : perfect ? '#15803d' : '#b84e00'; ctx.fill(); ctx.stroke()
+  ctx.beginPath(); ctx.roundRect(70, 754, aw, 66, 33); ctx.fillStyle = !proud ? DUSK : perfect ? SLIME : PUMPKIN; ctx.fill(); ctx.stroke()
+  star(ctx, 110, 786, 19); ctx.fillStyle = proud ? NIGHT : '#d7c1e3'; ctx.fill()
+  text(award, 142, 798, 28, proud ? NIGHT : '#eadff2', 'Luckiest Guy', aw - 100)
+  // Footer: the original NFT stays identifiable beside its number.
+  ctx.fillStyle = '#12091fdd'; ctx.strokeStyle = frame; ctx.lineWidth = 4; ctx.beginPath(); ctx.roundRect(52, 1186, 976, 112, 30); ctx.fill(); ctx.stroke()
+  ctx.save(); ctx.beginPath(); ctx.arc(116, 1242, 42, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(portrait, 74, 1200, 84, 84); ctx.restore()
+  ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(116, 1242, 44, 0, Math.PI * 2); ctx.stroke()
+  text(`CHOG #${kit.id}`, 182, 1262, 50, '#fff4d6')
+  ctx.textAlign = 'right'; text(gameLink().replace('https://', ''), 996, 1256, 36, '#d7c1e3', 'Patrick Hand'); ctx.textAlign = 'left'
   return new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The image could not be created.')), 'image/png'))
 }
 
-export function ShareCard({ assets, kit, costume, dance, result }: { assets: AssetPack; kit: Kit; costume: string; dance: string; result: Outcome }) {
+export function ShareCard({ assets, kit, costume, result }: { assets: AssetPack; kit: Kit; costume: string; dance: string; result: Outcome }) {
   const [file, setFile] = useState<File | null>(null), [url, setUrl] = useState(''), [open, setOpen] = useState(false), [status, setStatus] = useState(''), [attempt, setAttempt] = useState(0)
   const text = shareText(result, kit.id), link = gameLink()
   useEffect(() => {
     let active = true, objectUrl = ''
     setFile(null); setStatus('')
     // Drawing the card blocks the main thread for a moment (a 1200 × 1200 pixel scan), so wait until the result fanfare has landed.
-    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, dance, result).then(blob => {
+    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, result).then(blob => {
       if (!active) return
       const file = new File([blob], `candy-siege-chog-${kit.id}.png`, { type: 'image/png' }); objectUrl = URL.createObjectURL(file); setFile(file); setUrl(objectUrl)
     }).catch(() => { if (active) setStatus('Could not make the share image. Check your connection and try again.') }), attempt ? 0 : 1400)
     return () => { active = false; clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [assets, kit.id, costume, dance, result, attempt])
+  }, [assets, kit.id, costume, result, attempt])
   const share = async () => {
     if (!file) return
     if (navigator.canShare?.({ files: [file] }) && navigator.share) {

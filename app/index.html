@@ -14,9 +14,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Patrick+Hand&display=swap" rel="stylesheet">
     <title>Knock: Candy Siege</title>
     <meta name="description" content="Knock: Candy Siege. A Halloween tower defence where your Chog Genesis NFT is the hero and every trick-or-treater is a real Chog, traits and all.">
+    <style>
+      /* The boot shell paints before any script. App.tsx (loading and error screens) and Siege.tsx (stage labels, the lanterns overlay) reuse these classes. */
+      .boot { position: fixed; inset: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; background: radial-gradient(ellipse at 50% 45%, #64425c, #39263f 55%, #21172d), #21172d; color: #f4eedd; font: 22px/1.3 'Patrick Hand', 'Comic Sans MS', system-ui, sans-serif; text-align: center; }
+      .boot p { margin: 0; }
+      .boot-logo { width: clamp(150px, 30vw, 260px); height: auto; rotate: -3deg; filter: drop-shadow(3px 4px 0 #141414); }
+      /* A peppermint turning in its wrapper. */
+      .boot-candy { --size: 34px; position: relative; display: inline-block; flex: none; width: calc(var(--size) * 2); height: var(--size); vertical-align: middle; }
+      .boot-candy::before { content: ''; position: absolute; inset: 14% 0; background: #ffc93c; clip-path: polygon(0 0, 50% 50%, 100% 0, 100% 100%, 50% 50%, 0 100%); }
+      .boot-candy::after { content: ''; position: absolute; top: 0; left: calc(50% - var(--size) / 2); box-sizing: border-box; width: var(--size); height: var(--size); border: 3px solid #141414; border-radius: 50%; background: conic-gradient(#ff7a1a 0 12.5%, #fff1c7 0 25%, #ff7a1a 0 37.5%, #fff1c7 0 50%, #ff7a1a 0 62.5%, #fff1c7 0 75%, #ff7a1a 0 87.5%, #fff1c7 0); animation: boot-spin 1.1s linear infinite; }
+      @keyframes boot-spin { to { transform: rotate(1turn); } }
+      @media (prefers-reduced-motion: reduce) { .boot-candy::after { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><main class="boot" role="status"><img class="boot-logo" src="/art/ui/logo.svg" alt="Knock" width="240" height="80"><span class="boot-candy" aria-hidden="true"></span><p>Unpacking the candy…</p></main></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
