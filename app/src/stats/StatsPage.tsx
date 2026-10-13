@@ -4,10 +4,11 @@ import { ENEMIES } from '../siege/data/config'
 import { LEVELS } from '../siege/data/level1'
 import { SHOP_ITEMS } from '../siege/data/shop'
 import { STATS_URL } from '../siege/telemetry'
+import { renderCommunityCard } from './communityCard'
 import './stats.css'
 
 // The shape of GET /stats from the siege-stats Worker (knock/stats).
-type Stats = {
+export type Stats = {
   generatedAt: string
   players: { allTime: number; today: number; last7Days: number; daily: { day: string; players: number }[] }
   runs: { started: number; finished: number; wins: number; quits: number; playSeconds: number }
@@ -93,6 +94,7 @@ export default function StatsPage() {
   const [legends, setLegends] = useState<Legends | null>(null)
   const [now, setNow] = useState(Date.now)
   const [copied, setCopied] = useState('')
+  const [card, setCard] = useState<{ file: File; url: string } | null>(null), [making, setMaking] = useState(false)
   const [attempt, setAttempt] = useState(0)
   useEffect(() => { document.title = 'Live stats · Knock: Candy Siege' }, [])
   useEffect(() => { void fetch('/siege/legends.json').then(response => response.json()).then(setLegends).catch(() => { /* Bosses stay unnamed. */ }) }, [])
@@ -113,6 +115,19 @@ export default function StatsPage() {
     document.addEventListener('visibilitychange', load)
     return () => { active = false; clearInterval(refresh); clearInterval(tick); document.removeEventListener('visibilitychange', load) }
   }, [attempt])
+  useEffect(() => () => { if (card) URL.revokeObjectURL(card.url) }, [card])
+  // Drawn on demand from the numbers on screen; Share is a second tap on a ready file, so the share sheet still has its gesture (Safari needs one).
+  const makeImage = async () => {
+    if (!stats || making) return
+    setMaking(true); setCopied('')
+    try { const file = new File([await renderCommunityCard(stats, GOAL)], 'knock-candy-siege-community.png', { type: 'image/png' }); setCard({ file, url: URL.createObjectURL(file) }) }
+    catch { setCopied('Could not make the share image. Please try again.') }
+    finally { setMaking(false) }
+  }
+  const shareImage = async (file: File) => {
+    try { await navigator.share({ files: [file], title: 'Knock: Candy Siege', text: stats ? shareText(stats) : '' }) }
+    catch (reason) { if ((reason as Error).name !== 'AbortError') setCopied('Sharing was unavailable. Download the image instead.') }
+  }
   const copy = async () => {
     if (!stats) return
     const text = shareText(stats)
@@ -129,8 +144,17 @@ export default function StatsPage() {
       <div className="row stats-actions">
         <a className="sticker sticker--orange" href="/">Play Candy Siege →</a>
         <Sticker tone="gold" disabled={!stats} onClick={() => void copy()}>Copy for X</Sticker>
+        <Sticker tone="purple" disabled={!stats || making} onClick={() => void makeImage()}>{making ? 'Drawing the card…' : 'Share image'}</Sticker>
       </div>
       {copied && <p className="stats-copied" role="status">{copied}</p>}
+      {card && <section className="board stats-share" aria-label="Share image">
+        <img src={card.url} alt="Knock: Candy Siege community card: the goal, the headline numbers and the top three Chogs" width="1200" height="630" />
+        <div className="row">
+          {navigator.canShare?.({ files: [card.file] }) && <Sticker tone="gold" onClick={() => void shareImage(card.file)}>Share…</Sticker>}
+          <a className="sticker sticker--gold" href={card.url} download={card.file.name}>Download image</a>
+          <Sticker onClick={() => setCard(null)}>Close</Sticker>
+        </div>
+      </section>}
     </div>
     {!stats ? <section className="board stats-status" role="status">
       {failed ? <>

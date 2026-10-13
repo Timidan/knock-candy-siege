@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { SiegeWallet } from './guestWallet'
 import { WalletChoice } from './WalletChoice'
 import { StarterGrant } from './StarterGrant'
@@ -12,6 +12,7 @@ import { HeroPreview } from './hero/HeroPreview'
 import { reducedMotion } from './data/save'
 import { SHOP_ADDRESS, knockAmount } from './shopChain'
 import type { ShopState } from './useShop'
+import './shop-vault.css'
 
 export function AtlasSprite({ atlas, name, size = 128 }: { atlas?: AssetPack['atlases'][number]; name: string; size?: number }) {
   const f = atlas?.data.frames[name]?.frame
@@ -19,6 +20,9 @@ export function AtlasSprite({ atlas, name, size = 128 }: { atlas?: AssetPack['at
   const scale = size / Math.max(f.w, f.h)
   return <span aria-hidden="true" className="siege-atlas-sprite" style={{ width: f.w * scale, height: f.h * scale, backgroundImage: `url(${atlas.image.src})`, backgroundSize: `${atlas.image.width * scale}px ${atlas.image.height * scale}px`, backgroundPosition: `-${f.x * scale}px -${f.y * scale}px` }} />
 }
+// The claim ceremony: candies fountain up out of the balance and drop back into it. [apex x px, apex y px, delay ms, spin deg]; the class picks the candy.
+const BURST = [[-64, -92, 0, 260], [-38, -124, 40, -320], [-12, -100, 90, 200], [14, -132, 20, -240], [40, -110, 70, 300], [66, -88, 120, -200], [-52, -66, 160, 340], [28, -74, 180, -280], [-26, -136, 210, 220], [52, -120, 240, -300], [2, -84, 260, 180], [-4, -116, 300, -220]]
+const CANDY = ['mint', 'corn', 'gum', 'slime']
 export function Shop({ assets, kit, shop, wallet, bank, onBack, inLevel }: { assets: AssetPack; kit: Kit; shop: ShopState; wallet: SiegeWallet; bank: CandyBank; onBack: () => void; inLevel: boolean }) {
   const [selected, setSelected] = useState(1), [pack, setPack] = useState<AssetPack | null>(null), [cards, setCards] = useState<AssetPack['atlases'][number]>(), [dances, setDances] = useState<AssetPack['atlases'][number]>(), [error, setError] = useState(''), [attempt, setAttempt] = useState(0), [frame, setFrame] = useState(0)
   const item = SHOP_ITEMS.find(i => i.id === selected)!, owned = shop.owned.includes(selected), price = shop.prices?.[selected] ?? (!SHOP_ADDRESS ? BigInt(item.price) * 10n ** 18n : null)
@@ -35,14 +39,18 @@ export function Shop({ assets, kit, shop, wallet, bank, onBack, inLevel }: { ass
     return () => controller.abort()
   }, [assets, kit.id, item.id, attempt])
   useEffect(() => { if (reducedMotion()) return; const timer = setInterval(() => setFrame(n => n + 1), 180); return () => clearInterval(timer) }, [])
+  // Only a claim seen going from unclaimed or queued to paid gets the ceremony; a wallet that was already paid when the shop opened (null to paid) does not.
+  const claim = bank.claim?.state, lastClaim = useRef(claim), [burst, setBurst] = useState(false)
+  useEffect(() => { const before = lastClaim.current; lastClaim.current = claim; if (claim === 'paid' && (before === 'none' || before === 'queued') && !reducedMotion()) setBurst(true) }, [claim])
+  useEffect(() => { if (!burst) return; const timer = setTimeout(() => setBurst(false), 1700); return () => clearTimeout(timer) }, [burst])
   const short = shop.account ? `${shop.account.slice(0, 6)}…${shop.account.slice(-4)}` : ''
   const insufficient = price !== null && shop.balance !== null && shop.balance < price
-  return <div className="siege-shop">
-    <h2>Candy Shop · dress your Chog</h2>
+  return <div className="siege-shop siege-vault">
+    <h2><span>Candy Vault</span> · dress your Chog</h2>
     <WalletChoice wallet={wallet} disabled={shop.busy || inLevel} />
     <StarterGrant bank={bank} hasWallet={!!shop.account} />
     <div className="siege-shop-wallet">
-      <span>{short || 'Guest browsing'}<strong>{shop.balance === null ? '—' : knockAmount(shop.balance)} $KNOCK</strong></span>
+      <span>{short || 'Guest browsing'}<strong className={burst ? 'is-filling' : undefined}>{shop.balance === null ? '—' : knockAmount(shop.balance)} $KNOCK{burst && <span className="siege-vault-burst" aria-hidden="true">{BURST.map(([x, y, delay, spin], i) => <i key={i} className={`siege-candy--${CANDY[i % 4]}`} style={{ '--x': `${x}px`, '--y': `${y}px`, '--spin': `${spin}deg`, animationDelay: `${delay}ms` } as CSSProperties} />)}</span>}</strong></span>
       {!isSandbox && !wallet.guest && <Sticker disabled={shop.busy || wallet.connecting || shop.network || inLevel} onClick={() => void shop.connect()}>{!shop.account ? 'Connect wallet' : !shop.network ? 'Switch to Robinhood' : 'Wallet connected'}</Sticker>}
     </div>
     {!SHOP_ADDRESS && <p className="siege-shop-note" role="status">Shop opens soon · preview everything below. Prices shown are launch defaults.</p>}

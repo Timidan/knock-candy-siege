@@ -1,0 +1,82 @@
+/* The Candy Vault: the shop's warmer framing, the big green claim button and the claim ceremony. Shop-only.
+   siege.css loads after this file, so each rule here is one class more specific than the rule it overrides. */
+
+/* Candlelight from above on the night purple, with a pumpkin rim inside the ink border. */
+.siege-modal.siege-modal--shop {
+  background: var(--grain), radial-gradient(120% 60% at 50% -8%, #ff7a0040, #ff7a0000 62%), linear-gradient(#40264a, #29172f 75%);
+  box-shadow: 8px 10px 0 #120d1a, inset 0 0 0 3px #ff7a0045, inset 0 0 70px #ff7a001c;
+}
+.siege-modal--shop .siege-vault > h2 { color: #ffe2a5; text-shadow: 3px 4px 0 #120d1a; }
+.siege-modal--shop .siege-vault > h2 span { color: #ff9a3c; }
+
+/* The grant is a treat chest: Monad purple, a gold inner rim, and the claim button as its lock. */
+.siege-modal--shop .siege-vault .siege-grant:not(.siege-grant--pill) {
+  position: relative;
+  border: 3px solid var(--ink);
+  border-radius: 18px 8px 18px 8px;
+  background: var(--grain), radial-gradient(90% 130% at 50% 0%, #5a37a0, #2e1a47 70%);
+  color: #f6e4d1;
+  box-shadow: 4px 5px 0 #120d1a, inset 0 0 0 2px #ffd23f66;
+}
+.siege-modal--shop .siege-vault .siege-grant > strong { font: 400 clamp(21px, 2.6vw, 28px)/1.1 var(--font-display); letter-spacing: .02em; color: #ffd23f; text-shadow: 2px 3px 0 #120d1a; }
+.siege-modal--shop .siege-vault .siege-grant--pill { border: 2px solid #22c55e; background: #1b0f2b; color: #f6e4d1; box-shadow: 2px 3px 0 #120d1a; }
+
+/* Green, extruded, and it presses down 4 px on tap. */
+.siege-vault .sticker.siege-vault-claim {
+  --tilt: 0deg;
+  --lip: #15803d;
+  min-height: 52px;
+  margin: 4px 0 10px;
+  padding: 10px 28px;
+  border-radius: 14px;
+  background: var(--grain), linear-gradient(#4ade80, #22c55e 55%, #1fae52);
+  color: #08240f;
+  font-size: 1.35rem;
+  letter-spacing: .04em;
+  text-shadow: 0 1px 0 #ffffff70;
+  box-shadow: 0 5px 0 0 var(--lip), 0 5px 0 3px var(--ink);
+  transition: transform .05s ease-out, box-shadow .05s ease-out, filter .12s;
+}
+.siege-vault .sticker.siege-vault-claim:hover:not(:disabled) { animation: none; transform: none; filter: brightness(1.08); }
+.siege-vault .sticker.siege-vault-claim:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 0 var(--lip), 0 1px 0 3px var(--ink); }
+
+/* The balance is the vault's counter: a dark recess with a gold number. */
+.siege-modal--shop .siege-vault .siege-shop-wallet { margin-top: 10px; border: 2px solid var(--ink); border-radius: 14px 6px; background: #1b0f2bd9; box-shadow: inset 0 3px 0 #0009, 2px 3px 0 #120d1a; }
+.siege-modal--shop .siege-vault .siege-shop-wallet strong { position: relative; color: #ffd23f; text-shadow: 2px 3px 0 #120d1a; }
+
+/* Items sit in vault slots; the chosen one glows pumpkin. */
+.siege-modal--shop .siege-vault .siege-shop-item { background: linear-gradient(#37214f, #28173c); border-color: #5b3a85; box-shadow: 2px 3px 0 #120d1a; transition: translate .12s ease-out, border-color .12s; }
+.siege-modal--shop .siege-vault .siege-shop-item:hover { border-color: #ff9a3c; translate: 0 -2px; }
+.siege-modal--shop .siege-vault .siege-shop-item.is-selected { background: radial-gradient(110% 80% at 50% 0%, #ff7a0048, #ff7a0000 70%), #47295f; border-color: #ff9a3c; box-shadow: 0 0 0 2px #ff9a3c, 0 0 18px #ff7a0066; }
+.siege-modal--shop .siege-vault .siege-shop-preview { border-color: #ff9a3c99; background: radial-gradient(100% 50% at 50% 0%, #ff7a0026, #ff7a0000 70%), #2a1838; }
+
+/* The claim ceremony: twelve candies fountain up out of the balance, then drop back in and the number pops. */
+.siege-vault-burst { position: absolute; left: 50%; top: 40%; pointer-events: none; }
+.siege-vault-burst i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border: 2px solid var(--ink); animation: siege-vault-fountain 1.15s both; }
+.siege-vault-burst .siege-candy--mint { border-radius: 50%; background: repeating-conic-gradient(#e11d48 0 45deg, #fff4d6 0 90deg); }
+.siege-vault-burst .siege-candy--corn { border: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); background: linear-gradient(#fff4d6 0 32%, #ff7a00 0 66%, #ffd23f 0); }
+.siege-vault-burst .siege-candy--gum { border-radius: 50% 50% 38% 38%; background: radial-gradient(circle at 34% 30%, #ffffffb0 0 2px, #0000 3px), #836ef9; }
+.siege-vault-burst .siege-candy--slime { border-radius: 50% 50% 38% 38%; background: radial-gradient(circle at 34% 30%, #ffffffb0 0 2px, #0000 3px), #22c55e; }
+@keyframes siege-vault-fountain {
+  0% { translate: 0 6px; scale: .3; rotate: 0deg; opacity: 0; animation-timing-function: cubic-bezier(.15, .7, .35, 1); }
+  8% { opacity: 1; }
+  48% { translate: calc(var(--x) * var(--k, 1)) calc(var(--y) * var(--k, 1)); scale: 1.1; rotate: var(--spin); animation-timing-function: cubic-bezier(.55, 0, .85, .45); }
+  88% { opacity: 1; scale: .9; }
+  100% { translate: 0 0; scale: .25; rotate: calc(var(--spin) * 2); opacity: 0; }
+}
+.siege-vault .siege-shop-wallet strong.is-filling { animation: siege-vault-fill .34s 1.05s ease-out both; }
+@keyframes siege-vault-fill { 50% { scale: 1.18; color: #fff4d6; text-shadow: 0 0 14px #ffd23f; } }
+@media (prefers-reduced-motion: reduce) {
+  .siege-vault-burst { display: none; }
+  .siege-vault .siege-shop-wallet strong.is-filling { animation: none; }
+}
+
+/* Landscape phones (844 x 390, 740 x 360): the same look at the slim sizes siege.css sets, so the first row of items stays in view. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .siege-vault .sticker.siege-vault-claim { min-height: 36px; margin: 0; padding: 5px 16px; font-size: 15px; box-shadow: 0 3px 0 0 var(--lip), 0 3px 0 2px var(--ink); }
+  .siege-vault .sticker.siege-vault-claim:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 0 0 0 var(--lip), 0 0 0 2px var(--ink); }
+  .siege-modal--shop .siege-vault .siege-grant:not(.siege-grant--pill) { padding: 4px 12px 7px; }
+  .siege-modal--shop .siege-vault .siege-shop-wallet { margin-top: 4px; }
+  .siege-modal--shop .siege-vault .siege-shop-wallet strong { display: inline-block; }
+  .siege-vault-burst { --k: .75; } /* a lower fountain: the balance sits near the dialog's top edge here */
+}

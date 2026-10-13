@@ -38,7 +38,7 @@ export class Sfx {
   private lastTake = new Map<Group, AudioBuffer>()
   private last = new Map<string, number>()
   private active = new Map<string, number>()
-  private voices = new Set<AudioBufferSourceNode>()
+  private voices = new Map<AudioBufferSourceNode, [Cue, number]>() // each live or scheduled source, with its cue and start time
   private routine = 0
   private tracks = new Map<Track, { element: HTMLAudioElement; gain: GainNode }>()
   private track: Track = 'menu'
@@ -92,16 +92,21 @@ export class Sfx {
     let music = this.tracks.get(this.track)
     if (!music) {
       // Not in the assets inventory: globbing would copy each track into the build again. All three ship in both formats.
-      const element = new Audio(`/siege/audio/music/${this.track}.${FORMATS[0]}`), gain = context.createGain()
+      const element = new Audio(`/siege/audio/music/${this.track}.${FORMATS[0]}`), gain = context.createGain(), name = this.track
       element.loop = true; gain.gain.value = 0
+      // The fade-in starts when sound actually comes out: started at play(), a track still buffering would finish its fade in silence and enter abruptly.
+      element.addEventListener('playing', () => { if (this.track === name && !this.closed) gain.gain.setTargetAtTime(1, context.currentTime, .15) })
       context.createMediaElementSource(element).connect(gain).connect(musicGain)
       music = { element, gain }; this.tracks.set(this.track, music)
     }
     for (const [name, { element, gain }] of this.tracks) {
-      gain.gain.setTargetAtTime(name === this.track ? 1 : 0, context.currentTime, .15)
-      if (name !== this.track) setTimeout(() => { if (this.track !== name) element.pause() }, 700)
+      if (name !== this.track) { gain.gain.setTargetAtTime(0, context.currentTime, .15); setTimeout(() => { if (this.track !== name) element.pause() }, 700) }
+      else if (!element.paused) gain.gain.setTargetAtTime(1, context.currentTime, .15) // still sounding (switched back mid-fade): fade straight back in
     }
-    if (music.element.paused) { music.element.currentTime = 0; void music.element.play().catch(() => { /* Blocked until a gesture; unlock() retries. */ }) }
+    if (music.element.paused) {
+      const gain = music.gain.gain; gain.cancelScheduledValues(context.currentTime); gain.setValueAtTime(0, context.currentTime) // its playing event fades it in
+      music.element.currentTime = 0; void music.element.play().catch(() => { /* Blocked until a gesture; unlock() retries. */ })
+    }
   }
   // delay (seconds) schedules on the audio clock, which a busy main thread cannot make late.
   play(cue: Cue, rate = 1, volume = 1, important = !!CUES[cue].important, delay = 0) {
@@ -121,10 +126,16 @@ export class Sfx {
       const source = context.createBufferSource(), gain = context.createGain(), counted = slot
       slot = false
       source.buffer = buffer; source.playbackRate.value = rate * layerRate * pitch; gain.gain.value = volume * layerGain * loud
-      source.connect(gain).connect(fx); this.voices.add(source); if (counted) this.active.set(key, (this.active.get(key) ?? 0) + 1); if (!important) this.routine++
+      source.connect(gain).connect(fx); this.voices.set(source, [cue, at]); if (counted) this.active.set(key, (this.active.get(key) ?? 0) + 1); if (!important) this.routine++
       source.onended = () => { this.voices.delete(source); if (counted) this.active.set(key, (this.active.get(key) ?? 1) - 1); if (!important) this.routine--; source.disconnect(); gain.disconnect() }
       source.start(at)
     }
+  }
+  // Cancels a cue's plays that are scheduled but not yet sounding, such as the result card's star cues when the card closes early. One already sounding rings out.
+  stop(cue: Cue) {
+    const now = this.context?.currentTime ?? 0
+    for (const [source, [name, at]] of this.voices) if (name === cue && at > now) source.stop()
+    for (const key of [cue, `!${cue}`]) if ((this.last.get(key) ?? 0) > now) this.last.delete(key) // a cancelled cue must not hold off the next one
   }
   tower(kind: TowerKind) {
     const sound: Partial<Record<TowerKind, [Cue, number]>> = { roost: ['throw', 1.7], cauldron: ['splat', .72], catapult: ['throw', .6], lighthouse: ['laser', .7], organ: ['wave-horn', .55] }
@@ -168,7 +179,7 @@ export class Sfx {
     for (const type of GESTURES) document.removeEventListener(type, this.unlock, true)
     document.removeEventListener('visibilitychange', this.visibility)
     for (const { element } of this.tracks.values()) { element.pause(); element.removeAttribute('src'); element.load() }
-    for (const voice of this.voices) voice.stop()
+    for (const voice of this.voices.keys()) voice.stop()
     this.voices.clear(); this.tracks.clear(); this.buffers.clear()
     void this.context?.close().catch(() => {})
   }

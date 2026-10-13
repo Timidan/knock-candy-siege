@@ -97,3 +97,8 @@
 @media (max-height: 500px) and (orientation: landscape) {
   .stats-page h1 { font-size: 52px; margin: 8px auto 10px; }
 }
+
+/* The share image: a preview of the 1200 x 630 card with Share (where the browser can share files), Download and Close. */
+.stats-share { max-width: 760px !important; margin: 16px auto 0; padding: 16px; background: var(--grain), #2e1a47; }
+.stats-share img { display: block; width: 100%; height: auto; border: 3px solid var(--ink); border-radius: 12px; }
+.stats-share .row { justify-content: center; margin-top: 14px; }
