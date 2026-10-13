@@ -110,9 +110,6 @@ function startIntro(s: SiegeScene, e: Enemy, b: BossState) {
   s.options.sfx.boss(b.id, true); s.shake(.006)
   if (reducedMotion()) return
   s.slowBeat = 1.5
-  const camera = s.cameras.main, zoom = 1.45
-  camera.zoomTo(zoom * s.renderScale, 650, 'Sine.easeInOut'); camera.pan(Phaser.Math.Clamp(e.x, 960 / zoom - 120, 1920 - 960 / zoom + 120), Phaser.Math.Clamp(e.y - 70, 540 / zoom, 1080 - 540 / zoom), 650, 'Sine.easeInOut')
-  s.time.delayedCall(1700, () => { if (s.gone || s.ended) return; camera.zoomTo(s.renderScale, 650, 'Sine.easeInOut'); camera.pan(960, 540, 650, 'Sine.easeInOut') })
 }
 
 function enrage(s: SiegeScene, e: Enemy, b: BossState) {

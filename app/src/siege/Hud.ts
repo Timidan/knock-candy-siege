@@ -19,6 +19,8 @@ const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
 // icons and numbers at .85 so they stay readable.
 const REST = .85, PLATE = .75
+// One reveal per level in this page session, including scene teardown/restarts; never touches the player's save.
+const revealedLevels = new Set<number>()
 type RuleMoment = { x: number; y: number; key: string; enemy: Enemy; generation: number; icon: string; copy: string; age: number }
 export class Hud {
   scene: SiegeScene
@@ -43,7 +45,16 @@ export class Hud {
   private portrait: Button
   private ability: Button
   private ultimate: Button
+  private ultimateRing: Phaser.GameObjects.Image
+  private ultimateKey: Phaser.GameObjects.Text
+  private ultimateReady = false
+  private ultimateBurst = 1
+  private keyHints = matchMedia('(any-pointer: fine)').matches
+  private perks: { button: Button; x: number; pill: Phaser.GameObjects.Container }[] = []
+  private perkRoot: Phaser.GameObjects.Container
+  private perkAge = -1
   private talentCard: Phaser.GameObjects.Container
+  private talentTitle?: Phaser.GameObjects.Text
   private talentLevel = 0
   private talentTimer?: Phaser.Time.TimerEvent
   private talentBar?: Phaser.GameObjects.Image
@@ -62,7 +73,7 @@ export class Hud {
   private supplies: Phaser.GameObjects.Container
   private suppliesOpen = false
   private suppliesButton: Button
-  private calls: Button[] = []
+  private calls: (Button & { early: Phaser.GameObjects.Text; bounty: Phaser.GameObjects.Image })[] = []
   private speed: Button
   private tutorialCard: Phaser.GameObjects.Container
   private tutorialText: Phaser.GameObjects.Text
@@ -88,6 +99,8 @@ export class Hud {
   // The boss bar and banner exist only while a boss does, so they never hold a dropped boss texture.
   private boss: { root: Phaser.GameObjects.Container; fill: Phaser.GameObjects.Image; width: number; shown: number } | null = null
   private bossBannerRoot: Phaser.GameObjects.Container | null = null
+  private bossLetterbox: Phaser.GameObjects.Container
+  private bossBars: Phaser.GameObjects.Image[]
   constructor(scene: SiegeScene) {
     this.scene = scene
     shapeTexture(scene)
@@ -97,6 +110,9 @@ export class Hud {
     this.bottomRight = scene.add.container(0, 0).setDepth(3000)
     this.supplies = scene.add.container(0, 0).setDepth(3210).setVisible(false)
     this.entrances = scene.add.container(0, 0).setDepth(3000)
+    this.bossLetterbox = scene.add.container(0, 0).setDepth(3325).setVisible(false)
+    this.bossBars = [0, 1].map(() => scene.add.image(0, 0, 'siege-shapes', 'white').setOrigin(0).setTint(0x120d1b))
+    this.bossLetterbox.add(this.bossBars); scene.hudLayer.add(this.bossLetterbox)
     this.radialRoot = scene.add.container(0, 0).setDepth(3200)
     this.wheel = scene.add.container(0, 0).setDepth(3300)
     top.add(plate(scene, 24, 24, 620, 222, 28, 0x241b30, .96, 0xc7a2cb, 4).setAlpha(PLATE))
@@ -133,13 +149,33 @@ export class Hud {
     const legendArt = scene.hero.kit.legend ? `hero-${scene.hero.kit.costume}:` : ''
     this.ability = this.button(bottom, 266, 984, legendArt ? `${legendArt}special/2` : `kit/special/${scene.hero.kit.special}`, 132, () => { scene.cancel(); scene.heroAbility(); this.toast(scene.abilityName()) })
     this.ultimate = this.button(bottom, 266, 830, legendArt ? `${legendArt}ultimate/3` : `kit/ultimate/${scene.hero.kit.ultimate}`, 132, () => { scene.cancel(); scene.command({ type: 'ultimate' }) })
+    this.ultimateRing = scene.art.image(0, 0, 'combat/ring/0').setTint(0xffd477).setVisible(false)
+    this.ultimateKey = this.text(0, -47, 'R', 24).setOrigin(.5).setStroke('#241b30', 4).setVisible(this.keyHints)
+    this.ultimate.root.addAt(this.ultimateRing, 0); this.ultimate.root.add(this.ultimateKey)
+    const keyboardUsed = () => {
+      this.keyHints = true; this.ultimateKey.setVisible(true)
+      if (this.talentTitle?.active) this.talentTitle.setText(`LEVEL ${this.talentLevel} · PICK A TALENT [Z / X]`)
+    }
+    scene.input.keyboard?.on('keydown', keyboardUsed)
+    scene.events.once('shutdown', () => scene.input.keyboard?.off('keydown', keyboardUsed))
     // The card pauses play, so it sits above popups and banners whose tweens freeze with it.
     this.talentCard = scene.add.container(960, 165).setDepth(3345).setVisible(false)
+    this.perkRoot = scene.add.container(0, 0).setDepth(2995).setVisible(false)
+    scene.hudLayer.add(this.perkRoot)
+    if (revealedLevels.has(scene.options.level)) this.perkAge = 2.5
+    let pillY = 0
     for (const [i, slot] of (['passive', 'headgear', 'trinket', 'skin'] as const).entries()) {
       const family = scene.hero.kit[slot], info = scene.options.assets.kits.slots[slot][family]
       if (family === 'none') continue
       const button = this.button(top, 96 + i * 138, 180, `kit/${slot}/${family}`, 84, () => this.toast(`${info.name} · ${info.effect || 'Your portrait’s own colour'}`))
       button.icon.setDisplaySize(48, 48)
+      button.root.setVisible(this.perkAge >= 2.5)
+      const copy = this.text(82, 0, `${info.name} · ${info.effect || 'Your portrait’s own colour'}`, 32, '#fff0d5', true).setWordWrapWidth(510)
+      const height = Math.max(72, copy.height + 20), pill = scene.add.container(0, pillY).setVisible(false)
+      copy.y = height / 2
+      pill.add([plate(scene, 0, 0, 620, height, 24, 0x241b30, .96, 0xffd68a, 2), scene.art.image(40, height / 2, `kit/${slot}/${family}`).setDisplaySize(48, 48), copy])
+      this.perkRoot.add(pill); pillY += height + 8
+      this.perks.push({ button, x: button.root.x, pill })
     }
     this.rain = this.button(bottom, 416, 984, 'fx/candy-rain/1', 132, () => scene.selectSpell('rain'))
     this.boo = this.button(bottom, 566, 984, 'fx/boo/2', 132, () => scene.selectSpell('boo'))
@@ -166,7 +202,9 @@ export class Hud {
       const b = this.button(this.entrances, 0, 0, 'ui/speed-1', 144, () => this.callPreview(index))
       b.icon.setPosition(0, -20).setDisplaySize(64, 64)
       b.label.setPosition(0, 31).setFontSize(36)
-      this.calls.push(b)
+      const early = this.text(0, -25, 'EARLY', 28, '#35253d').setOrigin(.5).setVisible(false)
+      const bounty = scene.art.image(40, 24, 'ui/candy').setDisplaySize(34, 34).setVisible(false)
+      b.root.add([early, bounty]); this.calls.push(Object.assign(b, { early, bounty }))
     })
     this.tutorialCard = scene.add.container(1120, 217).setDepth(3500)
     this.tutorialCard.add(plate(scene, -600, -75, 1200, 150, 22, 0xffefd0, .98, 0x251c2d, 4))
@@ -194,6 +232,7 @@ export class Hud {
   layout() {
     const s = this.scene, v = s.view, centre = (v.left + v.right) / 2
     this.top.setPosition(v.left, v.top)
+    this.perkRoot.setPosition(v.left + 180, v.top + 258)
     this.alarm.setDisplaySize(v.width, v.height)
     this.topRight.setPosition(v.right - 1920, v.top)
     this.bottom.setPosition(v.left, v.bottom - 1080 - 24)
@@ -262,6 +301,23 @@ export class Hud {
     if (rule.age >= 2.6) { this.ruleRoot.setVisible(false); this.rule = null }
   }
   candyTargetPosition() { const p = this.candyRoot.getWorldTransformMatrix(); return { x: p.tx, y: p.ty } }
+  private animatePerks(dt: number) {
+    const s = this.scene
+    if (this.perkAge >= 2.5) return
+    if (this.perkAge < 0) {
+      if (s.focus.active || this.tutorialCard.visible || s.paused || this.talentCard.visible || this.bossBannerRoot) return
+      revealedLevels.add(s.options.level); this.perkAge = 0
+    }
+    this.perkAge += dt
+    const motion = !reducedMotion() && !s.settings.lite && s.quality.tier < 2
+    const from = this.portrait.root.getWorldTransformMatrix(), age = this.perkAge
+    this.perkRoot.setVisible(age < 2.5).setAlpha(Math.min(1, (2.5 - age) / .25))
+    this.perks.forEach(({ button, x, pill }, i) => {
+      const elapsed = age - i * .15, t = motion ? Phaser.Math.Easing.Back.Out(Phaser.Math.Clamp(elapsed / .35, 0, 1)) : 1
+      button.root.setVisible(elapsed >= 0).setPosition(Phaser.Math.Linear(from.tx - this.top.x, x, t), Phaser.Math.Linear(from.ty - this.top.y, 180, t))
+      pill.setVisible(elapsed >= .35).setAlpha(Phaser.Math.Clamp((elapsed - .35) / .12, 0, 1))
+    })
+  }
   candyArrived() {
     const s = this.scene
     s.tweens.killTweensOf([this.candyRoot, this.candyPlate])
@@ -270,6 +326,14 @@ export class Hud {
     if (!reducedMotion()) s.tweens.add({ targets: this.candyRoot, scaleX: 1.12, scaleY: .88, duration: 90, yoyo: true, ease: 'Sine.Out' })
   }
   hide() { this.scene.hudLayer.setVisible(false) }
+  coversControl(x: number, y: number, radius: number) {
+    for (const b of this.buttons) {
+      if (!b.root.visible || !b.root.parentContainer?.visible) continue
+      const p = b.root.getWorldTransformMatrix()
+      if (Math.hypot(p.tx - x, p.ty - y) < b.size / 2 + radius) return true
+    }
+    return false
+  }
   nudgeTarget(target: FocusTarget) {
     if (reducedMotion()) return
     const button = target.world ? undefined : [...this.buttons].find(b => { const p = b.root.getWorldTransformMatrix(); return Math.hypot(p.tx - target.x, p.ty - target.y) < 4 })
@@ -315,6 +379,7 @@ export class Hud {
     // Disabled (.65) and tutorial-blocked (.38) controls keep their existing look.
     const rest = allowed && b.enabled && (skip || !s.focus?.active) && !this.lit(b)
     b.root.setAlpha(rest ? REST : allowed ? b.enabled ? 1 : .65 : .38)
+    if (this.bossBannerRoot) b.root.setAlpha(.35)
     b.face.setAlpha(rest ? PLATE / REST : 1)
     b.icon.setTint(allowed && b.enabled ? 0xffffff : 0x777777)
   }
@@ -361,7 +426,10 @@ export class Hud {
     if (this.portrait.label.style.color !== '#fff0d5') this.portrait.label.setColor('#fff0d5')
     this.cooldown(this.ability, s.hero.hp <= 0 ? s.hero.respawn : s.hero.ability, s.hero.hp <= 0 ? 12 : s.hero.abilityTotal)
     this.cooldown(this.ultimate, 100 - s.hero.charge, 100)
-    this.ultimate.label.setText(s.hero.charge < 100 ? `${Math.floor(s.hero.charge)}%` : 'R').setFontSize(34)
+    const ready = s.hero.charge >= 100
+    if (ready && !this.ultimateReady) this.ultimateBurst = 0
+    this.ultimateReady = ready
+    this.ultimate.label.setText(ready ? 'READY' : `${Math.floor(s.hero.charge)}%`).setFontSize(ready ? 30 : 34).setPosition(0, ready ? 32 : 0)
     this.enabled(this.ultimate, s.hero.charge >= 100 && s.hero.hp > 0)
     const health = Phaser.Math.Clamp(s.hero.hp / s.hero.maxHp, 0, 1)
     this.health.setScale(health, 1).setTint(health < .3 ? 0xff876e : 0xa7d987).setVisible(health > 0)
@@ -373,9 +441,12 @@ export class Hud {
     for (const kind of ['pumpkin', 'bowl', 'gum'] as const) { this.enabled(this.trapButtons[kind], s.candy >= s.trapCost(kind)); this.cost(this.trapButtons[kind], s.trapCost(kind)); if (kind === 'pumpkin' && s.freePumpkin > 0) this.trapButtons[kind].costLabel?.setText('FREE').setFontSize(26); else this.trapButtons[kind].costLabel?.setFontSize(34) }
     this.calls.forEach((b, path) => {
       const wave = s.waveAt(s.wave)
-      b.root.setVisible(!!wave && wave.groups.some(g => !g.edge && s.entrancePath(g.type, g.path ?? 0) === path))
+      b.root.setVisible(!this.bossBannerRoot && !!wave && wave.groups.some(g => !g.edge && s.entrancePath(g.type, g.path ?? 0) === path))
       this.enabled(b, !!wave && s.tutorialStep > 0)
+      const early = s.wave > 0 && s.countdown > 0
+      b.early.setVisible(early); b.bounty.setVisible(early); b.icon.setVisible(!early)
       b.label.setText(s.wave === 0 ? 'GO' : `+${Math.ceil(Math.max(0, s.countdown) * 1.5)}`)
+      b.label.setPosition(early ? -17 : 0, early ? 24 : 31)
       b.sweep.setVisible(!!s.wave && !!wave).setScale(1)
       if (s.wave && wave) setSweep(s, b.sweep, s.countdown / wave.countdown, b.size / 2 - 3, 6)
     })
@@ -527,7 +598,8 @@ export class Hud {
     this.talentTimer = s.time.delayedCall(10000, () => this.pickTalent(0, true))
     s.input.keyboard?.on('keydown', this.talentKey, this)
     this.talentCard.add(plate(s, -360, -64, 720, 272, 20, 0x2e203c, .97, 0xffd58b, 3))
-    this.talentCard.add(this.text(0, -34, `LEVEL ${level} · PICK A TALENT [Z / X]`, 34).setOrigin(.5))
+    this.talentTitle = this.text(0, -34, `LEVEL ${level} · PICK A TALENT${this.keyHints ? ' [Z / X]' : ''}`, 34).setOrigin(.5)
+    this.talentCard.add(this.talentTitle)
     choices.forEach((choice, i) => {
       const x = i ? 176 : -176, panel = this.scene.add.container(x, 82).setSize(340, 180).setInteractive()
       panel.add(plate(this.scene, -166, -90, 332, 180, 12, 0xffefd0))
@@ -603,7 +675,7 @@ export class Hud {
   // The introduction: the boss's banner slides in with its name (a legend wears its real portrait over the Pumpkin icon).
   bossBanner(b: BossState) {
     const s = this.scene, v = s.view, k = 1.35
-    this.bossBannerRoot?.destroy()
+    if (this.bossBannerRoot) { s.tweens.killTweensOf(this.bossBannerRoot); this.bossBannerRoot.destroy() }
     const root = s.add.container((v.left + v.right) / 2, -150).setDepth(3330); s.hudLayer.add(root)
     root.add(s.art.image(0, 0, 'boss/ui/banner').setScale(k))
     if (b.rig) {
@@ -615,8 +687,22 @@ export class Hud {
       root.add(s.add.image(-248 * k, 0, 'siege-faces', s.art.face(b.id as number)).setDisplaySize(50 * k * 128 / 61, 50 * k * 128 / 61))
     }
     this.bossBannerRoot = root
+    this.closePreview(); this.calls.forEach(b => b.root.setVisible(false))
+    for (const button of this.buttons) this.shade(button)
+    const motion = !reducedMotion() && !s.settings.lite && s.quality.tier < 2, duration = motion ? 300 : 0, hold = motion ? 1500 : 1800
     const y = v.top + 250
-    s.tweens.add({ targets: root, y, duration: reducedMotion() ? 0 : 320, ease: 'Back.Out', hold: 1900, yoyo: true, onComplete: () => { root.destroy(); if (this.bossBannerRoot === root) this.bossBannerRoot = null } })
+    root.y = motion ? v.top - 180 : y
+    this.bossLetterbox.setVisible(true)
+    s.tweens.killTweensOf(this.bossBars)
+    this.bossBars.forEach((bar, i) => {
+      const at = i ? v.height - 80 : 0
+      bar.setDisplaySize(v.width, 80).setPosition(0, motion ? i ? v.height : -80 : at)
+      s.tweens.add({ targets: bar, y: at, duration, hold, yoyo: true, ease: 'Sine.Out' })
+    })
+    s.tweens.add({ targets: root, y, duration, ease: 'Back.Out', hold, yoyo: true, onComplete: () => {
+      root.destroy()
+      if (this.bossBannerRoot === root) { this.bossBannerRoot = null; this.bossLetterbox.setVisible(false); this.refresh() }
+    } })
   }
   tutorialTarget(target: string): FocusTarget | null {
     if (target === 'pad') {
@@ -645,9 +731,14 @@ export class Hud {
     this.candy.y += (0 - this.candy.y) * .25
     this.toastText.setVisible(time < this.toastUntil)
     if (this.toastText.visible) this.toastText.setText(this.toastPages[Math.floor((time - this.toastStart) / this.toastSeconds)] ?? '')
-    for (const b of this.pulsing) b.glow.setVisible(b.enabled).setAlpha(motion ? .55 + Math.sin(time * 4) * .25 : .65)
+    const pulse = motion && !s.settings.lite && s.quality.tier < 2
+    for (const b of this.pulsing) b.glow.setVisible(b.enabled).setAlpha(pulse ? .55 + Math.sin(time * 4) * .25 : .65)
+    this.ultimateBurst += dt
+    const burst = Math.min(1, this.ultimateBurst / .36)
+    this.ultimateRing.setVisible(pulse && this.ultimateReady && burst < 1).setDisplaySize(140 + 100 * burst, 140 + 100 * burst).setAlpha(1 - burst)
     this.portrait.glow.setVisible(s.heroSelected).setTint(0xffe296)
     this.animateAlarm(dt)
+    this.animatePerks(dt)
     this.animateRules(dt)
     this.animateBoss(dt)
     for (const preview of this.dancePreviews) {

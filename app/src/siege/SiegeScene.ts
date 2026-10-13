@@ -77,7 +77,7 @@ export class SiegeScene extends Phaser.Scene {
   seed: number
   discovered: Set<string>
   props: { data: LevelProp; image: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; cooldown: number; used: boolean; animation: number }[] = []
-  private pathPreview: { route: Route; path: number; start: number; span: number; skips: { at: number; to: number }[]; images: Phaser.GameObjects.Image[]; alpha: number; selected: boolean }[] = []
+  private pathPreview: { route: Route; path: number; start: number; span: number; skips: { at: number; to: number }[]; images: Phaser.GameObjects.Image[]; pulse: Phaser.GameObjects.Image; cueAge: number; alpha: number; selected: boolean }[] = []
   private previewWave = -1
   private previewBridge = false
   private previewTravel = 0
@@ -101,8 +101,8 @@ export class SiegeScene extends Phaser.Scene {
   bossOwned = new Set<string>()
   bossSheet?: AssetPack['atlases'][number]
   missTime = 0
-  // Witching Hour warning: chevrons pulse at the edges until `until`.
-  warning: { until: number } | null = null
+  // Presentation time only; the scheduled swarm still starts after WITCHING_WARNING.
+  warning: { until: number; edges: number[] } | null = null
   // Daily modifiers and endless scaling.
   speedScale = 1
   candyScale = 1
@@ -192,9 +192,11 @@ export class SiegeScene extends Phaser.Scene {
   private rangeFill!: Phaser.GameObjects.Image
   private rangeStroke!: Phaser.GameObjects.Image
   private rangeKey = ''
+  private rangeSelection = ''
   private focusRing?: Phaser.GameObjects.Image
   private focusRadius = 0
-  private overlay!: Phaser.GameObjects.Graphics
+  private warningRoot!: Phaser.GameObjects.Container
+  private warningEdges: { stroke: Phaser.GameObjects.Image; arrows: Phaser.GameObjects.Image[] }[] = []
   private heroRing!: Phaser.GameObjects.Image
   private preview!: Phaser.GameObjects.Image
   private hudTime = 0
@@ -242,8 +244,13 @@ export class SiegeScene extends Phaser.Scene {
     this.createWorld()
     this.range = this.add.container(0, 0).setDepth(8)
     this.paint = new ShapePool(this, 2000, 408)
-    this.overlay = this.add.graphics().setDepth(3340)
-    this.hudLayer.add(this.overlay)
+    this.warningRoot = this.add.container(0, 0).setDepth(2980).setVisible(false)
+    this.hudLayer.add(this.warningRoot)
+    this.warningEdges = Array.from({ length: 4 }, () => {
+      const stroke = this.add.image(0, 0, 'siege-shapes', 'white').setTint(0xffb45c)
+      const arrows = Array.from({ length: 3 }, () => this.art.image(0, 0, 'teach/path-arrow').setDisplaySize(48, 48))
+      this.warningRoot.add([stroke, ...arrows]); return { stroke, arrows }
+    })
     this.options.assets.geometry.pads.forEach((pad, i) => {
       this.pads.push(this.art.image(pad.x, pad.y, 'pad/empty').setDisplaySize(132, 66).setDepth(5)); this.towers[i] = null
       if (pad.boost) this.boostRings.push(this.art.image(pad.x, pad.y + 2, 'fx/boost/0').setDepth(4))
@@ -583,7 +590,7 @@ export class SiegeScene extends Phaser.Scene {
       const first = route.points.findIndex(p => p.x >= 0 && p.x <= 1920 && p.y >= 0 && p.y <= 1080)
       const start = Math.max(0, first) / (route.points.length - 1) * route.length
       const skips = this.portals.filter(p => p.path === path).map(p => ({ at: p.at, to: p.to })).sort((a, b) => a.at - b.at)
-      return { route, path, start, span: route.length - start - skips.reduce((sum, p) => sum + p.to - p.at, 0), skips, images: Array.from({ length: 10 }, () => this.art.image(0, 0, 'teach/path-dot').setDepth(6).setVisible(false)), alpha: 0, selected: false }
+      return { route, path, start, span: route.length - start - skips.reduce((sum, p) => sum + p.to - p.at, 0), skips, images: Array.from({ length: 10 }, () => this.art.image(0, 0, 'teach/path-dot').setDepth(6).setVisible(false)), pulse: this.art.image(0, 0, 'combat/ring/0').setDepth(6).setTint(0xffd477).setVisible(false), cueAge: 0, alpha: 0, selected: false }
     })
   }
   private drawPathPreview(dt: number) {
@@ -593,13 +600,20 @@ export class SiegeScene extends Phaser.Scene {
       // Edge-swarm paths do not exist until spawn's random draw; never invent a road or advance that RNG here.
       const paths = new Set(wave?.groups.filter(g => !g.edge && g.count > 0).map(g => this.roadFor(g.type, g.path ?? 0)))
       if (wave?.boss) paths.add(this.roadFor('treater', 0))
-      for (const entry of this.pathPreview) entry.selected = paths.has(entry.path)
+      for (const entry of this.pathPreview) { entry.selected = paths.has(entry.path); entry.cueAge = 0 }
     }
     const preparing = !!wave && !this.ended && this.presentationTime >= this.previewHideUntil && (this.wave === 0 || this.countdown > 0 && !this.schedule.some(e => e.wave === this.wave - 1))
     const moving = !reducedMotion() && !this.settings.lite && this.quality.tier < 2, count = moving ? 10 : 4
     if (moving) this.previewTravel += dt * 240
     for (const entry of this.pathPreview) {
       entry.alpha = this.ended ? 0 : Phaser.Math.Clamp(entry.alpha + (preparing && entry.selected ? 1 : -1) * dt / .25, 0, 1)
+      if (preparing && entry.selected) entry.cueAge += dt
+      entry.pulse.setVisible(moving && entry.selected && entry.cueAge < .75 && entry.alpha > 0)
+      if (entry.pulse.visible) {
+        entry.route.at(entry.start + 130, entry.pulse)
+        const t = entry.cueAge / .75
+        entry.pulse.setDisplaySize(90 + 100 * t, 90 + 100 * t).setAlpha(entry.alpha * (1 - t))
+      }
       for (let i = 0; i < entry.images.length; i++) {
         const image = entry.images[i], visible = entry.alpha > 0 && i < count
         image.setVisible(visible)
@@ -611,7 +625,7 @@ export class SiegeScene extends Phaser.Scene {
         const at = Math.min(entry.route.points.length - 2, Math.floor(distance / entry.route.length * (entry.route.points.length - 1))), a = entry.route.points[at], b = entry.route.points[at + 1]
         this.art.set(image, moving ? 'teach/path-dot' : 'teach/path-arrow')
         const fade = moving ? Math.min(1, along / 100, (entry.span - along) / 100) : 1
-        image.setDisplaySize(moving ? 42 : 54, moving ? 42 : 54).setRotation(Math.atan2(b.y - a.y, b.x - a.x)).setAlpha(entry.alpha * fade * .85)
+        image.setDisplaySize(moving ? 96 : 54, moving ? 96 : 54).setRotation(Math.atan2(b.y - a.y, b.x - a.x)).setAlpha(entry.alpha * fade * (moving ? 1 : .85))
       }
     }
   }
@@ -637,7 +651,7 @@ export class SiegeScene extends Phaser.Scene {
     this.schedule.sort((a, b) => a.time - b.time)
     this.countdown = next?.countdown ?? 0
     this.options.sfx.play('wave-horn')
-    if (data.witching) { this.warning = { until: this.clock + warning }; this.hud.banner("WITCHING HOUR: they're coming from everywhere!") }
+    if (data.witching) { this.warning = { until: this.presentationTime + 3.5, edges: [...new Set(this.schedule.filter(e => e.wave === wave && e.edge !== undefined).map(e => e.edge!))] }; this.hud.banner("WITCHING HOUR: they're coming from everywhere!") }
     else this.hud.banner(`WAVE ${this.wave}  ·  ${data.name}`)
     this.tutorial('wave'); this.hud.refresh()
   }
@@ -1502,14 +1516,21 @@ export class SiegeScene extends Phaser.Scene {
       this.rangeStroke = circle(this, radius, 0xffffff, 0, 0xffffff, line)
       this.range.add([this.rangeFill, this.rangeStroke])
     }
+    const selection = this.mode ? `mode:${this.mode}:${key}` : `pad:${this.selected}:${this.previewTower}:${key}`
+    const motion = !reducedMotion() && !this.settings.lite && this.quality.tier < 2
+    if (selection !== this.rangeSelection) {
+      this.rangeSelection = selection; this.tweens.killTweensOf(this.range)
+      this.range.setScale(motion ? .2 : 1)
+      if (motion) this.tweens.add({ targets: this.range, scale: 1, duration: 160, ease: 'Back.Out' })
+    } else if (!motion) { this.tweens.killTweensOf(this.range); this.range.setScale(1) }
     this.range.setPosition(x, y).setVisible(true)
     this.rangeFill.setTint(color).setAlpha(alpha); this.rangeStroke.setTint(color).setAlpha(strokeAlpha)
   }
   private drawSelection() {
-    this.range.setVisible(false); this.overlay.clear(); this.preview.setVisible(false); this.focusRing?.setVisible(false)
+    this.range.setVisible(false); this.preview.setVisible(false); this.focusRing?.setVisible(false)
     if (this.selected >= 0 && (this.towers[this.selected] || this.previewTower)) {
       const tower = this.towers[this.selected], pad = this.pads[this.selected], radius = tower ? towerStats(tower).range : TOWERS[this.previewTower!].levels[0].range
-      this.showRange(pad.x, pad.y, radius, 0xffe3a3, .07, .6, 3)
+      this.showRange(pad.x, pad.y, radius, 0xffe3a3, .11, .8, 3)
     }
     if (this.mode) {
       const spell = this.mode === 'rain' || this.mode === 'boo'
@@ -1520,6 +1541,7 @@ export class SiegeScene extends Phaser.Scene {
       this.showRange(point.x, point.y, config.radius, valid ? config.color : 0xff6666, .15, .8, 4)
       if (!spell) { this.art.set(this.preview, item ? `item/${this.mode}/world` : `trap/${this.mode}/0`); this.preview.setDisplaySize(95, 70).setPosition(point.x, point.y).setVisible(true).setTint(valid ? 0xffffff : 0xff7777) }
     }
+    if (!this.range.visible && this.rangeSelection) { this.rangeSelection = ''; this.tweens.killTweensOf(this.range) }
     const target = this.focus.target
     if (target) {
       if (this.focusRadius !== target.radius) { this.focusRing?.destroy(); this.focusRadius = target.radius; this.focusRing = circle(this, target.radius, 0xffdc76, 0, 0xffdc76, 4).setDepth(3340).setAlpha(.8); this.hudLayer.add(this.focusRing) }
@@ -1528,24 +1550,25 @@ export class SiegeScene extends Phaser.Scene {
     this.art.set(this.pads[0], this.tutorialStep === 0 ? 'pad/glow' : 'pad/empty')
     this.drawWarning()
   }
-  // Witching Hour: pulsing chevrons mark every edge the swarm will pour in from.
+  // Fixed atlas quads, below the HUD, only on edges present in the actual spawn schedule.
   private drawWarning() {
+    this.warningRoot.setVisible(false)
     if (!this.warning) return
-    if (this.clock >= this.warning.until) { this.warning = null; return }
-    const cam = this.cameras.main, v = this.view, g = this.overlay, pulse = reducedMotion() ? .85 : .6 + Math.sin(this.clock * 9) * .35
-    const r = this.renderScale, x0 = Math.max(cam.x / r, v.left) + 40, x1 = Math.min((cam.x + cam.width) / r, v.right) - 40, y0 = Math.max(cam.y / r, v.top) + 40, y1 = Math.min(cam.y / r + 1080, v.bottom) - 40
-    const chevron = (x: number, y: number, dx: number, dy: number, alpha: number) => {
-      // A chevron pointing along (dx, dy): two arms meeting at the tip.
-      const px = -dy, py = dx
-      for (const [width, color] of [[26, 0x241b30], [13, 0xffb45c]] as const) g.lineStyle(width, color, alpha).beginPath().moveTo(x - dx * 34 + px * 54, y - dy * 34 + py * 54).lineTo(x + dx * 34, y + dy * 34).lineTo(x - dx * 34 - px * 54, y - dy * 34 - py * 54).strokePath()
-    }
-    for (let j = 0; j < 3; j++) {
-      const alpha = Phaser.Math.Clamp(pulse - j * .12, .3, 1)
-      for (let i = 1; i <= 3; i++) {
-        const fy = y0 + (y1 - y0) * i / 4, fx = x0 + (x1 - x0) * i / 4
-        chevron(x0 + j * 44, fy, 1, 0, alpha); chevron(x1 - j * 44, fy, -1, 0, alpha); chevron(fx, y0 + j * 44, 0, 1, alpha); chevron(fx, y1 - j * 44, 0, -1, alpha)
-      }
-    }
+    if (this.presentationTime >= this.warning.until || this.ended) { this.warning = null; return }
+    const v = this.view, moving = !reducedMotion() && !this.settings.lite && this.quality.tier < 2
+    const elapsed = this.presentationTime - this.warning.until + 3.5
+    this.warningRoot.setVisible(true).setAlpha(moving ? .65 + Math.cos(elapsed * Math.PI * 4) * .3 : .85)
+    this.warningEdges.forEach(({ stroke, arrows }, edge) => {
+      const active = this.warning!.edges.includes(edge), vertical = edge < 2
+      const x = edge === 0 ? v.left + 5 : edge === 1 ? v.right - 5 : (v.left + v.right) / 2
+      const y = edge === 2 ? v.top + 5 : edge === 3 ? v.bottom - 5 : (v.top + v.bottom) / 2
+      stroke.setVisible(active).setPosition(x, y).setDisplaySize(vertical ? 8 : v.right - v.left, vertical ? v.bottom - v.top : 8)
+      arrows.forEach((arrow, i) => {
+        const ax = vertical ? edge === 0 ? v.left + 30 : v.right - 30 : v.left + (v.right - v.left) * (i + 1) / 4
+        const ay = !vertical ? edge === 2 ? v.top + 30 : v.bottom - 30 : v.top + (v.bottom - v.top) * (i + 1) / 4
+        arrow.setPosition(ax, ay).setRotation([0, Math.PI, Math.PI / 2, -Math.PI / 2][edge]).setVisible(active && moving && !this.hud.coversControl(ax, ay, 34))
+      })
+    })
   }
   private applyQuality() {
     for (const a of this.ambience) a.image.setVisible(!this.settings.lite && this.quality.tier === 0)
