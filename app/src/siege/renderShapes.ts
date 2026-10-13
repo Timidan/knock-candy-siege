@@ -1,4 +1,47 @@
 import Phaser from 'phaser'
+import type { Route } from './world'
+import type { LevelGeometry } from './data/level1'
+
+// The illustrated background already includes the road. Bake the exposed curb
+// union once, with the original road interior/scenery preserved in the same map
+// texture. Nothing is redrawn when a bridge moves or the quality tier changes.
+export function curbedMap(scene: Phaser.Scene, routes: Route[], geometry: LevelGeometry) {
+  const key = 'siege-curbed-map'
+  if (!scene.textures.exists(key)) {
+    const source = scene.textures.get('siege-background').getSourceImage() as HTMLImageElement
+    const texture = scene.textures.createCanvas(key, source.width, source.height)!, c = texture.context
+    const margin = (source.width - 1920) / 2
+    c.translate(margin, 0); c.lineCap = 'round'; c.lineJoin = 'round'
+    const stroke = (width: number, color: string) => {
+      c.lineWidth = width; c.strokeStyle = color
+      c.beginPath()
+      for (const route of routes) {
+        c.moveTo(route.points[0].x, route.points[0].y)
+        for (let i = 1; i < route.points.length; i++) c.lineTo(route.points[i].x, route.points[i].y)
+      }
+      c.stroke()
+    }
+    // All routes form one outline, so forks and shared sections have no seams.
+    stroke(151, '#110720'); stroke(143, '#7A6699')
+    c.globalCompositeOperation = 'destination-out'; stroke(139, '#000')
+    // Illustrated decks and water take precedence, including the fixed crossing.
+    const bridge = geometry.props.find(p => p.kind === 'bridge')
+    if (bridge?.reach) {
+      const xs = bridge.reach.map(p => p[0])
+      c.clearRect(Math.min(...xs) - 6, 0, Math.max(...xs) - Math.min(...xs) + 12, 1080)
+    }
+    for (const prop of geometry.props) if ('type' in prop && prop.type === 'lamp') c.clearRect(prop.x - 22, prop.y - 140, 44, 146)
+    c.clearRect(geometry.porch.x - 116, geometry.porch.y - 100, 250, 170)
+    c.globalCompositeOperation = 'source-over'
+    // Rare Row's existing gold trim and lighting carry most of its contrast.
+    if (geometry.dark) {
+      c.globalCompositeOperation = 'destination-in'; c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(-margin, 0, source.width, source.height)
+    }
+    c.globalCompositeOperation = 'destination-over'; c.drawImage(source, -margin, 0)
+    c.globalCompositeOperation = 'source-over'; texture.refresh()
+  }
+  return scene.add.image(960, 540, key)
+}
 
 // Small shared masks; moving/fading shapes are ordinary batched image quads.
 const KEY = 'siege-shapes'
@@ -38,16 +81,17 @@ export function circle(scene: Phaser.Scene, radius: number, fill: number, alpha 
 }
 
 // HUD-only 2x bakes. These canvases upload once; animation uses image transforms.
-export function hudPlate(scene: Phaser.Scene, width: number, height: number, accent: string, traits = false) {
-  const key = `siege-hud-plate-${width}-${height}-${accent}-${traits}`, pad = traits ? 28 : 8
+export function hudPlate(scene: Phaser.Scene, width: number, height: number, accent: string, traits = false, radius = traits ? 28 : 32) {
+  const key = `siege-hud-plate-${width}-${height}-${accent}-${traits}-${radius}`, pad = traits ? 28 : 8
   if (!scene.textures.exists(key)) {
     const texture = scene.textures.createCanvas(key, (width + pad * 2) * 2, (height + pad * 2) * 2)!, c = texture.context
     c.scale(2, 2); c.translate(pad, pad)
-    c.beginPath(); c.roundRect(0, 0, width, height, traits ? 28 : 32)
+    c.beginPath(); c.roundRect(0, 0, width, height, radius)
     if (traits) { c.shadowColor = accent; c.shadowBlur = 22 }
     c.fillStyle = traits ? '#1C0D30' : 'rgba(27,15,43,.72)'; c.fill()
     c.strokeStyle = accent; c.lineWidth = traits ? 3 : 2.5; c.stroke(); c.shadowBlur = 0
-    c.beginPath(); c.roundRect(16, 8, width - 32, 3, 1.5); c.fillStyle = traits ? '#b3a3ff' : 'rgba(255,255,255,.24)'; c.fill()
+    const inset = Math.max(16, radius * .65)
+    c.beginPath(); c.roundRect(inset, 8, width - inset * 2, 3, 1.5); c.fillStyle = traits ? '#b3a3ff' : 'rgba(255,255,255,.24)'; c.fill()
     texture.refresh()
   }
   return scene.add.image(-pad, -pad, key).setOrigin(0).setScale(.5)

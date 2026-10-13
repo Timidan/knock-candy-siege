@@ -10,6 +10,8 @@ type Layer = { frame: Frame; meta: Meta; image: HTMLImageElement }
 type Template = { anchors: Record<string, unknown> & { faceWindow: { centre: { x: number; y: number }; r: number }; faceMask: [number, number][] } }
 type Sources = { layers: Map<string, Layer>; template: Template; traits: TraitData; skins: Record<string, { tint: string; face?: string }>; legends: { legends: Record<string, unknown> } }
 const slug = (s = '') => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'none'
+// Crude cap names (Balls, Horny, TISM, Boob/BOOB, JEET/Jeet, RETARD); the slugs merge the case variants.
+const CRUDE_CAPS = new Set(['balls-cap', 'horny-cap', 'tism-cap', 'boob-cap', 'jeet-cap', 'retard-cap'])
 const makeCanvas = (width = 256, height = 320) => { const c = document.createElement('canvas'); c.width = width; c.height = height; return c }
 const json = async <T,>(url: string): Promise<T> => { const r = await fetch(url); if (!r.ok) throw new Error(`Could not load ${url}`); return r.json() }
 let sources: Promise<Sources> | undefined
@@ -112,13 +114,17 @@ export class ChogHeads {
     const skull = values.Form === 'Skull' || values.Base === 'Skull'
     let aura = `aura/${slug(values.Aura)}`
     if (!layers.has(aura)) aura += '/0'
-    const eye = `eyes/${slug(values.Eyes)}`, mouth = `mouth/${slug(values.Mouth)}`, head = `head/${slug(values.Head)}`
+    // In a live Siege scene every Chog but the player's hero is an enemy. Enemies (faces, steals, emotes) wear a crude cap
+    // without its print (/decal). Presentation only; the traits are untouched. The picker and share card scene has no hero.
+    const hero = (this.scene as Phaser.Scene & { options?: { hero?: number } })?.options?.hero, cap = slug(values.Head)
+    const plain = hero !== undefined && id !== hero && CRUDE_CAPS.has(cap)
+    const eye = `eyes/${slug(values.Eyes)}`, mouth = `mouth/${slug(values.Mouth)}`, head = `head/${cap}`
     const selectedEye = layers.has(eye) ? eye : 'eyes/placeholder'
     const names = [aura, ...(values.Base === 'Radioactive' ? ['form/radioactive/glow/0'] : []), `${head}/back`, 'base/back', ...(values.Skin === 'Multi Colored' ? ['skin/multi/stripes'] : []), skull ? 'form/skull/face' : 'base/face', ...({ Metal: ['skin/metal/shine'], Jade: ['skin/jade/shine'] }[values.Skin] ?? []), 'base/blush', ...(!skull ? ['base/nose'] : []), selectedEye, ...(layers.get(selectedEye)?.meta.eyeDecals?.[values.Eyes] ?? [])]
     if (layers.has(mouth)) { names.push(mouth); const decal = layers.get(mouth)!.meta.decals?.[mouth]; if (decal) names.push(decal) }
     else if (!skull) names.push('mouth/placeholder')
     // hidesSpikes hats supply their own opaque front/back silhouette, as in compose.py.
-    names.push(`acc/${slug(values.Accessory)}/face`, `${head}/front`, `${head}/decal`)
+    names.push(`acc/${slug(values.Accessory)}/face`, `${head}/front`, ...(plain ? [] : [`${head}/decal`]))
     return this.stack(names, skin.tint, left, skin.face)
   }
   auraFrames(id: number): HeadRef[] | null {

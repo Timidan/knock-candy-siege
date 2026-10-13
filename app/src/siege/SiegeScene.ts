@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 import { Art, loadImage } from './assets'
 import { ChogHeads } from './chogHead'
-import { ShapePool, circle, plate } from './renderShapes'
+import { ShapePool, circle, plate, curbedMap } from './renderShapes'
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
@@ -134,6 +134,7 @@ export class SiegeScene extends Phaser.Scene {
   private lightCount = 0
   towers: (Tower | null)[] = []
   pads: Phaser.GameObjects.Image[] = []
+  private padGlyphs: Phaser.GameObjects.Image[] = []
   projectiles: Projectile[] = []
   effects: Effect[] = []
   private candyFlights: number[] = []
@@ -258,7 +259,9 @@ export class SiegeScene extends Phaser.Scene {
       this.warningRoot.add([stroke, ...arrows]); return { stroke, arrows }
     })
     this.options.assets.geometry.pads.forEach((pad, i) => {
-      this.pads.push(this.art.image(pad.x, pad.y, 'pad/empty').setDisplaySize(132, 66).setDepth(5)); this.towers[i] = null
+      this.pads.push(this.art.image(pad.x, pad.y, 'world/rune-pad').setDisplaySize(144, 86.4).setDepth(5)); this.towers[i] = null
+      // The rune is emissive on Rare Row; it marks a socket without revealing enemies.
+      this.padGlyphs.push(this.art.image(pad.x, pad.y, 'world/rune-glyph').setDisplaySize(144, 86.4).setDepth(this.dark ? 1951 : 5.1).setAlpha(.3))
       if (pad.boost) this.boostRings.push(this.art.image(pad.x, pad.y + 2, 'fx/boost/0').setDepth(4))
     })
     this.makePools()
@@ -591,7 +594,7 @@ export class SiegeScene extends Phaser.Scene {
     p.animation = 1; this.options.sfx.play('build'); this.drawWorld(0)
   }
   private drawMap() {
-    if (this.textures.exists('siege-background')) this.add.image(960, 540, 'siege-background')
+    if (this.textures.exists('siege-background')) curbedMap(this, [...this.routes, ...(this.detour ? [this.detour] : [])], this.options.assets.geometry)
     else {
       const g = this.add.graphics()
       g.fillStyle(0x342741); g.fillRect(0, 0, 1920, 1080)
@@ -1656,7 +1659,13 @@ export class SiegeScene extends Phaser.Scene {
       if (this.focusRadius !== target.radius) { this.focusRing?.destroy(); this.focusRadius = target.radius; this.focusRing = circle(this, target.radius, 0xffdc76, 0, 0xffdc76, 4).setDepth(3340).setAlpha(.8); this.hudLayer.add(this.focusRing) }
       const p = target.world ? this.worldToView(target) : target; this.focusRing!.setPosition(p.x, p.y).setVisible(true)
     }
-    this.art.set(this.pads[0], this.tutorialStep === 0 ? 'pad/glow' : 'pad/empty')
+    const moving = !reducedMotion() && !this.settings.lite && this.quality.tier < 2
+    const pulse = moving ? .65 + .15 * Math.cos(this.presentationTime * Math.PI * 2 / 1.4) : .8
+    this.padGlyphs.forEach((glyph, i) => {
+      const empty = !this.towers[i], tutorial = i === 0 && this.tutorialStep === 0
+      const dragging = this.input.activePointer.isDown && distanceSq(this.pointer, this.pads[i]) < 82 ** 2
+      glyph.setVisible(empty).setAlpha(this.selected === i || dragging || tutorial ? pulse : .3)
+    })
     this.drawWarning()
   }
   // Fixed atlas quads, below the HUD, only on edges present in the actual spawn schedule.

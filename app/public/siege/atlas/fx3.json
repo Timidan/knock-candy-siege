@@ -72,9 +72,57 @@
         "y": 0.5
       }
     },
-    "combat/block/0": {
+    "world/rune-glyph": {
       "frame": {
         "x": 510,
+        "y": 2,
+        "w": 160,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 160,
+        "h": 96
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "world/rune-pad": {
+      "frame": {
+        "x": 674,
+        "y": 2,
+        "w": 160,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 160,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 160,
+        "h": 96
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "combat/block/0": {
+      "frame": {
+        "x": 838,
         "y": 2,
         "w": 96,
         "h": 96
@@ -98,8 +146,8 @@
     },
     "combat/block/1": {
       "frame": {
-        "x": 610,
-        "y": 2,
+        "x": 2,
+        "y": 166,
         "w": 96,
         "h": 96
       },
@@ -122,8 +170,8 @@
     },
     "combat/block/2": {
       "frame": {
-        "x": 710,
-        "y": 2,
+        "x": 102,
+        "y": 166,
         "w": 96,
         "h": 96
       },
@@ -146,8 +194,8 @@
     },
     "combat/block/3": {
       "frame": {
-        "x": 810,
-        "y": 2,
+        "x": 202,
+        "y": 166,
         "w": 96,
         "h": 96
       },
@@ -170,8 +218,8 @@
     },
     "combat/crit/0": {
       "frame": {
-        "x": 910,
-        "y": 2,
+        "x": 302,
+        "y": 166,
         "w": 96,
         "h": 96
       },
@@ -194,7 +242,7 @@
     },
     "combat/crit/1": {
       "frame": {
-        "x": 2,
+        "x": 402,
         "y": 166,
         "w": 96,
         "h": 96
@@ -218,7 +266,7 @@
     },
     "combat/crit/2": {
       "frame": {
-        "x": 102,
+        "x": 502,
         "y": 166,
         "w": 96,
         "h": 96
@@ -242,7 +290,7 @@
     },
     "combat/crit/3": {
       "frame": {
-        "x": 202,
+        "x": 602,
         "y": 166,
         "w": 96,
         "h": 96
@@ -266,7 +314,7 @@
     },
     "combat/dodge/0": {
       "frame": {
-        "x": 302,
+        "x": 702,
         "y": 166,
         "w": 96,
         "h": 96
@@ -290,7 +338,7 @@
     },
     "combat/dodge/1": {
       "frame": {
-        "x": 402,
+        "x": 802,
         "y": 166,
         "w": 96,
         "h": 96
@@ -314,7 +362,7 @@
     },
     "combat/dodge/2": {
       "frame": {
-        "x": 502,
+        "x": 902,
         "y": 166,
         "w": 96,
         "h": 96
@@ -338,8 +386,8 @@
     },
     "combat/dodge/3": {
       "frame": {
-        "x": 602,
-        "y": 166,
+        "x": 2,
+        "y": 266,
         "w": 96,
         "h": 96
       },
@@ -362,8 +410,8 @@
     },
     "combat/impact-egg/0": {
       "frame": {
-        "x": 702,
-        "y": 166,
+        "x": 102,
+        "y": 266,
         "w": 96,
         "h": 96
       },
@@ -386,8 +434,8 @@
     },
     "combat/impact-egg/1": {
       "frame": {
-        "x": 802,
-        "y": 166,
+        "x": 202,
+        "y": 266,
         "w": 96,
         "h": 96
       },
@@ -410,8 +458,8 @@
     },
     "combat/impact-egg/2": {
       "frame": {
-        "x": 902,
-        "y": 166,
+        "x": 302,
+        "y": 266,
         "w": 96,
         "h": 96
       },
@@ -434,7 +482,7 @@
     },
     "combat/impact-egg/3": {
       "frame": {
-        "x": 2,
+        "x": 402,
         "y": 266,
         "w": 96,
         "h": 96
@@ -458,7 +506,7 @@
     },
     "combat/impact-hero/0": {
       "frame": {
-        "x": 102,
+        "x": 502,
         "y": 266,
         "w": 96,
         "h": 96
@@ -482,7 +530,7 @@
     },
     "combat/impact-hero/1": {
       "frame": {
-        "x": 202,
+        "x": 602,
         "y": 266,
         "w": 96,
         "h": 96
@@ -506,7 +554,7 @@
     },
     "combat/impact-hero/2": {
       "frame": {
-        "x": 302,
+        "x": 702,
         "y": 266,
         "w": 96,
         "h": 96
@@ -530,7 +578,7 @@
     },
     "combat/impact-hero/3": {
       "frame": {
-        "x": 402,
+        "x": 802,
         "y": 266,
         "w": 96,
         "h": 96
@@ -554,7 +602,7 @@
     },
     "combat/impact-magic/0": {
       "frame": {
-        "x": 502,
+        "x": 902,
         "y": 266,
         "w": 96,
         "h": 96
@@ -578,8 +626,8 @@
     },
     "combat/impact-magic/1": {
       "frame": {
-        "x": 602,
-        "y": 266,
+        "x": 2,
+        "y": 366,
         "w": 96,
         "h": 96
       },
@@ -602,8 +650,8 @@
     },
     "combat/impact-magic/2": {
       "frame": {
-        "x": 702,
-        "y": 266,
+        "x": 102,
+        "y": 366,
         "w": 96,
         "h": 96
       },
@@ -626,8 +674,8 @@
     },
     "combat/impact-magic/3": {
       "frame": {
-        "x": 802,
-        "y": 266,
+        "x": 202,
+        "y": 366,
         "w": 96,
         "h": 96
       },
@@ -650,8 +698,8 @@
     },
     "combat/impact-seed/0": {
       "frame": {
-        "x": 902,
-        "y": 266,
+        "x": 302,
+        "y": 366,
         "w": 96,
         "h": 96
       },
@@ -674,7 +722,7 @@
     },
     "combat/impact-seed/1": {
       "frame": {
-        "x": 2,
+        "x": 402,
         "y": 366,
         "w": 96,
         "h": 96
@@ -698,7 +746,7 @@
     },
     "combat/impact-seed/2": {
       "frame": {
-        "x": 102,
+        "x": 502,
         "y": 366,
         "w": 96,
         "h": 96
@@ -722,7 +770,7 @@
     },
     "combat/impact-seed/3": {
       "frame": {
-        "x": 202,
+        "x": 602,
         "y": 366,
         "w": 96,
         "h": 96
@@ -746,7 +794,7 @@
     },
     "combat/impact-tp/0": {
       "frame": {
-        "x": 302,
+        "x": 702,
         "y": 366,
         "w": 96,
         "h": 96
@@ -770,7 +818,7 @@
     },
     "combat/impact-tp/1": {
       "frame": {
-        "x": 402,
+        "x": 802,
         "y": 366,
         "w": 96,
         "h": 96
@@ -794,7 +842,7 @@
     },
     "combat/impact-tp/2": {
       "frame": {
-        "x": 502,
+        "x": 902,
         "y": 366,
         "w": 96,
         "h": 96
@@ -818,8 +866,8 @@
     },
     "combat/impact-tp/3": {
       "frame": {
-        "x": 602,
-        "y": 366,
+        "x": 2,
+        "y": 466,
         "w": 96,
         "h": 96
       },
@@ -842,8 +890,8 @@
     },
     "combat/muzzle-egg/0": {
       "frame": {
-        "x": 702,
-        "y": 366,
+        "x": 102,
+        "y": 466,
         "w": 96,
         "h": 96
       },
@@ -866,8 +914,8 @@
     },
     "combat/muzzle-egg/1": {
       "frame": {
-        "x": 802,
-        "y": 366,
+        "x": 202,
+        "y": 466,
         "w": 96,
         "h": 96
       },
@@ -890,8 +938,8 @@
     },
     "combat/muzzle-egg/2": {
       "frame": {
-        "x": 902,
-        "y": 366,
+        "x": 302,
+        "y": 466,
         "w": 96,
         "h": 96
       },
@@ -914,7 +962,7 @@
     },
     "combat/muzzle-egg/3": {
       "frame": {
-        "x": 2,
+        "x": 402,
         "y": 466,
         "w": 96,
         "h": 96
@@ -938,7 +986,7 @@
     },
     "combat/muzzle-lantern/0": {
       "frame": {
-        "x": 102,
+        "x": 502,
         "y": 466,
         "w": 96,
         "h": 96
@@ -962,7 +1010,7 @@
     },
     "combat/muzzle-lantern/1": {
       "frame": {
-        "x": 202,
+        "x": 602,
         "y": 466,
         "w": 96,
         "h": 96
@@ -986,7 +1034,7 @@
     },
     "combat/muzzle-lantern/2": {
       "frame": {
-        "x": 302,
+        "x": 702,
         "y": 466,
         "w": 96,
         "h": 96
@@ -1010,7 +1058,7 @@
     },
     "combat/muzzle-lantern/3": {
       "frame": {
-        "x": 402,
+        "x": 802,
         "y": 466,
         "w": 96,
         "h": 96
@@ -1034,7 +1082,7 @@
     },
     "combat/muzzle-tp/0": {
       "frame": {
-        "x": 502,
+        "x": 902,
         "y": 466,
         "w": 96,
         "h": 96
@@ -1058,102 +1106,6 @@
     },
     "combat/muzzle-tp/1": {
       "frame": {
-        "x": 602,
-        "y": 466,
-        "w": 96,
-        "h": 96
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "sourceSize": {
-        "w": 96,
-        "h": 96
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "combat/muzzle-tp/2": {
-      "frame": {
-        "x": 702,
-        "y": 466,
-        "w": 96,
-        "h": 96
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "sourceSize": {
-        "w": 96,
-        "h": 96
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "combat/muzzle-tp/3": {
-      "frame": {
-        "x": 802,
-        "y": 466,
-        "w": 96,
-        "h": 96
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "sourceSize": {
-        "w": 96,
-        "h": 96
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "combat/ricochet/0": {
-      "frame": {
-        "x": 902,
-        "y": 466,
-        "w": 96,
-        "h": 96
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 96,
-        "h": 96
-      },
-      "sourceSize": {
-        "w": 96,
-        "h": 96
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "combat/ricochet/1": {
-      "frame": {
         "x": 2,
         "y": 566,
         "w": 96,
@@ -1176,7 +1128,7 @@
         "y": 0.5
       }
     },
-    "combat/ricochet/2": {
+    "combat/muzzle-tp/2": {
       "frame": {
         "x": 102,
         "y": 566,
@@ -1200,7 +1152,7 @@
         "y": 0.5
       }
     },
-    "combat/ricochet/3": {
+    "combat/muzzle-tp/3": {
       "frame": {
         "x": 202,
         "y": 566,
@@ -1224,7 +1176,7 @@
         "y": 0.5
       }
     },
-    "combat/ring/0": {
+    "combat/ricochet/0": {
       "frame": {
         "x": 302,
         "y": 566,
@@ -1248,7 +1200,7 @@
         "y": 0.5
       }
     },
-    "combat/ring/1": {
+    "combat/ricochet/1": {
       "frame": {
         "x": 402,
         "y": 566,
@@ -1272,7 +1224,7 @@
         "y": 0.5
       }
     },
-    "combat/ring/2": {
+    "combat/ricochet/2": {
       "frame": {
         "x": 502,
         "y": 566,
@@ -1296,7 +1248,7 @@
         "y": 0.5
       }
     },
-    "combat/ring/3": {
+    "combat/ricochet/3": {
       "frame": {
         "x": 602,
         "y": 566,
@@ -1320,7 +1272,7 @@
         "y": 0.5
       }
     },
-    "combat/shield/0": {
+    "combat/ring/0": {
       "frame": {
         "x": 702,
         "y": 566,
@@ -1344,7 +1296,7 @@
         "y": 0.5
       }
     },
-    "combat/shield/1": {
+    "combat/ring/1": {
       "frame": {
         "x": 802,
         "y": 566,
@@ -1368,7 +1320,7 @@
         "y": 0.5
       }
     },
-    "combat/shield/2": {
+    "combat/ring/2": {
       "frame": {
         "x": 902,
         "y": 566,
@@ -1392,9 +1344,105 @@
         "y": 0.5
       }
     },
-    "combat/shield/3": {
+    "combat/ring/3": {
       "frame": {
         "x": 2,
+        "y": 666,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "combat/shield/0": {
+      "frame": {
+        "x": 102,
+        "y": 666,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "combat/shield/1": {
+      "frame": {
+        "x": 202,
+        "y": 666,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "combat/shield/2": {
+      "frame": {
+        "x": 302,
+        "y": 666,
+        "w": 96,
+        "h": 96
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 96,
+        "h": 96
+      },
+      "sourceSize": {
+        "w": 96,
+        "h": 96
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "combat/shield/3": {
+      "frame": {
+        "x": 402,
         "y": 666,
         "w": 96,
         "h": 96
@@ -1418,7 +1466,7 @@
     },
     "combat/pop/block": {
       "frame": {
-        "x": 102,
+        "x": 502,
         "y": 666,
         "w": 200,
         "h": 70
@@ -1442,7 +1490,7 @@
     },
     "combat/pop/crit": {
       "frame": {
-        "x": 306,
+        "x": 706,
         "y": 666,
         "w": 200,
         "h": 70
@@ -1466,8 +1514,8 @@
     },
     "combat/pop/jar-1": {
       "frame": {
-        "x": 510,
-        "y": 666,
+        "x": 2,
+        "y": 766,
         "w": 200,
         "h": 70
       },
@@ -1490,8 +1538,8 @@
     },
     "combat/pop/jar-10": {
       "frame": {
-        "x": 714,
-        "y": 666,
+        "x": 206,
+        "y": 766,
         "w": 200,
         "h": 70
       },
@@ -1514,7 +1562,7 @@
     },
     "combat/pop/jar-2": {
       "frame": {
-        "x": 2,
+        "x": 410,
         "y": 766,
         "w": 200,
         "h": 70
@@ -1538,7 +1586,7 @@
     },
     "combat/pop/jar-3": {
       "frame": {
-        "x": 206,
+        "x": 614,
         "y": 766,
         "w": 200,
         "h": 70
@@ -1562,7 +1610,7 @@
     },
     "combat/pop/jar-4": {
       "frame": {
-        "x": 410,
+        "x": 818,
         "y": 766,
         "w": 200,
         "h": 70
@@ -1586,54 +1634,6 @@
     },
     "combat/pop/jar-5": {
       "frame": {
-        "x": 614,
-        "y": 766,
-        "w": 200,
-        "h": 70
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 200,
-        "h": 70
-      },
-      "sourceSize": {
-        "w": 200,
-        "h": 70
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "combat/pop/jar-6": {
-      "frame": {
-        "x": 818,
-        "y": 766,
-        "w": 200,
-        "h": 70
-      },
-      "rotated": false,
-      "trimmed": false,
-      "spriteSourceSize": {
-        "x": 0,
-        "y": 0,
-        "w": 200,
-        "h": 70
-      },
-      "sourceSize": {
-        "w": 200,
-        "h": 70
-      },
-      "pivot": {
-        "x": 0.5,
-        "y": 0.5
-      }
-    },
-    "combat/pop/jar-7": {
-      "frame": {
         "x": 2,
         "y": 840,
         "w": 200,
@@ -1656,7 +1656,7 @@
         "y": 0.5
       }
     },
-    "combat/pop/jar-8": {
+    "combat/pop/jar-6": {
       "frame": {
         "x": 206,
         "y": 840,
@@ -1680,7 +1680,7 @@
         "y": 0.5
       }
     },
-    "combat/pop/jar-9": {
+    "combat/pop/jar-7": {
       "frame": {
         "x": 410,
         "y": 840,
@@ -1704,7 +1704,7 @@
         "y": 0.5
       }
     },
-    "combat/pop/miss": {
+    "combat/pop/jar-8": {
       "frame": {
         "x": 614,
         "y": 840,
@@ -1728,7 +1728,7 @@
         "y": 0.5
       }
     },
-    "combat/pop/tink": {
+    "combat/pop/jar-9": {
       "frame": {
         "x": 818,
         "y": 840,
@@ -1752,10 +1752,58 @@
         "y": 0.5
       }
     },
+    "combat/pop/miss": {
+      "frame": {
+        "x": 2,
+        "y": 914,
+        "w": 200,
+        "h": 70
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 200,
+        "h": 70
+      },
+      "sourceSize": {
+        "w": 200,
+        "h": 70
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "combat/pop/tink": {
+      "frame": {
+        "x": 206,
+        "y": 914,
+        "w": 200,
+        "h": 70
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 200,
+        "h": 70
+      },
+      "sourceSize": {
+        "w": 200,
+        "h": 70
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
     "teach/path-arrow": {
       "frame": {
-        "x": 918,
-        "y": 666,
+        "x": 938,
+        "y": 2,
         "w": 64,
         "h": 64
       },
@@ -1778,8 +1826,8 @@
     },
     "teach/path-dot": {
       "frame": {
-        "x": 2,
-        "y": 914,
+        "x": 910,
+        "y": 666,
         "w": 64,
         "h": 64
       },
@@ -1808,7 +1856,7 @@
     "format": "RGBA8888",
     "size": {
       "w": 1020,
-      "h": 980
+      "h": 986
     },
     "scale": "1"
   }
