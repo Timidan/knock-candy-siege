@@ -4,7 +4,7 @@ import type { BossState } from './Boss'
 
 export type Statuses = Record<Status, number>
 export const clearStatuses = (): Statuses => ({ slow: 0, stun: 0, burn: 0, poison: 0, reveal: 0, fear: 0, freeze: 0, charm: 0, confuse: 0, root: 0, mark: 0, bleed: 0, wrap: 0, ground: 0 })
-export type UnitArt = { root: Phaser.GameObjects.Container; body: Phaser.GameObjects.Image; face: Phaser.GameObjects.Image; icons: Phaser.GameObjects.Image[] }
+export type UnitArt = { root: Phaser.GameObjects.Container; body: Phaser.GameObjects.Image; face: Phaser.GameObjects.Image; icons: Phaser.GameObjects.Image[]; statusImage: Phaser.GameObjects.Image; drawFrame: number; faceId: number; faceLeft: boolean; hitTint: boolean; statusName?: Status; statusFrame: number }
 export type Enemy = Point & {
   returning: number; casting: number; poisonStacks: number; active: boolean; generation: number; wave: number; kind: EnemyKind; id: number; mods: Modifier[]; path: number; distance: number; speed: number;
   hp: number; maxHp: number; candy: number; jars: number; status: Statuses; age: number; hit: number; attack: number; skill: number; lucky: boolean; revived: boolean; armour: boolean; visible: boolean; art: UnitArt; slowPower: number; heroDot: boolean; sigCooldown: number

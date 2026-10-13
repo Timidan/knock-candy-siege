@@ -20,32 +20,36 @@ export function ease(name: string, v: number): number {
     default: throw new Error(`Unknown rig ease: ${name}`)
   }
 }
-export function mix(a: Transform, b: Transform, t: number): Transform {
-  return Object.fromEntries(Object.keys(REST).map(key => { const k = key as keyof Transform; return [k, a[k] + (b[k] - a[k]) * t] })) as Transform
+const FIELDS: (keyof Transform)[] = ['x', 'y', 'r', 'sx', 'sy', 'a']
+export function mix(a: Partial<Transform>, b: Partial<Transform>, t: number, out: Transform = { ...REST }): Transform {
+  for (const k of FIELDS) { const start = a[k] ?? REST[k]; out[k] = start + ((b[k] ?? REST[k]) - start) * t }
+  return out
 }
-export function trackPose(track: Keyframe[] | undefined, t: number): Transform {
-  if (!track?.length) return { ...REST }
-  if (t <= track[0][0]) return { ...REST, ...track[0][1] }
+export function trackPose(track: Keyframe[] | undefined, t: number, out: Transform = { ...REST }): Transform {
+  if (!track?.length) return Object.assign(out, REST)
+  if (t <= track[0][0]) return Object.assign(out, REST, track[0][1])
   for (let i = 1; i < track.length; i++) if (t <= track[i][0]) {
     const [start, a] = track[i - 1], [end, b, easing = 'linear'] = track[i]
-    return mix({ ...REST, ...a }, { ...REST, ...b }, ease(easing, (t - start) / (end - start)))
+    return mix(a, b, ease(easing, (t - start) / (end - start)), out)
   }
-  return { ...REST, ...track.at(-1)![1] }
+  return Object.assign(out, REST, track[track.length - 1][1])
 }
-export function localPose(rig: RigData, costume: string, clipName: string, time: number): Record<string, Transform> {
+export function localPose(rig: RigData, costume: string, clipName: string, time: number, parts: Record<string, Transform> = {}): Record<string, Transform> {
   const clip = rig.clips[clipName], config = rig.costumes[costume]
   if (!clip || !config) throw new Error('Unknown rig costume or clip')
   const t = clip.loop ? Math.max(0, time) % clip.ms : Math.max(0, Math.min(time, clip.ms))
-  const parts: Record<string, Transform> = { root: trackPose(clip.tracks.root, t) }
-  for (const [name, node] of Object.entries(rig.skeleton)) {
-    const p = trackPose(clip.tracks[name], t), joint = config.joints[name] ?? node.joint
-    parts[name] = { ...p, x: p.x + joint[0], y: p.y + joint[1] }
+  parts.root = trackPose(clip.tracks.root, t, parts.root)
+  for (const name in rig.skeleton) {
+    const node = rig.skeleton[name], p = trackPose(clip.tracks[name], t, parts[name]), joint = config.joints[name] ?? node.joint
+    p.x += joint[0]; p.y += joint[1]; parts[name] = p
   }
   return parts
 }
-export function compose(parent: Transform, local: Transform): Transform {
+export function compose(parent: Transform, local: Transform, out: Transform = { ...REST }): Transform {
   const r = parent.r * Math.PI / 180, x = local.x * parent.sx, y = local.y * parent.sy
-  return { x: parent.x + Math.cos(r) * x - Math.sin(r) * y, y: parent.y + Math.sin(r) * x + Math.cos(r) * y, r: parent.r + local.r, sx: parent.sx * local.sx, sy: parent.sy * local.sy, a: parent.a * local.a }
+  out.x = parent.x + Math.cos(r) * x - Math.sin(r) * y; out.y = parent.y + Math.sin(r) * x + Math.cos(r) * y
+  out.r = parent.r + local.r; out.sx = parent.sx * local.sx; out.sy = parent.sy * local.sy; out.a = parent.a * local.a
+  return out
 }
 export function pose(rig: RigData, costume: string, clip: string, time: number): Record<string, Transform> {
   const local = localPose(rig, costume, clip, time), result: Record<string, Transform> = {}

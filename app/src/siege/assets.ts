@@ -99,6 +99,8 @@ export class Art {
   private scene: Phaser.Scene
   private faces: Record<string, Anchor>
   private atlasKeys: string[]
+  private frameCache = new Map<string, [string, string]>()
+  private anchorCache = new Map<string, Anchor>()
   constructor(scene: Phaser.Scene, pack: AssetPack, _lite = false) {
     this.scene = scene
     this.faces = pack.faces
@@ -108,9 +110,11 @@ export class Art {
 
   }
   frame(name: string): [string, string] {
+    const cached = this.frameCache.get(name)
+    if (cached) return cached
     const split = name.indexOf(':')
-    if (split >= 0) return [name.slice(0, split), name.slice(split + 1)]
-    for (const atlas of this.atlasKeys) if (this.scene.textures.exists(atlas) && this.scene.textures.get(atlas).has(name)) return [atlas, name]
+    if (split >= 0) { const ref: [string, string] = [name.slice(0, split), name.slice(split + 1)]; this.frameCache.set(name, ref); return ref }
+    for (const atlas of this.atlasKeys) if (this.scene.textures.exists(atlas) && this.scene.textures.get(atlas).has(name)) { const ref: [string, string] = [atlas, name]; this.frameCache.set(name, ref); return ref }
     const base = name.replace(/\/(walk|die|attack)\/\d+$/, '/walk/0').replace(/\/(hurt)$/, '/walk/0').replace(/\/\d+$/, '/0')
     // Built on the first missing frame only: with the full art it would be 16 MB of unused GPU memory.
     if (!this.scene.textures.exists('siege-fallback')) this.makeFallback()
@@ -120,10 +124,10 @@ export class Art {
   addAssets(pack: AssetPack) { for (const atlas of pack.atlases) this.addAtlas(atlas) }
   addAtlas(atlas: AssetPack['atlases'][number]) {
     if (this.scene.textures.exists(atlas.key)) return
-    this.scene.textures.addAtlas(atlas.key, atlas.image, atlas.data); this.atlasKeys.push(atlas.key)
+    this.scene.textures.addAtlas(atlas.key, atlas.image, atlas.data); this.atlasKeys.push(atlas.key); this.frameCache.clear()
   }
   // Boss art is loaded when its wave is called and dropped after the fight, to stay inside the texture budget.
-  removeAtlas(key: string) { this.atlasKeys = this.atlasKeys.filter(k => k !== key); if (this.scene.textures.exists(key)) this.scene.textures.remove(key) }
+  removeAtlas(key: string) { this.frameCache.clear(); this.atlasKeys = this.atlasKeys.filter(k => k !== key); if (this.scene.textures.exists(key)) this.scene.textures.remove(key) }
   count(name: string) {
     const [key, frame] = this.frame(name), texture = this.scene.textures.get(key), stem = frame.replace(/\/\d+$/, '')
     if (stem === frame) return 1
@@ -132,14 +136,17 @@ export class Art {
   }
   image(x: number, y: number, name: string) { return this.scene.add.image(x, y, ...this.frame(name)) }
   // A texture made at run time (the boss UI sheet) joins the lookup like an atlas.
-  useTexture(key: string) { this.atlasKeys.push(key) }
+  useTexture(key: string) { this.atlasKeys.push(key); this.frameCache.clear() }
   // Compare the texture itself, not its key: an atlas that was removed and loaded again reuses the key.
   set(image: Phaser.GameObjects.Image, name: string) { const [key, frame] = this.frame(name); if (image.texture !== this.scene.textures.get(key) || image.frame.name !== frame) image.setTexture(key, frame) }
   anchor(kind: EnemyKind | 'hero', frame = 0, hurt = false, state: 'walk' | 'cast' | 'grab' | 'die' = 'walk'): Anchor {
+    const key = `${kind}:${frame}:${hurt}:${state}`, cached = this.anchorCache.get(key)
+    if (cached) return cached
     const fallback = kind === 'hero' ? { x: 56, y: 56, r: 41 } : { x: 64, y: 52, r: 27 }
     const anchor = this.faces[kind]
     if (!anchor || ![anchor.x, anchor.y, anchor.r].every(Number.isFinite) || anchor.r <= 0) return fallback
-    return { ...anchor, ...(hurt && anchor.hurt ? anchor.hurt : (state === 'walk' ? anchor.frames?.[frame] : anchor[state]?.[frame])) }
+    const resolved = { ...anchor, ...(hurt && anchor.hurt ? anchor.hurt : (state === 'walk' ? anchor.frames?.[frame] : anchor[state]?.[frame])) }
+    this.anchorCache.set(key, resolved); return resolved
   }
   // Existing portrait consumers share the composed window atlas during the conversion.
   pin(_id: number) {}

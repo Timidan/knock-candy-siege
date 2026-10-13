@@ -35,6 +35,7 @@ export class Rig {
   private pose: Record<string, Transform>
   private from: Record<string, Transform> | null = null
   private fade = 0
+  private accessoryPose = { ...REST }
   private release?: () => void
   private pendingDance: string | null = null
   private signature?: Signature
@@ -119,7 +120,9 @@ export class Rig {
   play(clip: string, release?: () => void) {
     if (this.clip === clip && this.data.clips[clip].loop) return
     if (clip === 'faint' || clip === 'victory') this.pendingDance = null
-    this.from = this.pose; this.fade = 0; this.clip = clip; this.time = 0; this.release = release
+    this.from ??= {}
+    for (const part in this.pose) { this.from[part] ??= { ...REST }; Object.assign(this.from[part], this.pose[part]) }
+    this.fade = 0; this.clip = clip; this.time = 0; this.release = release
   }
   // Close-ups (the victory zoom) swap in the double-size parts: the same frame names, drawn at half scale, so the rig keeps its size and stays sharp.
   sharpen() {
@@ -153,19 +156,23 @@ export class Rig {
   update(dt: number, rate = 1) {
     const clip = this.data.clips[this.clip], before = this.time
     this.time += dt * 1000 * rate; this.fade = Math.min(1, this.fade + dt / .12)
-    for (const [name, value] of Object.entries(clip.events)) for (const at of Array.isArray(value) ? value : [value]) {
-      const cycle = clip.loop ? Math.floor(before / clip.ms) : 0
-      for (let i = cycle; i <= (clip.loop ? Math.floor(this.time / clip.ms) : 0); i++) {
-        const eventTime = at + i * clip.ms
-        if ((eventTime > before || before === 0 && eventTime === 0) && eventTime <= this.time) {
-          this.onEvent(name)
-          if (name === 'release') { const release = this.release; this.release = undefined; release?.() }
+    for (const name in clip.events) {
+      const value = clip.events[name], times = Array.isArray(value) ? value : null
+      for (let atIndex = 0; atIndex < (times?.length ?? 1); atIndex++) {
+        const at = times ? times[atIndex] : value as number
+        const cycle = clip.loop ? Math.floor(before / clip.ms) : 0
+        for (let i = cycle; i <= (clip.loop ? Math.floor(this.time / clip.ms) : 0); i++) {
+          const eventTime = at + i * clip.ms
+          if ((eventTime > before || before === 0 && eventTime === 0) && eventTime <= this.time) {
+            this.onEvent(name)
+            if (name === 'release') { const release = this.release; this.release = undefined; release?.() }
+          }
         }
       }
     }
-    const next = localPose(this.data, this.costume, this.clip, reducedMotion() && clip.loop ? 0 : this.time)
-    for (const part of Object.keys(next)) {
-      const p = this.from && this.fade < 1 ? mix(this.from[part], next[part], this.fade) : next[part]
+    const next = localPose(this.data, this.costume, this.clip, reducedMotion() && clip.loop ? 0 : this.time, this.pose)
+    for (const part in next) {
+      const p = this.from && this.fade < 1 ? mix(this.from[part], next[part], this.fade, next[part]) : next[part]
       next[part] = p
       const container = part === 'root' ? this.puppet : this.parts[part]
       container.setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx, p.sy).setAlpha(Math.max(0, Math.min(1, p.a)))
@@ -173,11 +180,12 @@ export class Rig {
     this.pose = next
     this.root.setScale(this.facing * this.size, this.size)
     if (this.accessory) {
-      const p = compose(next['arm-back'], this.accessory.hand)
+      const p = compose(next['arm-back'], this.accessory.hand, this.accessoryPose)
       this.accessory.image.setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx * this.headScale * 2, p.sy * this.headScale * 2).setAlpha(p.a)
     }
     const left = this.facing < 0, ref = this.sharpHead?.left === left ? this.sharpHead : this.heads.head(this.kit.id, left)
-    this.face.setTexture(ref.key, ref.frame).setDisplaySize(256 * this.headScale, 320 * this.headScale).setFlipX(left)
+    if (this.face.texture.key !== ref.key || this.face.frame.name !== ref.frame) this.face.setTexture(ref.key, ref.frame).setDisplaySize(256 * this.headScale, 320 * this.headScale)
+    this.face.setFlipX(left)
     if (this.aura && this.auraFrames?.length) {
       const ref = this.auraFrames[reducedMotion() ? 0 : Math.floor(this.scene.time.now * 6 / 1000) % this.auraFrames.length], p = next.head
       this.aura.setTexture(ref.key, ref.frame).setPosition(p.x, p.y).setAngle(p.r).setScale(p.sx * this.headScale * 2, p.sy * this.headScale * 2).setAlpha(p.a)

@@ -22,12 +22,12 @@ export function useWallet() {
     })
     return () => { active = false }
   }, [account, attempt])
-  const connect = async () => {
+  const connect = async (switchToMonad = true) => {
     setConnecting(true)
     setConnectError('')
     try {
       const previous = walletAccount()
-      if (await connectWallet() === previous) setAttempt(value => value + 1)
+      if (await connectWallet(switchToMonad) === previous) setAttempt(value => value + 1)
     } catch (error) {
       setConnectError(error instanceof Error ? error.message.split('\n')[0] : String(error))
     } finally {
@@ -65,7 +65,7 @@ export function WalletPicker({ wallet, onChoose, disabled = false }: {
     {wallet.loading && <p role="status">Loading your Chogs…</p>}
     {wallet.error && <div role="status"><p>{wallet.error}</p><Sticker disabled={wallet.connecting} onClick={() => void wallet.connect()}>Try again</Sticker></div>}
     {wallet.account && !wallet.loading && !wallet.error && !wallet.ids.length &&
-      <p>No Chog Genesis in this wallet. You can still explore the street.</p>}
+      <p>No Chog Genesis in this wallet. You can borrow any Chog in Candy Siege.</p>}
     {!!wallet.ids.length && <div className="row wallet-chogs" aria-label="Choose a Chog to play">
       {wallet.ids.map(id => <Sticker key={id} className="wallet-chog" disabled={disabled || wallet.connecting} onClick={() => onChoose(id)} aria-label={`Play as Chog #${id}`}>
         <img src={thumb(id, true)} alt="" loading="lazy" />#{id}

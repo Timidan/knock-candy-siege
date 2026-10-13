@@ -1,15 +1,14 @@
-# The Knock relay: watches Knock on Monad and pays testnet KNOCK on Robinhood Chain Testnet.
+# Candy Bank: polls the Worker and grants testnet KNOCK plus gas on Robinhood Chain Testnet.
 # No ports: it only makes outgoing connections. The named volume keeps the "already paid" record across redeploys.
 services:
   relay:
     build: .
     restart: unless-stopped
     environment:
-      KNOCK_RPC: ${KNOCK_RPC:-https://rpc.monad.xyz}
-      KNOCK_CONTRACT: ${KNOCK_CONTRACT:-}
-      RELAY_FROM_BLOCK: ${RELAY_FROM_BLOCK:-}
+      BANK_URL: ${BANK_URL:?Set BANK_URL}
+      BANK_TOKEN: ${BANK_TOKEN:?Set BANK_TOKEN}
       RELAY_KEY: ${RELAY_KEY}
-      RELAY_STATE: /state/relay-state.json
+      RELAY_STATE: /state/candy-bank-state.json
     volumes:
       - relay-state:/state
 volumes:

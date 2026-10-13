@@ -1,13 +1,14 @@
-import { createPublicClient, createWalletClient, custom, encodeFunctionData, defineChain, http, isAddress, parseAbi, parseSignature, formatEther, type Address, type Hash, type Hex, type TypedDataDomain } from 'viem'
-import { CANDY_TOKEN, injectedWallet, isSandbox, knockCandy } from '../chain'
+import { createPublicClient, createWalletClient, custom, encodeFunctionData, defineChain, http, isAddress, parseAbi, parseSignature, formatEther, type Address, type Hash, type Hex, type PrivateKeyAccount, type TypedDataDomain } from 'viem'
+import { CANDY_TOKEN, injectedWallet, isSandbox } from '../chain'
 import { SHOP_ITEMS } from './data/shop'
 
 export const SHOP_ADDRESS = isAddress(import.meta.env.VITE_KNOCK_SHOP ?? '') ? import.meta.env.VITE_KNOCK_SHOP as Address : null
-export const robinhood = defineChain({ id: 46630, name: 'Robinhood Chain Testnet', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: ['https://rpc.testnet.chain.robinhood.com'] } } })
-// chain.ts keeps its Robinhood client private; only the additional shop reads need this client.
-const client = createPublicClient({ chain: robinhood, transport: http() })
+export const shopRpc = import.meta.env.VITE_SHOP_RPC_URL || 'https://rpc.testnet.chain.robinhood.com'
+export const robinhood = defineChain({ id: 46630, name: 'Robinhood Chain Testnet', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [shopRpc] } }, contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } } })
+// All shop reads share one transport so prices, balances and ownership travel together.
+const client = createPublicClient({ chain: robinhood, batch: { multicall: { batchSize: 16_384 } }, transport: http(shopRpc, { batch: true }) })
 const shopAbi = parseAbi(['function knock() view returns (address)', 'function price(uint256) view returns (uint256)', 'function owned(address,uint256) view returns (bool)', 'function ownedItems(address,uint256[]) view returns (bool[])', 'function buyFor(address,uint256,uint256,uint8,bytes32,bytes32)', 'function buy(uint256)'])
-const tokenAbi = parseAbi(['function nonces(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)', 'function name() view returns (string)', 'function eip712Domain() view returns (bytes1,string,string,uint256,address,bytes32,uint256[])'])
+const tokenAbi = parseAbi(['function balanceOf(address) view returns (uint256)', 'function nonces(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)', 'function name() view returns (string)', 'function eip712Domain() view returns (bytes1,string,string,uint256,address,bytes32,uint256[])'])
 export const knockAmount = (value: bigint) => Number(formatEther(value)).toLocaleString(undefined, { maximumFractionDigits: 4 })
 const storageKey = (address: Address) => `knock-siege-shop:${robinhood.id}:${SHOP_ADDRESS?.toLowerCase() ?? 'unopened'}:${address.toLowerCase()}`
 export function cachedOwned(address: Address | null): number[] {
@@ -21,7 +22,7 @@ export function pendingPurchase(address: Address): Hash | null {
 function savePending(address: Address, hash: Hash | null) { try { if (hash) localStorage.setItem(storageKey(address) + ':pending', hash); else localStorage.removeItem(storageKey(address) + ':pending') } catch { /* Keep the hash in the visible purchase state too. */ } }
 export async function readShop(address: Address | null) {
   const [balance, gas, prices, owned] = await Promise.all([
-    address && !isSandbox ? knockCandy(address) : null,
+    address && !isSandbox ? client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'balanceOf', args: [address] }) : null,
     address && !isSandbox ? client.getBalance({ address }) : null,
     SHOP_ADDRESS ? Promise.all(SHOP_ITEMS.map(item => client.readContract({ address: SHOP_ADDRESS!, abi: shopAbi, functionName: 'price', args: [BigInt(item.id)] }))) : SHOP_ITEMS.map(item => BigInt(item.price) * 10n ** 18n),
     address && SHOP_ADDRESS && !isSandbox ? client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'ownedItems', args: [address, SHOP_ITEMS.map(i => BigInt(i.id))] }) : [],
@@ -36,8 +37,6 @@ export async function switchShopNetwork() {
   const provider = injectedWallet()
   if (!provider) throw new Error('Open Knock in your wallet browser or install an Ethereum wallet.')
   if (await onShopNetwork()) return
-  // The shared connector reloads on chainChanged. Reopen the shop after that navigation.
-  try { sessionStorage.setItem('knock-siege-reopen-shop', '1') } catch { /* Network can still switch. */ }
   try { await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0xb626' }] }) }
   catch (error) {
     if ((error as { code?: number }).code !== 4902) throw error
@@ -62,12 +61,17 @@ export async function confirmPurchase(address: Address, hash: Hash) {
   savePending(address, null)
   if (receipt.status !== 'success') throw new Error('The purchase reverted. No item was bought; the network may still charge gas.')
 }
-export async function purchase(address: Address, item: number, displayedPrice: bigint, state: (phase: PurchasePhase, hash?: Hash) => void) {
+export async function purchase(address: Address, item: number, displayedPrice: bigint, state: (phase: PurchasePhase, hash?: Hash) => void, guest?: PrivateKeyAccount | null) {
   if (isSandbox || !SHOP_ADDRESS) throw new Error('Buying is not available in this shop yet.')
   const provider = injectedWallet()
-  if (!provider) throw new Error('Connect your wallet first.')
+  if (!provider && !guest) throw new Error('Choose a guest wallet or connect your wallet first.')
   if (pendingPurchase(address)) throw new Error('A purchase is still pending. Check that transaction before buying again.')
   const verifyWallet = async () => {
+    if (guest) {
+      if (guest.address.toLowerCase() !== address.toLowerCase()) throw new Error('Choose your guest wallet again.')
+      if (await client.getChainId() !== robinhood.id) throw new Error('The shop RPC is on the wrong network.')
+      return
+    }
     if ((await readAccount())?.toLowerCase() !== address.toLowerCase()) throw new Error('Your wallet account changed. Choose the item again with the current wallet.')
     if (!await onShopNetwork()) throw new Error('Switch to Robinhood Chain Testnet before buying.')
   }
@@ -76,16 +80,17 @@ export async function purchase(address: Address, item: number, displayedPrice: b
     client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'price', args: [BigInt(item)] }),
     client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'owned', args: [address, BigInt(item)] }),
     client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'knock' }),
-    knockCandy(address), client.getBalance({ address }),
+    client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'balanceOf', args: [address] }), client.getBalance({ address }),
     client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'allowance', args: [address, SHOP_ADDRESS] }),
   ])
   if (token.toLowerCase() !== CANDY_TOKEN.toLowerCase()) throw new Error('This shop uses a different token. Buying is disabled.')
   if (owned) { state('owned'); return }
   if (price === 0n) throw new Error('This item is not for sale right now.')
   if (price !== displayedPrice) throw new Error('The price changed. Refresh the shop and review the new price.')
-  if (balance < price) throw new Error('Not enough $KNOCK. Earn it on the street or get it on vibe/vibe.')
+  if (balance < price) throw new Error('Not enough $KNOCK. Claim the starter grant if eligible, or get it on vibe/vibe.')
   if (gasBalance === 0n) throw new Error('No test ETH for gas. Use the Robinhood faucet, then try again.')
-  const wallet = createWalletClient({ chain: robinhood, transport: custom(provider), account: address })
+  const signer = guest ?? address
+  const wallet = createWalletClient({ chain: robinhood, transport: guest ? http(shopRpc) : custom(provider!), account: signer })
   let data: Hex
   if (allowance >= price) {
     const call = { abi: shopAbi, functionName: 'buy', args: [BigInt(item)] } as const
@@ -101,7 +106,7 @@ export async function purchase(address: Address, item: number, displayedPrice: b
     await client.simulateContract({ ...call, address: SHOP_ADDRESS, account: address }); data = encodeFunctionData(call)
   }
   await verifyWallet()
-  const request = { to: SHOP_ADDRESS, data, account: address }
+  const request = { to: SHOP_ADDRESS, data, account: signer }
   const [gas, gasPrice] = await Promise.all([client.estimateGas(request), client.getGasPrice()])
   if (gasBalance < gas * gasPrice * 12n / 10n) throw new Error('Not enough test ETH for gas. Top up at the Robinhood faucet.')
   state('transaction')

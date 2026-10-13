@@ -1,7 +1,8 @@
 export type Settings = { music: number; effects: number; lite: boolean; shake: boolean; gold: boolean; autoFullscreen: boolean }
 // endless: the best wave and score of Town Square; daily: the best score for each UTC day number (the last 30 days are kept).
 export type Save = { seen: string[]; stars: Record<string, number>; scores: Record<string, number>; endless: { wave: number; score: number }; daily: Record<string, number>; tutorial: boolean; costume: string; victoryDance: string; settings: Settings }
-export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+let motionQuery: MediaQueryList | undefined
+export const reducedMotion = () => (motionQuery ??= window.matchMedia('(prefers-reduced-motion: reduce)')).matches
 export function readSave(): Save {
   const defaults: Save = { seen: [], stars: {}, scores: {}, endless: { wave: 0, score: 0 }, daily: {}, tutorial: false, costume: '', victoryDance: 'gg', settings: { music: .45, effects: .7, lite: false, shake: !reducedMotion(), gold: false, autoFullscreen: true } }
   try {

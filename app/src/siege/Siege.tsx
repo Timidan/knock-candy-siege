@@ -10,7 +10,7 @@ import type { Outcome, Mode } from './SiegeScene'
 import { Sfx } from './Sfx'
 import { readSave, writeSave } from './data/save'
 import type { Save, Settings } from './data/save'
-import { NO_STREET, readStreetBonuses, streetLines } from './street'
+import { NO_STREET, readHolderBonuses, readHomeAdvantage, holderLines } from './street'
 import type { StreetRead, StreetBonuses } from './street'
 import { ENEMIES, seededRandom } from './data/config'
 import type { EnemyKind } from './data/config'
@@ -23,12 +23,16 @@ import { HeroPreview } from './hero/HeroPreview'
 import { selfCheck } from './data/selfCheck'
 import { Shop, AtlasSprite } from './Shop'
 import { useShop } from './useShop'
+import { useSiegeWallet } from './guestWallet'
+import { WalletChoice } from './WalletChoice'
+import { useCandyBank } from './candyBank'
+import { holderUrl } from '../chain'
 import { reopenShop } from './shopChain'
 import { SHOP_ITEMS, canDance } from './data/shop'
 import { ShareCard } from './ShareCard'
 import './siege.css'
 
-type Run = { id: number; home: boolean; serial: number; level: number; mode: Mode; daily: Daily | null; seed: number; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; assets: AssetPack; street: StreetBonuses; streetUnavailable?: boolean; stars: Record<string, number> }
+type Run = { id: number; home: boolean; serial: number; level: number; mode: Mode; daily: Daily | null; seed: number; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; assets: AssetPack; street: StreetBonuses; stars: Record<string, number> }
 type Menu = 'title' | 'levels' | 'hero' | 'pause' | 'settings' | 'book' | 'result' | 'intro' | 'shop' | 'street' | null
 if (import.meta.env.DEV) selfCheck()
 function Modal({ children, label, onEscape, className = '' }: { children: ReactNode; label: string; onEscape: () => void; className?: string }) {
@@ -53,6 +57,9 @@ function BossCard({ assets, id, sheet }: { assets: AssetPack; id: string; sheet?
   </>
 }
 export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?: () => void }) {
+  const activeWallet = useSiegeWallet(wallet)
+  const shop = useShop(activeWallet)
+  const bank = useCandyBank(activeWallet.account, shop.refresh)
   const shell = useRef<HTMLDivElement>(null)
   const host = useRef<HTMLDivElement>(null)
   const autoFullscreenTried = useRef(false)
@@ -76,22 +83,51 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const [run, setRun] = useState<Run | null>(null)
   const [streetRead, setStreetRead] = useState<StreetRead | null>(null)
   const pendingRun = useRef<Run | null>(null), startToken = useRef(0)
-  const accountNow = useRef(wallet.account); accountNow.current = wallet.account
+  const accountNow = useRef(activeWallet.account); accountNow.current = activeWallet.account
   const [starting, setStarting] = useState(false)
-  useEffect(() => { startToken.current++; pendingRun.current = null; setStarting(false); setStreetRead(null); setMenu(m => m === 'street' ? 'hero' : m) }, [wallet.account])
+  useEffect(() => { startToken.current++; pendingRun.current = null; setStarting(false); setStreetRead(null); setMenu(m => m === 'street' ? 'hero' : m) }, [activeWallet.account, activeWallet.sandbox])
   useEffect(() => () => { startToken.current++ }, [])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [intro, setIntro] = useState('treater')
   const [icons, setIcons] = useState<AssetPack['atlases'][number]>()
-  // The daily challenge: the UTC date picks the level and the night's modifier (the same theme as the live street).
+  // The daily challenge: the UTC date picks the level and the night's modifier.
   const daily = dailyInfo(), mapLevel = level === DAILY_LEVEL ? daily.level : level
   const mode: Mode = level === ENDLESS_LEVEL ? 'endless' : level === DAILY_LEVEL ? 'daily' : 'level'
   const levelName = (id: number) => id === DAILY_LEVEL ? `Daily #${daily.number}` : LEVELS[id - 1].name
   const [ready, setReady] = useState(false)
   const valid = /^\d+$/.test(hero) && Number(hero) >= 1 && Number(hero) <= 1969
-  const home = !!wallet.account && valid && wallet.ids.includes(Number(hero))
+  const [holder, setHolder] = useState<{ account: string | null; id: number; sandbox: boolean; home: boolean; chog: boolean } | null>(null)
+  const [tryingHolder, setTryingHolder] = useState(false), [holderError, setHolderError] = useState('')
+  const holderCurrent = holder?.account === activeWallet.account && holder?.id === Number(hero) && holder?.sandbox === activeWallet.sandbox
+  const home = valid && holderCurrent && !!holder?.home
+  const hasChog = holderCurrent && !!holder?.chog
+  const myChogs = activeWallet.sandboxId !== null && activeWallet.sandbox ? [activeWallet.sandboxId] : activeWallet.choice === 'connected' ? wallet.ids : []
+  useEffect(() => {
+    if (!valid || menu !== 'hero') return
+    let active = true
+    const account = activeWallet.account, sandbox = activeWallet.sandbox, id = Number(hero)
+    void Promise.all([readHomeAdvantage(id, account, sandbox), readHolderBonuses(id, account, sandbox)]).then(([home, perks]) => {
+      if (active) setHolder({ account, id, sandbox, home, chog: perks.bonuses.chog })
+    })
+    return () => { active = false }
+  }, [activeWallet.account, activeWallet.sandbox, hero, valid, menu])
+  const tryHolder = async () => {
+    if (tryingHolder) return
+    const guest = activeWallet.useGuest()
+    if (!guest) return
+    setTryingHolder(true); setHolderError('')
+    try {
+      const response = await fetch(holderUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: guest.address }), signal: AbortSignal.timeout(20_000) })
+      const data = await response.json()
+      const id = Number(data.chogId)
+      if (!response.ok || !Number.isInteger(id) || id < 1 || id > 1969) throw new Error('Unavailable')
+      const [owned, perks] = await Promise.all([readHomeAdvantage(id, guest.address, true), readHolderBonuses(id, guest.address, true)])
+      if (!owned || !perks.bonuses.chog) throw new Error('Not ready')
+      activeWallet.setSandboxId(id); setHero(String(id))
+    } catch { setHolderError('The holder demo is taking a break. You can still choose any hero and play with your guest wallet. Try again later.') }
+    finally { setTryingHolder(false) }
+  }
   const kit = assets && valid ? resolveKit(assets.kits, assets.traits, assets.chogs, Number(hero), home) : null
-  const shop = useShop(wallet)
   const ownedKey = shop.owned.join(',')
   const costume = SHOP_ITEMS.some(i => i.kind === 'costume' && i.key === save.costume && shop.owned.includes(i.id)) ? save.costume : ''
   const victoryDance = kit && assets && canDance(save.victoryDance, kit.emote, shop.owned, assets.dances) ? save.victoryDance : 'gg'
@@ -165,7 +201,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       onPause: () => setMenu('pause'),
       onIntro: kind => { setIntro(kind); setMenu('intro') },
       onTutorial: () => persist({ ...saveRef.current, tutorial: true }),
-      onReady: () => { setReady(true); if (run.streetUnavailable) world.hud.toast('The street could not be reached. Playing this level without house bonuses.') },
+      onReady: () => { setReady(true) },
       onEnd: result => {
         setOutcome(result); setMenu('result')
         const now = saveRef.current
@@ -215,20 +251,19 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const start = async (tutorial = level === 1 && !save.tutorial) => {
     if (starting) return
     let next: Run
-    if (run && menu !== 'hero') next = { ...run, serial: Date.now(), tutorial, owned: shop.owned, stars: saveRef.current.stars, street: NO_STREET, streetUnavailable: false, assets: scene.current?.options.assets ?? run.assets }
+    if (run && menu !== 'hero') next = { ...run, serial: Date.now(), tutorial, owned: shop.owned, stars: saveRef.current.stars, street: NO_STREET, assets: scene.current?.options.assets ?? run.assets }
     else {
       if (!valid || !prepared || prepared.id !== Number(hero) || prepared.home !== home || prepared.costume !== costume) return
       next = { id: Number(hero), home, level: mapLevel, mode, daily: mode === 'daily' ? daily : null, seed: mode === 'daily' ? daily.seed : crypto.getRandomValues(new Uint32Array(1))[0], serial: Date.now(), tutorial, costume, owned: shop.owned, victoryDance, assets: prepared.assets, street: NO_STREET, stars: saveRef.current.stars }
     }
     mobileFullscreen(); setStarting(true)
-    const token = ++startToken.current, account = wallet.account, fromMenu = menu
-    const result = await readStreetBonuses(next.id, account)
+    const token = ++startToken.current, account = activeWallet.account, fromMenu = menu
+    const [result, ownedHero] = await Promise.all([readHolderBonuses(next.id, account, activeWallet.sandbox), readHomeAdvantage(next.id, account, activeWallet.sandbox)])
     if (token !== startToken.current || accountNow.current !== account) return
     setStarting(false)
     if (menuNow.current !== fromMenu) return
-    if (result.status === 'guest') { launchRun({ ...next, home: !!account && wallet.ids.includes(next.id) }); return }
-    if (result.status === 'unavailable') { launchRun({ ...next, streetUnavailable: true }); return }
-    pendingRun.current = { ...next, home: result.status === 'ready' || next.home, street: result.bonuses }
+    if (!result.bonuses.chog) { launchRun({ ...next, home: ownedHero }); return }
+    pendingRun.current = { ...next, home: ownedHero, street: result.bonuses }
     setStreetRead(result); setMenu('street')
   }
   const subMenu = (next: Menu) => { setReturnMenu(menu); setMenu(next) }
@@ -243,12 +278,13 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const stars = (count: number) => <span className="siege-stars" aria-label={`${count} of 3 stars`}>{[1, 2, 3].map(n => <span key={n} className={n <= count ? 'earned-star' : ''} aria-hidden="true">★</span>)}</span>
   return <div ref={shell} className={`siege-shell ${run ? 'siege-shell--playing' : ''}`}>
     <div className="siege-stage" ref={host} />
+    {run && !menu && activeWallet.sandbox && <aside style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', maxWidth: '36%', padding: '4px 10px', borderRadius: 6, background: '#241632e6', color: '#fff1b3', fontSize: 13, textAlign: 'center', pointerEvents: 'none' }}>Sandbox: a demo copy of Monad, nothing is real</aside>}
     <div className="siege-safe-area" aria-hidden="true" />
     {!run && <div className="siege-night" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#24163266, #241632aa), url(/siege/levels/level1.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>}
     {onBack && <div className="siege-back"><Sticker onClick={onBack}>← Knock</Sticker></div>}
     <div className="siege-rotate bubble">Turn your phone sideways for the best view</div>
     {run && !ready && <div className="siege-loading" role="status">Lighting the lanterns…</div>}
-    {menu && <Modal key={menu} label={menu === 'intro' ? 'New enemy' : `Candy Siege ${menu}`} onEscape={escape} className={menu === 'result' ? 'siege-modal--result' : menu === 'shop' ? 'siege-modal--shop' : menu === 'hero' ? 'siege-modal--hero' : ''}>
+    {menu && <Modal key={menu} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={menu === 'result' ? 'siege-modal--result' : menu === 'shop' ? 'siege-modal--shop' : menu === 'hero' ? 'siege-modal--hero' : ''}>
       {installTip && <aside className="siege-install-tip" aria-label="Play full screen on iPhone">
         <strong>Add Knock to your Home Screen to play full screen</strong>
         <p>In Safari, tap Share (the square with an arrow). Scroll down and tap “Add to Home Screen”, then “Add”. Open Knock from its new icon.</p>
@@ -261,6 +297,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <p>The whole neighbourhood wants your candy.<br />Give them a Halloween to remember.</p>
         <Sticker tone="orange" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Hold the porch →</Sticker>
         <div className="row"><Sticker tone="gold" onClick={() => subMenu('shop')}>Shop · $KNOCK</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker></div>
+        {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK available</button>}
         <small>20 jars. Your Chog. One very long night.</small>
       </div>}
       {menu === 'levels' && <>
@@ -277,13 +314,16 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       </>}
       {menu === 'hero' && <>
         <span className="siege-eyebrow">{level === DAILY_LEVEL ? `${levelName(level).toUpperCase()} · ${LEVELS[daily.level - 1].name.toUpperCase()} · ${NIGHTS[daily.theme].name.toUpperCase()}` : level === ENDLESS_LEVEL ? 'ENDLESS · TOWN SQUARE' : `${levelName(level).toUpperCase()} · LEVEL ${level}`}</span><h2>Who’s on porch duty?</h2>
+        <WalletChoice wallet={activeWallet} disabled={starting || tryingHolder || shop.busy} />
+        <div className="row"><Sticker tone="gold" disabled={tryingHolder || starting || shop.busy} onClick={() => void tryHolder()}>{tryingHolder ? 'Preparing holder demo…' : 'Try as a holder'}</Sticker>{hasChog && <strong className="siege-shop-note">$CHOG holder</strong>}</div>
+        {holderError && <p role="status">{holderError}</p>}
         <div className="siege-hero-pick">
           <div className={`siege-portrait ${home ? 'siege-portrait--home' : ''} ${kit?.legend ? 'siege-portrait--legend' : ''}`}>
             {!valid && <span>?</span>}
             {kit?.legend && <b className="siege-legendary">★ LEGENDARY ★</b>}
             <b>{home ? 'HOME ADVANTAGE' : 'GUEST HERO'}</b>
             {valid && <div className="siege-chog-comparison">
-              <figure className="siege-nft"><figcaption>Your NFT</figcaption><img key={hero} src={`/chogs-256/${Number(hero)}.webp`} alt={`Original portrait of Chog #${Number(hero)}`} /><small>Chog #{Number(hero)}</small></figure>
+              <figure className="siege-nft"><figcaption>{home ? "Your Chog" : "Chog portrait"}</figcaption><img key={hero} src={`/chogs-256/${Number(hero)}.webp`} alt={`Original portrait of Chog #${Number(hero)}`} /><small>Chog #{Number(hero)}</small></figure>
               <figure className="siege-in-game"><figcaption>In Siege</figcaption>{prepared && kit && prepared.id === kit.id && prepared.costume === costume ? <HeroPreview lite={save.settings.lite} assets={prepared.assets} kit={kit} costume={costume || kit.costume} dance={previewDance === 'idle' || canDance(previewDance, kit.emote, shop.owned, prepared.assets.dances) ? previewDance : 'idle'} /> : <span className="siege-character-loading" role="status">Dressing your Chog…</span>}</figure>
             </div>}
             {kit && assets && <label className="siege-dance-select">Try a dance<select aria-label="Preview dance" value={previewDance === 'idle' || canDance(previewDance, kit.emote, shop.owned, assets.dances) ? previewDance : 'idle'} onChange={event => setPreviewDance(event.target.value)}><option value="idle">Idle · On porch duty</option>{Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => <option value={name} key={name}>{dance.name}{name === kit.emote ? ' · Signature' : ''}</option>)}</select></label>}
@@ -291,11 +331,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
           </div>
           <div><PlaqueInput label="Chog #" value={hero} onChange={setHero} min={1} max={1969} />
             <div className="row"><Sticker onClick={() => setHero(String(Math.floor(menuRandom() * 1969) + 1))}>Random</Sticker>
-              {wallet.account && <Sticker tone="gold" disabled={!wallet.ids.length} onClick={() => { const index = wallet.ids.indexOf(Number(hero)); setHero(String(wallet.ids[(index + 1) % wallet.ids.length])) }}>My Chog</Sticker>}
+              {activeWallet.account && <Sticker tone="gold" disabled={!myChogs.length} onClick={() => { const index = myChogs.indexOf(Number(hero)); setHero(String(myChogs[(index + 1) % myChogs.length])) }}>My Chog</Sticker>}
             </div>
-            <p>{home ? 'Your own Chog starts one level higher and wears a gold frame.' : 'Borrow any Chog. Its real traits are your perks.'}</p>
-            {wallet.account && wallet.loading && <small>Checking your Chogs…</small>}
-            {wallet.error && <small>{wallet.error}</small>}
+            <p>{home ? 'Home advantage: your own Chog starts one level higher and wears a gold frame.' : 'Borrow any Chog. Its real traits are your perks.'}</p>
+            {activeWallet.choice === 'connected' && wallet.account && wallet.loading && <small>Checking your Chogs…</small>}
             {kit && assets && <div className="siege-kit">{(['weapon', 'special', 'ultimate', 'passive', 'headgear', 'trinket'] as const).map(slot => {
               const family = kit[slot], info = assets.kits.slots[slot][family], atlas = assets.atlases.find(a => a.key === 'kit')!, frame = atlas.data.frames[`kit/${slot}/${family}`]?.frame
               const legendArt = kit.legend && (slot === 'weapon' || slot === 'special' || slot === 'ultimate') ? { atlas: prepared?.assets.atlases.find(a => a.key === `hero-${kit.costume}`), name: slot === 'weapon' ? 'wpn/proj' : slot === 'special' ? 'special/2' : 'ultimate/3' } : null
@@ -306,19 +345,21 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         </div>
         <div className="siege-costumes" aria-label="Hero costume"><span>Wear</span><Sticker aria-pressed={!costume} onClick={() => persist({ ...save, costume: '' })}>Original outfit</Sticker>{SHOP_ITEMS.filter(i => i.kind === 'costume' && shop.owned.includes(i.id)).map(i => <Sticker key={i.id} aria-pressed={costume === i.key} tone={costume === i.key ? 'gold' : 'paper'} onClick={() => persist({ ...save, costume: i.key })}>{i.name}</Sticker>)}<Sticker tone="gold" onClick={() => subMenu('shop')}>Costume shop ↗</Sticker></div>
         {error ? <p role="alert">{error} <Sticker onClick={() => setLoadAttempt(n => n + 1)}>Retry</Sticker></p> : (!assets || !prepared) && <p role="status">Unpacking your hero…</p>}
-        <div className="row"><Sticker tone="orange" disabled={starting || !valid || !prepared || prepared.id !== Number(hero)} onClick={() => start()}>{starting ? 'Checking your street…' : 'Let’s make mischief →'}</Sticker><Sticker onClick={() => setMenu('levels')}>← Back</Sticker></div>
-        {save.tutorial && level === 1 && <button className="siege-text-button" onClick={() => start(true)} disabled={starting || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
+        <div className="row"><Sticker tone="orange" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)} onClick={() => start()}>{starting ? 'Checking your $CHOG perks…' : 'Let’s make mischief →'}</Sticker><Sticker onClick={() => setMenu('levels')}>← Back</Sticker></div>
+        {save.tutorial && level === 1 && <button className="siege-text-button" onClick={() => start(true)} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
       </>}
       {menu === 'street' && streetRead && <section className="siege-street-card">
-        <span className="siege-eyebrow">CHOG #{pendingRun.current?.id} · HOME ON THE STREET</span>
-        <h2>Your house on the street gives you:</h2>
-        {streetLines(streetRead.bonuses).length ? <ul>{streetLines(streetRead.bonuses).map(row => <li key={row.source}><strong>{row.source}</strong><span>{row.bonus}</span></li>)}</ul> : <p>No house bonuses this time. Stock your bowl, set a trap or join a crew on the street for your next night.</p>}
+        <span className="siege-eyebrow">CHOG #{pendingRun.current?.id} · A SWEETER NIGHT</span>
+        <h2>Your $CHOG perks</h2>
+        {holderLines(streetRead.bonuses).length ? <ul>{holderLines(streetRead.bonuses).map(row => <li key={row.source}><strong>{row.source}</strong><span>{row.bonus}</span></li>)}</ul> : <p>No holder perks this time. Every Chog can still defend the porch.</p>}
+        {pendingRun.current?.home && <p><strong>Home advantage</strong> · Your own Chog starts one level higher and wears a gold frame.</p>}
+        {activeWallet.sandbox && <p><strong>Sandbox: a demo copy of Monad, nothing is real</strong></p>}
         <Sticker tone="orange" onClick={() => { if (pendingRun.current) launchRun(pendingRun.current) }}>Defend the porch →</Sticker>
         <button className="siege-text-button" onClick={escape}>← Back</button>
       </section>}
       {menu === 'pause' && <>
         <span className="siege-eyebrow">EVERYONE, FREEZE.</span><h2>Candy break</h2><p>Your jars are safe while you’re here.</p>
-        <div className="siege-menu-actions"><Sticker tone="orange" onClick={resume}>Keep playing →</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker disabled={starting} onClick={() => void start(run?.tutorial ?? false)}>{starting ? 'Checking your street…' : 'Restart level'}</Sticker><Sticker onClick={leaveLevel}>Level select</Sticker></div>
+        <div className="siege-menu-actions"><Sticker tone="orange" onClick={resume}>Keep playing →</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker disabled={starting} onClick={() => void start(run?.tutorial ?? false)}>{starting ? 'Checking your $CHOG perks…' : 'Restart level'}</Sticker><Sticker onClick={leaveLevel}>Level select</Sticker></div>
         <p className="siege-hint">Space: pause · 1 / 2: spells · Q: ability · R: ultimate · Z / X: talents · E: emotes · N: next wave<br />Tap a pad to build. Select your hero, then tap ground to move. Drag traps onto the path.</p>
       </>}
       {menu === 'settings' && <>
@@ -352,7 +393,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <div className="row"><Sticker tone="orange" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker><Sticker onClick={leaveLevel}>Level select</Sticker></div>
         {run && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} dance={run.victoryDance} result={outcome} />}
       </div>}
-      {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={wallet} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
+      {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
       {menu === 'shop' && !assets && <p role="status">{error || 'Opening the shop…'}{error && <Sticker onClick={() => setLoadAttempt(n => n + 1)}>Retry</Sticker>}</p>}
       {saveWarning && <p className="siege-save-warning" role="status">This browser couldn’t save progress. Your current game is still safe.</p>}
       {onBack && <button className="siege-text-button" onClick={onBack}>← Back to Knock</button>}

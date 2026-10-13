@@ -12,3 +12,4 @@ app/.env.local
 .fork.log
 .fork.pid
 .env.relay
+.env.bank

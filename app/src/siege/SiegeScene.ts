@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { Art, loadImage } from './assets'
 import { ChogHeads } from './chogHead'
+import { ShapePool, circle, plate } from './renderShapes'
+import { Quality } from './Quality'
 import type { AssetPack } from './assets'
 import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind } from './data/config'
@@ -50,6 +52,8 @@ export type Outcome = { level: number; mode: Mode; daily: number; theme: number;
 export type Spawn = { chogId?: number; time: number; kind: EnemyKind; path: number; wave: number; distance?: number; route?: number; edge?: number; risen?: boolean; boss?: BossSpawn }
 export type SceneOptions = { assets: AssetPack; level: number; mode: Mode; daily: Daily | null; seed: number; stars: Record<string, number>; street: StreetBonuses; seen: string[]; onDiscover: (keys: string[]) => void; hero: number; home: boolean; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; settings: Settings; sfx: Sfx; onFullscreen?: () => void; onShop: () => void; onPause: () => void; onEnd: (result: Outcome) => void; onIntro: (kind: string) => void; onTutorial: () => void; onReady: () => void }
 const WITCHING_WARNING = 3
+const STATUS_KEYS = Object.keys(clearStatuses()) as Status[]
+const DRAW_STATUSES: Status[] = ['freeze', 'charm', 'confuse', 'root', 'mark', 'bleed', 'fear', 'burn', 'poison', 'slow']
 export class SiegeScene extends Phaser.Scene {
   options: SceneOptions
   art!: Art
@@ -115,6 +119,9 @@ export class SiegeScene extends Phaser.Scene {
   routeFor(e: Enemy): Route { return e.route ?? (e.path >= this.routes.length ? e.path === this.routes.length + this.flyRoutes.length ? this.detour! : this.flyRoutes[e.path - this.routes.length] : this.routes[e.path]) }
   roadFor(kind: EnemyKind, path: number) { const sw = this.options.assets.geometry.switch; return this.bridgeUp && !ENEMIES[kind].flying && path === sw?.path ? this.routes.length + this.flyRoutes.length : this.entrancePath(kind, path) }
   enemies: Enemy[] = []
+  private crowns: Enemy[] = []
+  private lightPool: Light[] = []
+  private lightCount = 0
   towers: (Tower | null)[] = []
   pads: Phaser.GameObjects.Image[] = []
   projectiles: Projectile[] = []
@@ -153,12 +160,19 @@ export class SiegeScene extends Phaser.Scene {
   mode: SpellKind | TrapKind | ConsumableKind | null = null
   pointer = { x: 960, y: 540 }
   emoteOpen = false
+  quality = new Quality()
+  renderScale = 1
   ready = false
   schedule: Spawn[] = []
   waveAlive: number[] = []
   private rewarded = new Set<number>()
-  private paint!: Phaser.GameObjects.Graphics
-  private range!: Phaser.GameObjects.Graphics
+  private paint!: ShapePool
+  private range!: Phaser.GameObjects.Container
+  private rangeFill!: Phaser.GameObjects.Image
+  private rangeStroke!: Phaser.GameObjects.Image
+  private rangeKey = ''
+  private focusRing?: Phaser.GameObjects.Image
+  private focusRadius = 0
   private overlay!: Phaser.GameObjects.Graphics
   private heroRing!: Phaser.GameObjects.Image
   private preview!: Phaser.GameObjects.Image
@@ -205,8 +219,8 @@ export class SiegeScene extends Phaser.Scene {
     }
     this.drawMap()
     this.createWorld()
-    this.range = this.add.graphics().setDepth(8)
-    this.paint = this.add.graphics().setDepth(2000)
+    this.range = this.add.container(0, 0).setDepth(8)
+    this.paint = new ShapePool(this, 2000, 408)
     this.overlay = this.add.graphics().setDepth(3340)
     this.hudLayer.add(this.overlay)
     this.options.assets.geometry.pads.forEach((pad, i) => {
@@ -266,11 +280,11 @@ export class SiegeScene extends Phaser.Scene {
     else if (this.options.mode === 'endless') this.hud.toast('Endless: the waves never stop. A new road opens every ten waves.', 6)
   }
   layout() {
-    const width = this.scale.width, height = this.scale.height, worldWidth = Math.min(2400, width)
+    const r = this.renderScale, width = this.scale.width / r, height = this.scale.height / r, worldWidth = Math.min(2400, width)
     const camera = this.cameras.main
-    camera.setViewport((width - worldWidth) / 2, (height - 1080) / 2, worldWidth, 1080)
-    if (!this.ended) camera.setZoom(1).centerOn(960, 540)
-    this.hudCamera.setSize(width, height)
+    camera.setViewport((width - worldWidth) * r / 2, (height - 1080) * r / 2, worldWidth * r, 1080 * r)
+    if (!this.ended) camera.setZoom(r).centerOn(960, 540)
+    this.hudCamera.setSize(width * r, height * r).setZoom(r).centerOn(width / 2, height / 2)
     const probe = document.querySelector('.siege-safe-area'), css = probe && getComputedStyle(probe), bounds = this.game.canvas.getBoundingClientRect()
     const x = width / (bounds.width || width), y = height / (bounds.height || height)
     this.view = { width, height, left: parseFloat(css?.paddingLeft || '0') * x, right: width - parseFloat(css?.paddingRight || '0') * x, top: parseFloat(css?.paddingTop || '0') * y, bottom: height - parseFloat(css?.paddingBottom || '0') * y }
@@ -279,7 +293,10 @@ export class SiegeScene extends Phaser.Scene {
   viewToWorld(point: Point): Point { return this.cameras.main.getWorldPoint(point.x, point.y) }
   worldToView(point: Point): Point {
     const c = this.cameras.main
-    return { x: c.x + c.width / 2 + (point.x - c.scrollX - c.width / 2) * c.zoom, y: c.y + c.height / 2 + (point.y - c.scrollY - c.height / 2) * c.zoom }
+    const x = (point.x - c.scrollX - c.width / 2) * c.zoomX, y = (point.y - c.scrollY - c.height / 2) * c.zoomY
+    const rotation = (c as Phaser.Cameras.Scene2D.Camera & { rotation: number }).rotation
+    const cos = Math.cos(rotation), sin = Math.sin(rotation)
+    return { x: (Math.floor(c.x + c.width / 2 + .5) + x * cos - y * sin) / this.renderScale, y: (Math.floor(c.y + c.height / 2 + .5) + x * sin + y * cos) / this.renderScale }
   }
   discover(keys: string[]) {
     const fresh = keys.filter(k => !this.discovered.has(k))
@@ -400,7 +417,7 @@ export class SiegeScene extends Phaser.Scene {
     for (const portal of this.portals) for (const image of portal.images) this.art.set(image, `prop/portal/${Math.floor(this.clock * 8) % 6}`)
     for (const z of this.zones) this.art.set(z.image, `fx/toxic/${Math.floor(this.clock * 4) % 4}`)
     this.boostRings.forEach((ring, i) => this.art.set(ring, `fx/boost/${Math.floor(this.clock * 6 + i) % 4}`))
-    if (this.settings.lite) return
+    if (this.settings.lite || this.quality.tier > 0) return
     for (const a of this.ambience) {
       const t = this.clock, i = a.n
       if (a.kind === 'fog') a.image.x = a.x + Math.sin(t * .06 + i) * 160
@@ -472,6 +489,7 @@ export class SiegeScene extends Phaser.Scene {
       g.fillStyle(0x241b30); g.fillRoundedRect(p.x - 105, p.y - 185, 190, 235, 18)
       g.fillStyle(0xffd077); g.fillRoundedRect(p.x - 62, p.y - 125, 106, 135, 12)
       g.fillStyle(0x4a344e); g.fillTriangle(p.x - 140, p.y - 175, p.x + 110, p.y - 175, p.x - 15, p.y - 280)
+      g.generateTexture('siege-map-fallback', 1920, 1080); g.destroy(); this.add.image(960, 540, 'siege-map-fallback')
       this.add.text(p.x - 18, p.y - 100, 'OUR\nPORCH', { fontFamily: '"Luckiest Guy", sans-serif', fontSize: '34px', color: '#40304a', align: 'center', fontStyle: 'bold' }).setOrigin(.5)
     }
     for (const prop of this.options.assets.geometry.props) if (prop.frame) this.art.image(prop.x, prop.y, prop.frame).setOrigin(.5, 1).setScale(prop.scale ?? 1).setDepth(prop.y)
@@ -484,7 +502,7 @@ export class SiegeScene extends Phaser.Scene {
     const icons = [0, 1].map(i => this.art.image(-19 + i * 38, -150, 'mod/wind').setDisplaySize(30, 30).setVisible(false))
     const status = this.art.image(0, -85, 'status/burn/0').setVisible(false).setName('status')
     const root = this.add.container(0, 0, [body, face, ...icons, status]).setDepth(100)
-    return { root, body, face, icons }
+    return { root, body, face, icons, statusImage: status, drawFrame: -1, faceId: id, faceLeft: false, hitTint: false, statusFrame: -1 }
   }
   private makePools() {
     for (let i = 0; i < LIMITS.enemies; i++) {
@@ -503,7 +521,7 @@ export class SiegeScene extends Phaser.Scene {
   }
   // Edge swarms (Witching Hour) start just outside the visible view and walk straight at the porch; ghosts weave as they drift.
   private wildRoute(edge: number, kind: EnemyKind) {
-    const half = this.cameras.main.width / 2, porch = this.options.assets.geometry.porch
+    const half = this.cameras.main.width / this.renderScale / 2, porch = this.options.assets.geometry.porch
     const at = (t: number) => edge === 0 ? { x: 960 - half - 90, y: 60 + t * 960 } : edge === 1 ? { x: 960 + half + 90, y: 60 + t * 960 } : edge === 2 ? { x: 960 - half + 60 + t * (half * 2 - 120), y: -90 } : { x: 960 - half + 60 + t * (half * 2 - 120), y: 1170 }
     // Keep at least a few seconds of flight: an edge that is nearly on top of the porch is re-rolled along that edge.
     let from = at(.1 + this.random() * .8)
@@ -523,7 +541,7 @@ export class SiegeScene extends Phaser.Scene {
     const ref = this.heads.window(id)
     enemy.art.face.setTexture(ref.key, ref.frame).setVisible(true)
     enemy.art.root.setVisible(true).setAlpha(1).setScale(1)
-    enemy.art.body.clearTint(); enemy.art.face.clearTint()
+    enemy.art.body.clearTint(); enemy.art.face.clearTint(); enemy.art.drawFrame = -1; enemy.art.faceId = -1; enemy.art.hitTint = false; enemy.art.statusFrame = -1
     enemy.art.icons.forEach((icon, i) => { icon.setVisible(!!mods[i]); if (mods[i]) this.art.set(icon, `mod/${mods[i]}`) })
     this.routeFor(enemy).at(distance, enemy)
     this.waveAlive[wave] = (this.waveAlive[wave] ?? 0) + 1
@@ -559,6 +577,7 @@ export class SiegeScene extends Phaser.Scene {
   }
   update(_time: number, delta: number) {
     if (!this.ready) return
+    if (this.quality.update(this.game.loop.rawDelta, !this.paused && !this.ended && !this.focus.active)) this.applyQuality()
     const real = Math.min(delta / 1000, .06)
     this.hudTime += real; this.portraitTime += real
     if (this.portraitTime > .2) { this.art.refresh(); this.portraitTime = 0 }
@@ -602,6 +621,8 @@ export class SiegeScene extends Phaser.Scene {
     if (this.tutorialStep !== 4) { this.updateTowers(dt); this.hero.update(dt) }
     this.updateLights(); this.darkness?.update(this.sources, dt, this.bonfire > 0)
     this.updateSignatures(dt)
+    this.crowns.length = 0
+    for (const enemy of this.enemies) if (enemy.active && enemy.mods.includes('crown')) this.crowns.push(enemy)
     for (const enemy of this.enemies) if (enemy.active) this.updateEnemy(enemy, dt)
     for (let i = this.later.length - 1; i >= 0; i--) if (this.later[i].at <= this.clock) { const { run } = this.later[i]; this.later.splice(i, 1); run() }
     this.updateAllies(dt); this.updateHazards(dt)
@@ -658,7 +679,7 @@ export class SiegeScene extends Phaser.Scene {
     if (e.returning > 0) { e.returning = Math.max(0, e.returning - dt); if (!e.returning) this.effect('fx/poof/0', e.x, e.y - 20, .5, 1.2); if (!e.boss) e.art.root.setVisible(e.returning === 0); return }
     e.sigCooldown = Math.max(0, e.sigCooldown - dt)
     e.age += dt; e.hit = Math.max(0, e.hit - dt); e.attack -= dt; e.skill -= dt
-    for (const status of Object.keys(e.status) as Status[]) e.status[status] = Math.max(0, e.status[status] - dt)
+    for (const status of STATUS_KEYS) e.status[status] = Math.max(0, e.status[status] - dt)
     if (e.status.burn || e.status.poison || e.status.bleed) { this.damage(e, ((e.status.burn ? 13 : 0) + (e.status.poison ? 10 * Math.max(1, e.poisonStacks) : 0) + (e.status.bleed ? 12 : 0)) * dt, 'magic', false, e.heroDot); if (!e.active) return }
     if (!e.status.poison) e.poisonStacks = 0
     if (e.boss) updateBoss(this, e, dt)
@@ -668,7 +689,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.bonfire > 0) e.status.reveal = Math.max(e.status.reveal, .2)
     e.visible = (e.kind !== 'ghost' || e.status.reveal > 0) && (!this.dark || e.lit || e.status.reveal > 0 || !!e.boss)
     e.armour = e.mods.includes('metal')
-    for (const other of this.enemies) if (other.active && !other.returning && other !== e && other.mods.includes('crown') && distanceSq(e, other) < 160 ** 2) { e.armour = true; break }
+    for (const other of this.crowns) if (other.active && !other.returning && other !== e && distanceSq(e, other) < 160 ** 2) { e.armour = true; break }
     if (e.skill <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear && !e.status.charm && !e.status.confuse) {
       if (e.kind === 'witch') {
         e.casting = .7
@@ -693,16 +714,12 @@ export class SiegeScene extends Phaser.Scene {
       if (target && e.attack <= 0 && !e.status.stun && !e.status.freeze) { this.damage(target, Math.max(20, e.maxHp * .12), 'physical', true, true); e.attack = .65; this.addBeam(e, target, 0xff9fc9) }
       return
     }
-    let blocked = (!ENEMIES[e.kind].flying || e.status.ground > 0) && this.items.some(item => item.kind === 'candy-cane' && distanceSq(e, item) < CONSUMABLES['candy-cane'].radius ** 2)
+    let blocked = false
+    if (!ENEMIES[e.kind].flying || e.status.ground > 0) for (const item of this.items) if (item.kind === 'candy-cane' && distanceSq(e, item) < CONSUMABLES['candy-cane'].radius ** 2) { blocked = true; break }
     if ((!ENEMIES[e.kind].flying || e.status.ground > 0) && e.visible && !e.status.fear) {
       // Tower guards and temporary allies hold the road alike; a blocker is a wall that is only walked into.
-      const clash = (guard: { x: number; y: number; hp: number }) => {
-        if (guard.hp <= 0 || distanceSq(e, guard) >= 66 ** 2) return
-        blocked = true
-        if (e.attack <= 0 && !e.status.stun && !e.status.freeze) { guard.hp -= (e.mods.includes('knife') ? 45 : e.boss ? 48 : 16) * this.hero.enemyDamage(e); e.attack = .8; this.effect('fx/splat/0', guard.x, guard.y - 30, .25, .4) }
-      }
-      for (const tower of this.towers) if (tower) for (const guard of tower.guards) clash(guard)
-      for (const ally of this.allies) clash(ally)
+      for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (this.clash(e, guard)) blocked = true
+      for (const ally of this.allies) if (this.clash(e, ally)) blocked = true
       for (const wall of this.blockers) if (distanceSq(e, wall) < wall.radius ** 2) blocked = true
     }
     if (e.mods.includes('toxic')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (guard.hp > 0 && distanceSq(e, guard) < 110 ** 2) guard.hp -= dt * 12
@@ -713,7 +730,8 @@ export class SiegeScene extends Phaser.Scene {
     const slow = e.status.slow && !e.mods.includes('burning') ? e.slowPower : 1
     const candle = e.mods.includes('candle') ? (Math.floor(e.age / 3) % 2 ? .65 : 1.5) : 1
     // Radioactive Ridge: ground enemies inside a toxic pool move 30% faster.
-    const toxic = !e.route && !ENEMIES[e.kind].flying && this.zones.some(z => distanceSq(e, z) < z.r ** 2) ? 1.3 : 1
+    let toxic = 1
+    if (!e.route && !ENEMIES[e.kind].flying) for (const z of this.zones) if (distanceSq(e, z) < z.r ** 2) { toxic = 1.3; break }
     const decoy = !e.boss && !ENEMIES[e.kind].flying && !e.mods.includes('visor') && !e.status.fear ? this.items.find(item => item.kind === 'scarecrow' && item.hp > 0 && distanceSq(e, item) < CONSUMABLES.scarecrow.radius ** 2) : undefined
     const lure = decoy ? this.routeFor(e).nearest(decoy.x, decoy.y).distance : 0
     if (decoy && !blocked && !e.status.stun && !e.status.freeze && !e.status.root) {
@@ -737,6 +755,11 @@ export class SiegeScene extends Phaser.Scene {
       this.options.sfx.play('jar-stolen'); this.shake(.004)
       this.removeEnemy(e)
     }
+  }
+  private clash(e: Enemy, guard: { x: number; y: number; hp: number }) {
+    if (guard.hp <= 0 || distanceSq(e, guard) >= 66 ** 2) return false
+    if (e.attack <= 0 && !e.status.stun && !e.status.freeze) { guard.hp -= (e.mods.includes('knife') ? 45 : e.boss ? 48 : 16) * this.hero.enemyDamage(e); e.attack = .8; this.effect('fx/splat/0', guard.x, guard.y - 30, .25, .4) }
+    return true
   }
   private updateTowers(dt: number) {
     for (const tower of this.towers) if (tower) {
@@ -871,14 +894,19 @@ export class SiegeScene extends Phaser.Scene {
   }
   // Everything that casts light on a dark map: the street lights, each lantern's range, your Chog and the bonfire.
   updateLights() {
-    const list = this.sources; list.length = 0
-    if (!this.dark) return
+    this.lightCount = 0
+    if (!this.dark) { this.sources.length = 0; return }
     const flicker = 1 + Math.sin(this.clock * 5) * .02
-    for (const light of this.options.assets.geometry.lights ?? []) list.push({ x: light.x, y: light.y, r: light.r * flicker })
-    for (const t of this.towers) if (t?.kind === 'lantern') list.push({ x: t.x, y: t.y - 60, r: towerStats(t).range })
-    for (const e of this.enemies) if (e.active && e.status.reveal > 0) list.push({ x: e.x, y: e.y - 45, r: 85 })
-    list.push({ x: this.hero.x, y: this.hero.y - 40, r: 210 })
-    for (const p of this.props) if (p.data.kind === 'bonfire') list.push({ x: p.data.x, y: p.data.y - 40, r: this.bonfire > 0 ? 260 : 75 })
+    for (const light of this.options.assets.geometry.lights ?? []) this.light(light.x, light.y, light.r * flicker)
+    for (const t of this.towers) if (t?.kind === 'lantern') this.light(t.x, t.y - 60, towerStats(t).range)
+    for (const e of this.enemies) if (e.active && e.status.reveal > 0) this.light(e.x, e.y - 45, 85)
+    this.light(this.hero.x, this.hero.y - 40, 210)
+    for (const p of this.props) if (p.data.kind === 'bonfire') this.light(p.data.x, p.data.y - 40, this.bonfire > 0 ? 260 : 75)
+    this.sources.length = this.lightCount
+  }
+  private light(x: number, y: number, r: number) {
+    const i = this.lightCount++, light = this.lightPool[i] ?? (this.lightPool[i] = { x: 0, y: 0, r: 0 })
+    light.x = x; light.y = y; light.r = r; this.sources[i] = light
   }
   status(e: Enemy, status: Status, duration: number) {
     if (!e.active || e.returning || (status === 'slow' && e.mods.includes('burning'))) return
@@ -1049,7 +1077,7 @@ export class SiegeScene extends Phaser.Scene {
   setPaused(paused: boolean) { this.paused = paused; this.tweens.timeScale = paused ? 0 : 1; this.holdAt = null; this.dragStart = null; this.options.sfx.pause(paused) }
   towerFrame(kind: TowerKind, level: number, spec: Specialisation | null = null) { if (spec) return `tower/${kind}/${spec}`; return `${this.settings.gold && this.options.owned.includes(21) && ['egg', 'tp', 'lantern', 'patch'].includes(kind) ? 'skin/gold/' : ''}tower/${kind}/${level}` }
   applySettings(settings: Settings) {
-    this.settings = settings; for (const a of this.ambience) a.image.setVisible(!settings.lite); this.options.sfx.apply(settings); this.motion = !reducedMotion()
+    this.settings = settings; for (const a of this.ambience) a.image.setVisible(!settings.lite && this.quality.tier === 0); this.options.sfx.apply(settings); this.motion = !reducedMotion()
     for (const tower of this.towers) if (tower) this.art.set(tower.image, this.towerFrame(tower.kind, tower.level, tower.spec))
   }
   private finish(won: boolean) {
@@ -1065,7 +1093,7 @@ export class SiegeScene extends Phaser.Scene {
       // With the double-size parts the close-up can go from 2× to 3.4× and stay sharp; the pan offset keeps the hero left of the result panel.
       const sharp = this.hero.rig.sharpen(), camera = this.cameras.main, zoom = sharp ? 3.4 : 2, duration = reducedMotion() ? 0 : 950
       if (sharp) void this.sharpPortrait()
-      camera.zoomTo(zoom, duration, 'Sine.easeInOut'); camera.pan(this.hero.x + 235 * 2 / zoom, this.hero.y - 110 * 2 / zoom, duration, 'Sine.easeInOut')
+      camera.zoomTo(zoom * this.renderScale, duration, 'Sine.easeInOut'); camera.pan(this.hero.x + 235 * 2 / zoom, this.hero.y - 110 * 2 / zoom, duration, 'Sine.easeInOut')
       for (let i = 0; i < (this.settings.lite ? 24 : 48); i++) {
         const star = this.art.image(this.hero.x + (this.visualRandom() - .5) * 560, this.hero.y - 500 - this.visualRandom() * 140, 'ui/star-full').setDepth(2900).setScale(.16 + this.visualRandom() * .15).setTint([0xffd477, 0xfb8cac, 0xb2eccb][i % 3])
         this.tweens.add({ targets: star, y: this.hero.y + 60, x: star.x + (this.visualRandom() - .5) * 80, angle: reducedMotion() ? 0 : 180, alpha: 0, duration: reducedMotion() ? 0 : 1800 + this.visualRandom() * 1500, onComplete: () => star.destroy() })
@@ -1086,7 +1114,7 @@ export class SiegeScene extends Phaser.Scene {
   shake(intensity: number) { if (this.settings.shake && this.motion && !reducedMotion()) this.cameras.main.shake(110, intensity) }
   private addBeam(from: Point, to: Point, color: number) { if (this.beam.length < 12) this.beam.push({ from: { x: from.x, y: from.y - 50 }, to: { x: to.x, y: to.y - 30 }, life: .35, color }) }
   effect(name: string, x: number, y: number, duration: number, size = 1, mode: Effect['mode'] = 'burst', toX = x, toY = y) {
-    const limit = this.settings.lite ? LIMITS.effects / 2 : LIMITS.effects
+    const limit = this.settings.lite || this.quality.tier >= 2 ? LIMITS.effects / 2 : LIMITS.effects
     let effect: Effect | undefined
     for (let i = 0; i < limit; i++) if (!this.effects[i].active) { effect = this.effects[i]; break }
     if (!effect) return
@@ -1096,7 +1124,7 @@ export class SiegeScene extends Phaser.Scene {
   }
   number(value: number, x: number, y: number, color: number) {
     let number: DamageNumber | undefined
-    for (let i = 0; i < (this.settings.lite ? LIMITS.numbers / 2 : LIMITS.numbers); i++) if (!this.numbers[i].active) { number = this.numbers[i]; break }
+    for (let i = 0; i < (this.settings.lite || this.quality.tier >= 2 ? LIMITS.numbers / 2 : LIMITS.numbers); i++) if (!this.numbers[i].active) { number = this.numbers[i]; break }
     if (!number) return
     Object.assign(number, { active: true, life: 0, x: x + this.visualRandom() * 20 - 10, y }); number.text.setText(String(value)).setVisible(true).setTint(color).setAlpha(1).setPosition(x, y)
   }
@@ -1120,35 +1148,50 @@ export class SiegeScene extends Phaser.Scene {
     for (let i = this.beam.length - 1; i >= 0; i--) { this.beam[i].life -= dt; if (this.beam[i].life <= 0) this.beam.splice(i, 1) }
   }
   private drawUnits(_dt: number) {
-    this.paint.clear()
+    this.paint.begin()
     for (const e of this.enemies) if (e.active && !e.returning) {
       if (e.boss) { drawBoss(this, e); if (e.boss.child) this.bar(e.x, e.y - 190 * e.boss.scale, e.hp / e.maxHp, 0xffc17a, 80); continue }
-      const frame = e.casting ? Math.min(3, Math.floor((.7 - e.casting) * 6)) : Math.floor(e.age * 9) % 6, anchor = this.art.anchor(e.kind, frame, !e.casting && e.hit > 0, e.casting ? 'cast' : 'walk'), bob = this.motion ? Math.sin(e.age * 14) * 3 : 0
-      this.art.set(e.art.body, `enemy/${e.kind}/${e.casting ? `cast/${Math.min(3, Math.floor((.7 - e.casting) * 6))}` : e.hit ? 'hurt' : `walk/${frame}`}`)
-      e.art.face.setPosition(anchor.x - 64, anchor.y - 114).setDisplaySize(anchor.r * 2, anchor.r * 2)
-      const point = this.routeFor(e).points[Math.min(this.routeFor(e).points.length - 1, Math.floor(e.distance / this.routeFor(e).length * (this.routeFor(e).points.length - 1)) + 1)]
-      const flip = (point.x < e.x) !== !!e.status.fear
-      const face = this.heads.window(e.id, flip)
-      if (e.art.face.texture.key !== face.key || e.art.face.frame.name !== face.frame) e.art.face.setTexture(face.key, face.frame)
-      e.art.body.setFlipX(flip); e.art.face.x = (anchor.x - 64) * (flip ? -1 : 1)
+      const frame = e.casting ? Math.min(3, Math.floor((.7 - e.casting) * 6)) : Math.floor(e.age * 9) % 6, bob = this.motion ? Math.sin(e.age * 14) * 3 : 0
+      const route = this.routeFor(e), point = route.points[Math.min(route.points.length - 1, Math.floor(e.distance / route.length * (route.points.length - 1)) + 1)]
+      const flip = (point.x < e.x) !== !!e.status.fear, key = frame + (e.casting ? 10 : e.hit ? 20 : 0), art = e.art
+      if (art.drawFrame !== key || art.faceLeft !== flip) {
+        art.drawFrame = key
+        const anchor = this.art.anchor(e.kind, frame, !e.casting && e.hit > 0, e.casting ? 'cast' : 'walk')
+        this.art.set(art.body, `enemy/${e.kind}/${e.casting ? `cast/${frame}` : e.hit ? 'hurt' : `walk/${frame}`}`)
+        art.face.setPosition((anchor.x - 64) * (flip ? -1 : 1), anchor.y - 114).setDisplaySize(anchor.r * 2, anchor.r * 2)
+        art.body.setFlipX(flip)
+      }
+      if (art.faceId !== e.id || art.faceLeft !== flip) {
+        const face = this.heads.window(e.id, flip)
+        art.face.setTexture(face.key, face.frame); art.faceId = e.id; art.faceLeft = flip
+      }
       const emoting = this.motion && e.sigCooldown > 3.2, hop = emoting ? Math.abs(Math.sin((5 - e.sigCooldown) * 9)) : 0
       const spawn = this.motion ? Math.min(1, e.age * 5) : 1, squash = this.motion && e.hit ? .86 : emoting ? 1 - .14 * Math.cos((5 - e.sigCooldown) * 18) : 1
-      e.art.root.setPosition(e.x, e.y + bob - hop * 12).setDepth(e.y + 20).setScale(spawn * (2 - squash), spawn * squash)
+      if (e.art.root.depth !== e.y + 20) e.art.root.setDepth(e.y + 20)
+      e.art.root.setPosition(e.x, e.y + bob - hop * 12).setScale(spawn * (2 - squash), spawn * squash)
       // On a dark map an enemy outside every light vanishes, leaving only two glowing eyes.
       const dim = this.dark && !e.lit && e.status.reveal <= 0 && this.bonfire <= 0
-      e.art.root.setAlpha(dim ? 0 : e.visible ? 1 : .22)
+      const alpha = dim ? 0 : e.visible ? 1 : .22
+      if (art.root.alpha !== alpha) art.root.setAlpha(alpha)
       if (dim) {
         const a = e.kind === 'ghost' ? .5 : .95
-        this.paint.fillStyle(0xffd060, a * .3).fillCircle(e.x - 9, e.y - 66, 8).fillCircle(e.x + 9, e.y - 66, 8)
-        this.paint.fillStyle(0xfff4b0, a).fillCircle(e.x - 9, e.y - 66, 3.5).fillCircle(e.x + 9, e.y - 66, 3.5)
+        this.paint.image('dot', e.x - 17, e.y - 74, 16, 16, 0xffd060, a * .3)
+        this.paint.image('dot', e.x + 1, e.y - 74, 16, 16, 0xffd060, a * .3)
+        this.paint.image('dot', e.x - 12.5, e.y - 69.5, 7, 7, 0xfff4b0, a)
+        this.paint.image('dot', e.x + 5.5, e.y - 69.5, 7, 7, 0xfff4b0, a)
         continue
       }
-      if (e.hit) { e.art.body.setTintFill(0xfff0cd); e.art.face.setTint(0xffffff) } else { e.art.body.clearTint(); e.art.face.clearTint() }
-      const statusName = (['freeze', 'charm', 'confuse', 'root', 'mark', 'bleed', 'fear', 'burn', 'poison', 'slow'] as Status[]).find(name => e.status[name] > 0)
-      const statusArt = e.art.root.getByName('status') as Phaser.GameObjects.Image
-      statusArt.setVisible(!!statusName || e.status.stun > 0 || e.status.wrap > 0); if (statusName || e.status.stun || e.status.wrap) this.art.set(statusArt, `status/${statusName ?? (e.status.wrap ? 'root' : 'freeze')}/${Math.floor(this.clock * 8) % 4}`)
+      if (art.hitTint !== (e.hit > 0)) { art.hitTint = e.hit > 0; if (art.hitTint) { art.body.setTintFill(0xfff0cd); art.face.setTint(0xffffff) } else { art.body.clearTint(); art.face.clearTint() } }
+      let statusName: Status | undefined
+      for (const name of DRAW_STATUSES) if (e.status[name] > 0) { statusName = name; break }
+      statusName ??= e.status.wrap ? 'root' : e.status.stun ? 'freeze' : undefined
+      const statusFrame = Math.floor(this.clock * 8) % 4
+      if (art.statusName !== statusName || art.statusFrame !== statusFrame) {
+        art.statusName = statusName; art.statusFrame = statusFrame; art.statusImage.setVisible(!!statusName)
+        if (statusName) this.art.set(art.statusImage, `status/${statusName}/${statusFrame}`)
+      }
       this.bar(e.x, e.y - 124, e.hp / e.maxHp, e.visible ? 0x92dcb0 : 0xb9a5e1, 64)
-      if (e.armour) { this.paint.lineStyle(2, 0xfbe394, .6); this.paint.strokeEllipse(e.x, e.y, 88, 30) }
+      if (e.armour) this.paint.image('armour', e.x - 46, e.y - 17, 92, 34, 0xfbe394, .6)
     }
     for (const sig of this.signatures) if (sig.enemy) sig.player.root.setPosition(sig.enemy.art.face.x, sig.enemy.art.face.y)
     for (const tower of this.towers) if (tower) {
@@ -1157,10 +1200,16 @@ export class SiegeScene extends Phaser.Scene {
       for (const guard of tower.guards) if (guard.hp > 0) this.bar(guard.x, guard.y - 80, guard.hp / guard.maxHp, 0xffc17a, 45)
     }
     const hero = this.hero
-    hero.rig.root.setPosition(hero.x, hero.y).setDepth(hero.y + 25).setAlpha(hero.hp > 0 ? 1 : .4)
+    if (hero.rig.root.depth !== hero.y + 25) hero.rig.root.setDepth(hero.y + 25)
+    hero.rig.root.setPosition(hero.x, hero.y).setAlpha(hero.hp > 0 ? 1 : .4)
     this.heroRing.setPosition(hero.x, hero.y).setAlpha(hero.hp > 0 ? .8 : .2)
     if (!this.ended) this.bar(hero.x, hero.y - 172, hero.hp / hero.maxHp, 0xffdc7b, 82)
-    for (const beam of this.beam) { this.paint.lineStyle(7, beam.color, beam.life / .35); this.paint.lineBetween(beam.from.x, beam.from.y, beam.to.x, beam.to.y); this.paint.lineStyle(2, 0xffffff); this.paint.lineBetween(beam.from.x, beam.from.y, beam.to.x, beam.to.y) }
+    for (const beam of this.beam) {
+      const dx = beam.to.x - beam.from.x, dy = beam.to.y - beam.from.y, length = Math.hypot(dx, dy), angle = Math.atan2(dy, dx)
+      this.paint.image('white', beam.from.x + Math.sin(angle) * 3.5, beam.from.y - Math.cos(angle) * 3.5, length, 7, beam.color, beam.life / .35, angle)
+      this.paint.image('white', beam.from.x + Math.sin(angle), beam.from.y - Math.cos(angle), length, 2, 0xffffff, 1, angle)
+    }
+    this.paint.end()
   }
   spriteBeam(frame: string, from: Point, to: Point, duration: number, width: number, color = 0xffffff) {
     const fx = this.effect(frame, (from.x + to.x) / 2, (from.y + to.y) / 2 - 50, duration)
@@ -1184,7 +1233,7 @@ export class SiegeScene extends Phaser.Scene {
       else player.root.setPosition(Phaser.Math.Clamp(enemy.x - 40, 70, 1850), Math.max(100, enemy.y - 150)).setDepth(2800)
     } else {
       this.hero.rig.emote()
-      const bubble = this.add.graphics().fillStyle(0xffefd0).lineStyle(4, 0x352342).fillRoundedRect(-66, -64, 132, 140, 22).strokeRoundedRect(-66, -64, 132, 140, 22)
+      const bubble = plate(this, -66, -64, 132, 140, 22, 0xffefd0, 1, 0x352342, 4)
       player.root.addAt(bubble, 0); player.root.setPosition(Phaser.Math.Clamp(this.hero.x, 70, 1850), Math.max(100, this.hero.y - 225)).setDepth(2800)
     }
     this.options.sfx.emote(assets.kits.emotes[String(id)], !!enemy)
@@ -1198,12 +1247,23 @@ export class SiegeScene extends Phaser.Scene {
       sig.player.destroy(); this.signatures.splice(i, 1)
     }
   }
-  private bar(x: number, y: number, value: number, color: number, width: number) { this.paint.fillStyle(0x241c32, .9); this.paint.fillRoundedRect(x - width / 2 - 2, y - 2, width + 4, 10, 4); this.paint.fillStyle(color); this.paint.fillRoundedRect(x - width / 2, y, width * Phaser.Math.Clamp(value, 0, 1), 6, 3) }
+  private bar(x: number, y: number, value: number, color: number, width: number) { this.paint.bar(x, y, value, color, width) }
+  private showRange(x: number, y: number, radius: number, color: number, alpha: number, strokeAlpha: number, line: number) {
+    const key = `${radius}:${line}`
+    if (key !== this.rangeKey) {
+      this.rangeKey = key; this.range.removeAll(true)
+      this.rangeFill = circle(this, radius, 0xffffff, 1)
+      this.rangeStroke = circle(this, radius, 0xffffff, 0, 0xffffff, line)
+      this.range.add([this.rangeFill, this.rangeStroke])
+    }
+    this.range.setPosition(x, y).setVisible(true)
+    this.rangeFill.setTint(color).setAlpha(alpha); this.rangeStroke.setTint(color).setAlpha(strokeAlpha)
+  }
   private drawSelection() {
-    this.range.clear(); this.overlay.clear(); this.preview.setVisible(false)
+    this.range.setVisible(false); this.overlay.clear(); this.preview.setVisible(false); this.focusRing?.setVisible(false)
     if (this.selected >= 0 && (this.towers[this.selected] || this.previewTower)) {
       const tower = this.towers[this.selected], pad = this.pads[this.selected], radius = tower ? towerStats(tower).range : TOWERS[this.previewTower!].levels[0].range
-      this.range.fillStyle(0xffe3a3, .07); this.range.fillCircle(pad.x, pad.y, radius); this.range.lineStyle(3, 0xffe3a3, .6); this.range.strokeCircle(pad.x, pad.y, radius)
+      this.showRange(pad.x, pad.y, radius, 0xffe3a3, .07, .6, 3)
     }
     if (this.mode) {
       const spell = this.mode === 'rain' || this.mode === 'boo'
@@ -1211,11 +1271,14 @@ export class SiegeScene extends Phaser.Scene {
       const config = spell ? SPELLS[this.mode as SpellKind] : item ? CONSUMABLES[this.mode as ConsumableKind] : TRAPS[this.mode as TrapKind]
       const point = spell ? this.pointer : this.nearestPath(this.pointer.x, this.pointer.y)
       const valid = spell || ('gap' in point && Number(point.gap) <= (item ? 90 : 65))
-      this.range.fillStyle(valid ? config.color : 0xff6666, .15); this.range.fillCircle(point.x, point.y, config.radius); this.range.lineStyle(4, valid ? config.color : 0xff6666, .8); this.range.strokeCircle(point.x, point.y, config.radius)
+      this.showRange(point.x, point.y, config.radius, valid ? config.color : 0xff6666, .15, .8, 4)
       if (!spell) { this.art.set(this.preview, item ? `item/${this.mode}/world` : `trap/${this.mode}/0`); this.preview.setDisplaySize(95, 70).setPosition(point.x, point.y).setVisible(true).setTint(valid ? 0xffffff : 0xff7777) }
     }
     const target = this.focus.target
-    if (target) { const p = target.world ? this.worldToView(target) : target; this.overlay.lineStyle(4, 0xffdc76, .8).strokeCircle(p.x, p.y, target.radius) }
+    if (target) {
+      if (this.focusRadius !== target.radius) { this.focusRing?.destroy(); this.focusRadius = target.radius; this.focusRing = circle(this, target.radius, 0xffdc76, 0, 0xffdc76, 4).setDepth(3340).setAlpha(.8); this.hudLayer.add(this.focusRing) }
+      const p = target.world ? this.worldToView(target) : target; this.focusRing!.setPosition(p.x, p.y).setVisible(true)
+    }
     this.art.set(this.pads[0], this.tutorialStep === 0 ? 'pad/glow' : 'pad/empty')
     this.drawWarning()
   }
@@ -1224,7 +1287,7 @@ export class SiegeScene extends Phaser.Scene {
     if (!this.warning) return
     if (this.clock >= this.warning.until) { this.warning = null; return }
     const cam = this.cameras.main, v = this.view, g = this.overlay, pulse = reducedMotion() ? .85 : .6 + Math.sin(this.clock * 9) * .35
-    const x0 = Math.max(cam.x, v.left) + 40, x1 = Math.min(cam.x + cam.width, v.right) - 40, y0 = Math.max(cam.y, v.top) + 40, y1 = Math.min(cam.y + 1080, v.bottom) - 40
+    const r = this.renderScale, x0 = Math.max(cam.x / r, v.left) + 40, x1 = Math.min((cam.x + cam.width) / r, v.right) - 40, y0 = Math.max(cam.y / r, v.top) + 40, y1 = Math.min(cam.y / r + 1080, v.bottom) - 40
     const chevron = (x: number, y: number, dx: number, dy: number, alpha: number) => {
       // A chevron pointing along (dx, dy): two arms meeting at the tip.
       const px = -dy, py = dx
@@ -1238,6 +1301,17 @@ export class SiegeScene extends Phaser.Scene {
       }
     }
   }
+  private applyQuality() {
+    for (const a of this.ambience) a.image.setVisible(!this.settings.lite && this.quality.tier === 0)
+    const scale = this.quality.tier >= 3 ? .75 : 1
+    if (this.renderScale === scale) return
+    this.renderScale = scale
+    // EXPAND uses the configured minimum buffer, not devicePixelRatio. Cameras
+    // and HUD retain design coordinates; only the physical canvas gets smaller.
+    Object.assign(this.game.config, { width: 1920 * scale, height: 1080 * scale })
+    this.scale.setGameSize(1920 * scale, 1080 * scale)
+    this.layout()
+  }
   private textureMB() {
     if (this.game.renderer.type !== Phaser.WEBGL) return 0
     const renderer = this.game.renderer as Phaser.Renderer.WebGL.WebGLRenderer
@@ -1246,6 +1320,6 @@ export class SiegeScene extends Phaser.Scene {
   }
   stats() {
     const count = (list: Phaser.GameObjects.GameObject[]): number => list.reduce((total, object) => total + 1 + (object instanceof Phaser.GameObjects.Container || object instanceof Phaser.GameObjects.Layer ? count(object.list) : 0), 0)
-    return { fps: Math.round(this.game.loop.actualFps), objects: count(this.children.list), enemies: this.enemies.filter(e => e.active).length, draws: this.statsPrevious, textureMB: this.textureMB() }
+    return { quality: this.quality.tier, renderScale: this.renderScale, fps: Math.round(this.game.loop.actualFps), objects: count(this.children.list), enemies: this.enemies.filter(e => e.active).length, draws: this.statsPrevious, textureMB: this.textureMB() }
   }
 }

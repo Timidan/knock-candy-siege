@@ -33,7 +33,8 @@ export class TutorialFocus {
     return !this.active || !!target && target.world === world && Math.hypot(point.x - target.x, point.y - target.y) <= target.radius
   }
   input(point: Point, world: boolean) {
-    if (this.permits(point, world)) { this.acted(); return true }
+    const input = world ? point : { x: point.x / this.scene.renderScale, y: point.y / this.scene.renderScale }
+    if (this.permits(input, world)) { this.acted(); return true }
     this.nudge(); return false
   }
   nudge() { this.bounce = this.scene.time.now; this.scene.hud.hand.setText('☟ HERE!'); if (this.target) this.scene.hud.nudgeTarget(this.target) }

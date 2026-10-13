@@ -37,7 +37,7 @@ function loadSources() {
   })().catch(error => { sources = undefined; throw error })
 }
 
-type Atlas = { texture: Phaser.Textures.CanvasTexture; slots: Map<string, number>; width: number; height: number; columns: number; capacity: number; dirty: boolean }
+type Atlas = { texture: Phaser.Textures.CanvasTexture; slots: Map<string, number>; width: number; height: number; columns: number; capacity: number; dirty: boolean; refs: HeadRef[] }
 
 export class ChogHeads {
   readonly ready: Promise<void>
@@ -51,6 +51,11 @@ export class ChogHeads {
   private queue = new Map<string, { id: number; left: boolean }>()
   private alive = true
   private pending = 0
+  private batchFrame = 0
+  private uploadFrame = -4
+  private uploadNext = false
+  private scratch = Array.from({ length: 5 }, () => { const canvas = makeCanvas(); return { canvas, ctx: canvas.getContext('2d')! } })
+  private valuesCache = new Map<number, Record<string, string>>()
   constructor(scene: Phaser.Scene) {
     this.scene = scene
     this.ready = loadSources().then(data => {
@@ -64,6 +69,7 @@ export class ChogHeads {
       this.mask = makeCanvas(); this.mask.getContext('2d')!.drawImage(mask, 0, 0, 256, 320)
     })
     // Detached scenes can use canvas() in React without creating any GPU texture.
+    scene?.events?.on('postupdate', this.flush, this)
     scene?.events?.once('shutdown', () => this.dispose())
     scene?.events?.once('destroy', () => this.dispose())
   }
@@ -72,24 +78,23 @@ export class ChogHeads {
     for (const atlas of [this.headAtlas, this.windowAtlas]) if (atlas && this.scene?.textures?.exists(atlas.texture.key)) this.scene.textures.remove(atlas.texture.key)
   }
   prepare(ids: number[]): void {
-    for (const id of ids) for (const left of [false, true]) this.queue.set(`${id}:${left}`, { id, left })
+    for (const id of ids) for (const left of [false, true]) { const key = `${id}:${left}`; if (!this.windowAtlas?.slots.has(key)) this.queue.set(key, { id, left }) }
     void this.ready.then(() => { if (this.alive && !this.pending) this.pending = requestAnimationFrame(() => this.drain()) }).catch(() => { this.queue.clear() })
   }
   private drain() {
     this.pending = 0
     if (!this.alive) return
-    const next = this.queue.entries().next().value
-    if (next) {
-      const [key, { id, left }] = next; this.queue.delete(key)
-      // One facing per browser frame; reuse the full composition for both outputs.
-      const head = this.atlas(false), win = this.atlas(true)
-      if (!head.slots.has(key) || !win.slots.has(key)) {
-        const canvas = this.canvas(id, left)
-        if (!head.slots.has(key)) this.store(head, key, canvas)
-        if (!win.slots.has(key)) this.store(win, key, this.crop(canvas, left))
+    // Four face crops share an upload, once per four browser frames. Enemies
+    // never consume full-head slots needed by the hero, legends and UI rigs.
+    if (this.batchFrame++ % 4 === 0) {
+      const win = this.atlas(true)
+      for (let i = 0; i < 4 && this.queue.size; i++) {
+        const [key, { id, left }] = this.queue.entries().next().value!
+        this.queue.delete(key)
+        if (!win.slots.has(key)) this.store(win, key, this.crop(this.canvas(id, left), left))
       }
+      this.flush()
     }
-    this.flush()
     if (this.queue.size) this.pending = requestAnimationFrame(() => this.drain())
   }
   head(id: number, left = false): HeadRef {
@@ -138,9 +143,12 @@ export class ChogHeads {
   isLegend(id: number): boolean { return !!this.data?.legends.legends[String(id)] || this.values(id).Base === '1:1' }
   private values(id: number) {
     if (!this.data) throw new Error('Await ChogHeads.ready before composing')
+    const cached = this.valuesCache.get(id)
+    if (cached) return cached
     const row = this.data.traits.chogs[String(id)]
     if (!row || row.length !== this.data.traits.keys.length) throw new Error(`Unknown Chog: ${id}`)
-    return Object.fromEntries(this.data.traits.keys.map((key, i) => [key, row[i] ? this.data.traits.values[key][row[i]] : '']))
+    const values = Object.fromEntries(this.data.traits.keys.map((key, i) => [key, row[i] ? this.data.traits.values[key][row[i]] : '']))
+    this.valuesCache.set(id, values); return values
   }
   private stack(names: string[], tint: string, left: boolean, face?: string) {
     const canvas = makeCanvas(), ctx = canvas.getContext('2d')!
@@ -149,9 +157,9 @@ export class ChogHeads {
       if (!this.data.layers.has(name)) continue
       const layer = this.layer(name, tint, left)
       if (name === 'base/face' && face && face.toLowerCase() !== '#f4eedd') this.tint(layer, face)
-      if (name === 'base/back') fur = layer
+      if (name === 'base/back') { const saved = this.scratch[3]; saved.ctx.clearRect(0, 0, 256, 320); saved.ctx.drawImage(layer, 0, 0); fur = saved.canvas }
       if (name === 'skin/multi/stripes' && fur) this.clip(layer, fur)
-      if (name === 'base/face' || name === 'form/skull/face') faceAlpha = layer
+      if (name === 'base/face' || name === 'form/skull/face') { const saved = this.scratch[4]; saved.ctx.clearRect(0, 0, 256, 320); saved.ctx.drawImage(layer, 0, 0); faceAlpha = saved.canvas }
       if (name.startsWith('skin/') && name.endsWith('/shine') && faceAlpha) this.clip(layer, faceAlpha)
       ctx.drawImage(layer, 0, 0)
     }
@@ -159,20 +167,20 @@ export class ChogHeads {
   }
   private layer(name: string, color: string, left: boolean) {
     const { frame: f, image } = this.data.layers.get(name)!, rect = f.frame, s = f.spriteSourceSize
-    const canvas = makeCanvas(), ctx = canvas.getContext('2d')!
+    const { canvas, ctx } = this.scratch[0]; ctx.clearRect(0, 0, 256, 320)
     ctx.drawImage(image, rect.x, rect.y, rect.w, rect.h, s.x, s.y, s.w, s.h)
     if (name === 'base/back' || f.tint === 'skin') this.tint(canvas, color)
     if (f.clip === 'faceMask') this.clip(canvas, this.mask)
     if (!left) return canvas
-    const moved = makeCanvas(), mc = moved.getContext('2d')!
+    const { canvas: moved, ctx: mc } = this.scratch[1]; mc.clearRect(0, 0, 256, 320); mc.save()
     if (name.endsWith('/decal')) {
       if (!f.decal) throw new Error(`Missing decal registration: ${name}`)
       mc.drawImage(canvas, Math.round(256 - 2 * f.decal.anchor.x), 0)
     } else { mc.translate(256, 0); mc.scale(-1, 1); mc.drawImage(canvas, 0, 0) }
-    return moved
+    mc.restore(); return moved
   }
   private tint(canvas: HTMLCanvasElement, color: string) {
-    const original = makeCanvas(); original.getContext('2d')!.drawImage(canvas, 0, 0)
+    const { canvas: original, ctx: copy } = this.scratch[2]; copy.clearRect(0, 0, 256, 320); copy.drawImage(canvas, 0, 0)
     const ctx = canvas.getContext('2d')!
     ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = color; ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.globalCompositeOperation = 'destination-in'; ctx.drawImage(original, 0, 0); ctx.globalCompositeOperation = 'source-over'
@@ -191,16 +199,16 @@ export class ChogHeads {
     if (existing) return existing
     const width = window ? 64 : 128, height = window ? 64 : 160, columns = 1024 / width
     if (!this.scene?.textures) throw new Error('A live Phaser scene is required for Chog atlas frames')
-    const texture = this.scene.textures.createCanvas(window ? 'siege-faces' : 'siege-chog-heads', 1024, 1024)!
-    const atlas: Atlas = { texture, slots: new Map(), width, height, columns, capacity: columns * Math.floor(1024 / height), dirty: false }
-    for (let i = 0; i < atlas.capacity; i++) texture.add(String(i), 0, i % columns * width, Math.floor(i / columns) * height, width, height)
+    const atlasHeight = window ? 1024 : 512
+    const texture = this.scene.textures.createCanvas(window ? 'siege-faces' : 'siege-chog-heads', 1024, atlasHeight)!
+    const atlas: Atlas = { texture, slots: new Map(), width, height, columns, capacity: columns * Math.floor(atlasHeight / height), dirty: false, refs: [] }
+    for (let i = 0; i < atlas.capacity; i++) { texture.add(String(i), 0, i % columns * width, Math.floor(i / columns) * height, width, height); atlas.refs.push({ key: texture.key, frame: String(i) }) }
     if (window) this.windowAtlas = atlas; else this.headAtlas = atlas
-    if (!this.headAtlas || !this.windowAtlas) this.scene.events.on('postupdate', this.flush, this)
     return atlas
   }
   private cached(atlas: Atlas, key: string): HeadRef | undefined {
     const slot = atlas.slots.get(key)
-    return slot === undefined ? undefined : { key: atlas.texture.key, frame: String(slot) }
+    return slot === undefined ? undefined : atlas.refs[slot]
   }
   private store(atlas: Atlas, key: string, canvas: HTMLCanvasElement): HeadRef {
     let slot = atlas.slots.size
@@ -224,9 +232,14 @@ export class ChogHeads {
     atlas.slots.set(key, slot)
     const x = slot % atlas.columns * atlas.width, y = Math.floor(slot / atlas.columns) * atlas.height, ctx = atlas.texture.context
     ctx.clearRect(x, y, atlas.width, atlas.height); ctx.drawImage(canvas, x, y, atlas.width, atlas.height); atlas.dirty = true
-    return { key: atlas.texture.key, frame: String(slot) }
+    return atlas.refs[slot]
   }
   private flush() {
-    for (const atlas of [this.headAtlas, this.windowAtlas]) if (atlas?.dirty) { atlas.texture.refresh(); atlas.dirty = false }
+    const frame = this.scene.game.loop.frame
+    // Scene creation and stopped-loop tools may flush immediately. During play
+    // at most one atlas is uploaded per four frames, alternating when both dirty.
+    if (this.scene.game.loop.running && frame - this.uploadFrame < 4) return
+    const atlas = this.uploadNext ? this.windowAtlas?.dirty ? this.windowAtlas : this.headAtlas : this.headAtlas?.dirty ? this.headAtlas : this.windowAtlas
+    if (atlas?.dirty) { atlas.texture.refresh(); atlas.dirty = false; this.uploadFrame = frame; this.uploadNext = atlas === this.headAtlas }
   }
 }

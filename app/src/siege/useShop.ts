@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Address, Hash } from 'viem'
-import type { WalletState } from '../wallet'
+import type { SiegeWallet } from './guestWallet'
 import { injectedWallet, isSandbox } from '../chain'
-import { cachedOwned, confirmPurchase, onShopNetwork, pendingPurchase, purchase, readAccount, readShop, shopError, switchShopNetwork, type PurchasePhase } from './shopChain'
+import { cachedOwned, confirmPurchase, onShopNetwork, pendingPurchase, purchase, readShop, shopError, switchShopNetwork, type PurchasePhase } from './shopChain'
 
-export function useShop(wallet: WalletState) {
-  const [account, setAccount] = useState<Address | null>(wallet.account)
+export function useShop(wallet: SiegeWallet) {
+  const account = wallet.account
   const [data, setData] = useState<{ account: Address | null; owned: number[]; balance: bigint | null; gas: bigint | null; prices: Record<number, bigint> | null }>({ account: wallet.account, owned: cachedOwned(wallet.account), balance: null, gas: null, prices: null })
   const [network, setNetwork] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState(''), [error, setError] = useState(''), [hash, setHash] = useState<Hash | null>(null)
   const current = useRef(account), locked = useRef(false)
@@ -18,16 +18,16 @@ export function useShop(wallet: WalletState) {
   }
   useEffect(() => {
     const provider = injectedWallet()
+    if (wallet.guest) { setNetwork(true); return }
+    setNetwork(false)
     if (!provider || isSandbox) return
     let active = true
-    const accounts = (values: Address[]) => { if (active) setAccount(values[0] ?? null) }
     const chain = () => { void onShopNetwork().then(value => { if (active) setNetwork(value) }) }
-    void readAccount().then(address => { if (active) setAccount(address) }).catch(() => {})
-    chain(); provider.on('accountsChanged', accounts); provider.on('chainChanged', chain)
-    return () => { active = false; provider.removeListener('accountsChanged', accounts); provider.removeListener('chainChanged', chain) }
-  }, [wallet.account])
+    chain(); provider.on('chainChanged', chain)
+    return () => { active = false; provider.removeListener('chainChanged', chain) }
+  }, [wallet.account, wallet.guest])
   useEffect(() => {
-    setData({ account, owned: cachedOwned(account), balance: null, gas: null, prices: null }); setStatus(''); setHash(account ? pendingPurchase(account) : null)
+    setData(previous => ({ account, owned: cachedOwned(account), balance: null, gas: null, prices: previous.prices })); setStatus(''); setHash(account ? pendingPurchase(account) : null)
     void refresh(account)
     const timer = window.setInterval(() => { if (!locked.current) void refresh(account) }, 30_000)
     return () => clearInterval(timer)
@@ -36,10 +36,7 @@ export function useShop(wallet: WalletState) {
     if (isSandbox || locked.current) return
     locked.current = true; setBusy(true); setError('')
     try {
-      if (!await readAccount()) await wallet.connect()
-      const address = await readAccount()
-      if (!address) throw new Error('Connect an account in your wallet to continue.')
-      setAccount(address)
+      if (!account) { await wallet.useConnected(); return }
       await switchShopNetwork(); setNetwork(true); setStatus('Wallet ready on Robinhood Chain Testnet.')
     } catch (reason) { setError(shopError(reason)) }
     finally { locked.current = false; setBusy(false) }
@@ -48,9 +45,9 @@ export function useShop(wallet: WalletState) {
     if (!account || !data.prices || locked.current) return
     locked.current = true; setBusy(true); setError(''); setHash(null)
     const owner = account
-    const messages: Record<PurchasePhase, string> = { checking: 'Checking price, balance and ownership…', signature: 'Waiting for your permit signature · exactly this item’s price.', transaction: 'Confirm the purchase transaction in your wallet.', confirming: 'Confirming on Robinhood Chain Testnet…', owned: 'Owned! Your item is ready to use.' }
+    const messages: Record<PurchasePhase, string> = { checking: 'Checking price, balance and ownership…', signature: wallet.guest ? 'Signing the exact-price permit in your guest wallet…' : 'Waiting for your permit signature · exactly this item’s price.', transaction: wallet.guest ? 'Sending from your guest wallet…' : 'Confirm the purchase transaction in your wallet.', confirming: 'Confirming on Robinhood Chain Testnet…', owned: 'Owned! Your item is ready to use.' }
     try {
-      await purchase(owner, item, data.prices[item], (phase, tx) => { if (current.current === owner) { setStatus(messages[phase]); if (tx) setHash(tx) } })
+      await purchase(owner, item, data.prices[item], (phase, tx) => { if (current.current === owner) { setStatus(messages[phase]); if (tx) setHash(tx) } }, wallet.guest)
       await refresh(owner)
     } catch (reason) { if (current.current === owner) setError(shopError(reason)) }
     finally { locked.current = false; setBusy(false) }

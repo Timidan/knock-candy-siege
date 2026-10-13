@@ -11,8 +11,9 @@ import { NIGHTS } from './data/endless'
 import { bossLead, bossFraction } from './Boss'
 import type { BossState } from './Boss'
 import type { Enemy } from './world'
+import { plate, circle, shapeTexture, setSweep } from './renderShapes'
 
-type Button = { root: Phaser.GameObjects.Container; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Graphics; glow: Phaser.GameObjects.Graphics; size: number; enabled: boolean; costLabel?: Phaser.GameObjects.Text }
+type Button = { root: Phaser.GameObjects.Container; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; costLabel?: Phaser.GameObjects.Text }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
 export class Hud {
@@ -28,7 +29,8 @@ export class Hud {
   private ultimate: Button
   private talentCard: Phaser.GameObjects.Container
   private talentLevel = 0
-  private health: Phaser.GameObjects.Graphics
+  private health: Phaser.GameObjects.Image
+  private pulsing: Button[] = []
   private top: Phaser.GameObjects.Container
   private bottom: Phaser.GameObjects.Container
   private topRight: Phaser.GameObjects.Container
@@ -51,6 +53,7 @@ export class Hud {
   private bannerText: Phaser.GameObjects.Text
   private preview: Phaser.GameObjects.Container
   private statsText: Phaser.GameObjects.Text
+  private statsAt = 0
   private toastUntil = 0
   private toastValue = ''
   private toastPages: string[] = []
@@ -69,6 +72,7 @@ export class Hud {
   private bossBannerRoot: Phaser.GameObjects.Container | null = null
   constructor(scene: SiegeScene) {
     this.scene = scene
+    shapeTexture(scene)
     const top = this.top = scene.add.container(0, 0).setDepth(3000)
     const bottom = this.bottom = scene.add.container(0, 0).setDepth(3000)
     this.topRight = scene.add.container(0, 0).setDepth(3000)
@@ -77,7 +81,7 @@ export class Hud {
     this.entrances = scene.add.container(0, 0).setDepth(3000)
     this.radialRoot = scene.add.container(0, 0).setDepth(3200)
     this.wheel = scene.add.container(0, 0).setDepth(3300)
-    top.add(scene.add.graphics().fillStyle(0x241b30, .96).lineStyle(4, 0xc7a2cb).fillRoundedRect(24, 24, 620, 222, 28).strokeRoundedRect(24, 24, 620, 222, 28))
+    top.add(plate(scene, 24, 24, 620, 222, 28, 0x241b30, .96, 0xc7a2cb, 4))
     top.add(scene.art.image(74, 81, 'ui/jar').setDisplaySize(49, 60))
     this.jars = scene.add.bitmapText(118, 82, 'siege-digits', '', 44).setOrigin(0, .5); top.add(this.jars)
     top.add(scene.art.image(261, 82, 'ui/candy').setDisplaySize(56, 56))
@@ -99,7 +103,8 @@ export class Hud {
     this.portrait = this.button(bottom, 100, 984, `hero/frame/${scene.options.home ? 'home' : 'guest'}`, 152, () => scene.selectHero())
     const heads = scene.heads, ref = heads.head(scene.options.hero)
     this.portrait.icon.setTexture(ref.key, ref.frame).setOrigin(heads.pivot.x / 256, heads.pivot.y / 320).setPosition(0, -3).setDisplaySize(145, 181.25)
-    this.health = scene.add.graphics(); this.portrait.root.add(this.health)
+    this.portrait.root.add(plate(scene, -68, 80, 136, 22, 9, 0x171020, 1, 0xffdf9a, 3))
+    this.health = plate(scene, -63, 85, 126, 12, 5, 0xffffff); this.portrait.root.add(this.health)
     // A legend's special and ultimate icons come from its own atlas.
     const legendArt = scene.hero.kit.legend ? `hero-${scene.hero.kit.costume}:` : ''
     this.ability = this.button(bottom, 266, 984, legendArt ? `${legendArt}special/2` : `kit/special/${scene.hero.kit.special}`, 132, () => { scene.cancel(); scene.heroAbility(); this.toast(scene.abilityName()) })
@@ -124,7 +129,7 @@ export class Hud {
       if (open) this.toast('Supplies · drag an item to the road, or select it and tap a target.'); this.refresh()
     })
     this.suppliesButton.root.add(this.text(0, -82, 'SUPPLIES', 30).setOrigin(.5).setStroke('#241b30', 5))
-    this.supplies.add(scene.add.graphics().fillStyle(0x241b30, .97).lineStyle(3, 0xc7a2cb).fillRoundedRect(-380, -80, 760, 172, 24).strokeRoundedRect(-380, -80, 760, 172, 24))
+    this.supplies.add(plate(scene, -380, -80, 760, 172, 24, 0x241b30, .97, 0xc7a2cb, 3))
     for (const [i, kind] of (Object.keys(CONSUMABLES) as ConsumableKind[]).entries()) {
       const b = this.button(this.supplies, (i - 2) * 146, 0, `item/${kind}`, 124, p => scene.selectConsumable(kind, scene.viewToWorld(p)))
       this.cost(b, CONSUMABLES[kind].cost); this.itemButtons[kind] = b
@@ -139,7 +144,7 @@ export class Hud {
       this.calls.push(b)
     })
     this.tutorialCard = scene.add.container(1120, 217).setDepth(3500)
-    this.tutorialCard.add(scene.add.graphics().fillStyle(0xffefd0, .98).lineStyle(4, 0x251c2d).fillRoundedRect(-600, -75, 1200, 150, 22).strokeRoundedRect(-600, -75, 1200, 150, 22))
+    this.tutorialCard.add(plate(scene, -600, -75, 1200, 150, 22, 0xffefd0, .98, 0x251c2d, 4))
     this.tutorialText = this.text(-568, 0, '', 34, '#35253d', true).setWordWrapWidth(990)
     this.tutorialCard.add(this.tutorialText)
     const skip = this.button(this.tutorialCard, 524, 0, '', 120, () => scene.skipTutorial())
@@ -152,6 +157,7 @@ export class Hud {
     this.waveBanner.add(this.bannerText)
     this.hand = this.text(0, 0, '☟', 74, '#ffe396', true).setOrigin(.5).setStroke('#281f31', 5).setDepth(3350)
     this.statsText = this.text(1130, 24, '', 34, '#fff0d5', true).setOrigin(.5, 0).setWordWrapWidth(850).setAlign('center').setPadding(8).setBackgroundColor('#20162cdd').setDepth(3600).setVisible(new URLSearchParams(location.search).has('siegeStats'))
+    this.pulsing = [this.ability, this.ultimate, this.rain, this.boo, ...this.calls]
     scene.hudLayer.add([top, bottom, this.topRight, this.bottomRight, this.entrances, this.radialRoot, this.wheel, this.talentCard, this.preview, this.supplies, this.tutorialCard, this.toastText, this.waveBanner, this.hand, this.statsText])
   }
   layout() {
@@ -169,7 +175,7 @@ export class Hud {
     if (this.boss) { const left = v.left + 690, right = v.right - 1920 + 1470; this.boss.root.setPosition((left + right) / 2, v.top + 72) }
     const camera = s.cameras.main
     ;[...s.routes, ...s.flyRoutes].forEach((route, i) => {
-      const entry = route.points.find(p => p.x >= camera.scrollX && p.x <= camera.scrollX + camera.width && p.y >= 0 && p.y <= 1080) ?? route.points[0]
+      const entry = route.points.find(p => p.x >= camera.midPoint.x - camera.width / camera.zoom / 2 && p.x <= camera.midPoint.x + camera.width / camera.zoom / 2 && p.y >= 0 && p.y <= 1080) ?? route.points[0]
       const p = s.worldToView(entry)
       // A road that enters low on the left would sit on the emote button, so such a call button waits above it.
       const x = Phaser.Math.Clamp(p.x, v.left + 84, v.right - 84)
@@ -195,7 +201,8 @@ export class Hud {
   }
   private button(parent: Phaser.GameObjects.Container, x: number, y: number, frame: string, size: number, action: (pointer: Phaser.Input.Pointer) => void, slot = false, previewUnavailable = false): Button {
     const s = this.scene, root = s.add.container(x, y)
-    const glow = s.add.graphics(), sweep = s.add.graphics()
+    const glow = circle(s, size / 2 + 3, 0xffffff, 0, 0xffffff, 6).setTint(0xffdf92).setVisible(false)
+    const sweep = s.add.image(0, 0, 'siege-shapes', 'white').setVisible(false)
     const icon = s.art.image(0, 0, frame || 'ui/candy').setVisible(!!frame)
     const scale = size * .65 / Math.max(icon.width, icon.height); icon.setScale(scale)
     const label = this.text(0, 0, '', 40, '#35253d').setOrigin(.5).setAlign('center')
@@ -220,7 +227,7 @@ export class Hud {
   private cost(b: Button, value: number, refund = false) {
     if (b.costLabel) { b.costLabel.setText(`${refund ? '+' : ''}${value}`); return }
     const y = b.size / 2 - 8, width = refund ? 136 : 114
-    b.root.add(this.scene.add.graphics().fillStyle(0xffdf95).lineStyle(3, 0x34233b).fillRoundedRect(-width / 2, y - 22, width, 44, 16).strokeRoundedRect(-width / 2, y - 22, width, 44, 16))
+    b.root.add(plate(this.scene, -width / 2, y - 22, width, 44, 16, 0xffdf95, 1, 0x34233b, 3))
     b.root.add(this.scene.art.image(-width / 2 + 22, y, 'ui/candy').setDisplaySize(28, 28))
     b.costLabel = this.text(16, y, `${refund ? '+' : ''}${value}`, 34, '#35253d').setOrigin(.5)
     b.root.add(b.costLabel)
@@ -249,14 +256,14 @@ export class Hud {
     this.jars.setText(String(s.jars)); this.wave.setText(s.level.endless ? String(s.wave) : `${s.wave}/${s.waveCount}`)
     s.art.set(this.speed.icon, `ui/speed-${s.speed}`)
     this.enabled(this.portrait, s.hero.hp > 0)
-    this.portrait.label.setText(`Lv ${s.hero.level}`).setPosition(0, 57).setFontSize(34).setColor('#fff0d5').setStroke('#241b30', 5)
+    this.portrait.label.setText(`Lv ${s.hero.level}`).setPosition(0, 57).setFontSize(34).setStroke('#241b30', 5)
+    if (this.portrait.label.style.color !== '#fff0d5') this.portrait.label.setColor('#fff0d5')
     this.cooldown(this.ability, s.hero.hp <= 0 ? s.hero.respawn : s.hero.ability, s.hero.hp <= 0 ? 12 : s.hero.abilityTotal)
     this.cooldown(this.ultimate, 100 - s.hero.charge, 100)
     this.ultimate.label.setText(s.hero.charge < 100 ? `${Math.floor(s.hero.charge)}%` : 'R').setFontSize(34)
     this.enabled(this.ultimate, s.hero.charge >= 100 && s.hero.hp > 0)
-    this.health.clear().fillStyle(0x171020).lineStyle(3, 0xffdf9a).fillRoundedRect(-68, 80, 136, 22, 9).strokeRoundedRect(-68, 80, 136, 22, 9)
     const health = Phaser.Math.Clamp(s.hero.hp / s.hero.maxHp, 0, 1)
-    if (health > 0) this.health.fillStyle(health < .3 ? 0xff876e : 0xa7d987).fillRoundedRect(-63, 85, 126 * health, 12, 5)
+    this.health.setScale(health, 1).setTint(health < .3 ? 0xff876e : 0xa7d987).setVisible(health > 0)
     this.talents()
     this.cooldown(this.rain, s.spellCooldown.rain, SPELLS.rain.cooldown * factor)
     this.cooldown(this.boo, s.spellCooldown.boo, SPELLS.boo.cooldown * factor)
@@ -266,8 +273,8 @@ export class Hud {
       b.root.setVisible(!!wave && wave.groups.some(g => !g.edge && s.entrancePath(g.type, g.path ?? 0) === path))
       this.enabled(b, !!wave && s.tutorialStep > 0)
       b.label.setText(s.wave === 0 ? 'GO' : `+${Math.ceil(Math.max(0, s.countdown) * 1.5)}`)
-      b.sweep.clear().lineStyle(6, 0xffd675)
-      if (s.wave && wave) b.sweep.beginPath().arc(0, 0, b.size / 2 - 3, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Phaser.Math.Clamp(s.countdown / wave.countdown, 0, 1)).strokePath()
+      b.sweep.setVisible(!!s.wave && !!wave).setScale(1)
+      if (s.wave && wave) setSweep(s, b.sweep, s.countdown / wave.countdown, b.size / 2 - 3, 6)
     })
     const step = TUTORIAL[s.tutorialStep]
     if (step) { this.tutorialCard.setVisible(true); this.tutorialText.setText(`${s.tutorialStep + 1}/7  ${step.title}\n${step.text}`) }
@@ -275,7 +282,7 @@ export class Hud {
     for (const item of this.radialButtons) this.enabled(item.button, s.candy >= item.cost && (!item.kind || !s.towerLock(item.kind)))
     for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown); this.enabled(b, s.itemCooldown[kind] <= 0 && s.candy >= CONSUMABLES[kind].cost) }
     this.suppliesButton.root.setVisible(!s.focus?.active)
-    this.suppliesButton.glow.clear(); if (this.suppliesOpen) this.suppliesButton.glow.lineStyle(6, 0xffdf92).strokeCircle(0, 0, 64)
+    this.suppliesButton.glow.setVisible(this.suppliesOpen)
     for (const button of this.buttons) {
       const matrix = button.root.getWorldTransformMatrix()
       const allowed = button.root.getData('tutorialSkip') || !s.focus || s.focus.permits({ x: matrix.tx, y: matrix.ty }, false)
@@ -283,13 +290,14 @@ export class Hud {
       button.icon.setTint(allowed && button.enabled ? 0xffffff : 0x777777)
     }
     if (this.previewWave !== s.wave) this.closePreview()
-    if (this.statsText.visible) { const stats = s.stats(); this.statsText.setText(`${stats.fps} FPS · ${stats.enemies} foes · ${stats.objects} objects · ${s.game.renderer.type === Phaser.WEBGL ? stats.draws + ' draws · GPU tex ≈' + stats.textureMB + ' MB' : 'Canvas'}`) }
+    if (this.statsText.visible && s.time.now >= this.statsAt) { this.statsAt = s.time.now + 500; const stats = s.stats(); this.statsText.setText(`${stats.fps} FPS · Q${stats.quality} · ${stats.enemies} foes · ${stats.objects} objects · ${s.game.renderer.type === Phaser.WEBGL ? stats.draws + ' draws · GPU tex ≈' + stats.textureMB + ' MB' : 'Canvas'}`) }
   }
   private cooldown(b: Button, remaining: number, total: number) {
     this.enabled(b, remaining <= 0)
-    b.label.setText(remaining > 0 ? String(Math.ceil(remaining)) : '').setColor('#fff0d5').setStroke('#241b30', 5)
-    b.sweep.clear()
-    if (remaining > 0) b.sweep.fillStyle(0x160f21, .78).slice(0, 0, b.size / 2 - 7, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * Phaser.Math.Clamp(remaining / total, 0, 1), false).fillPath()
+    b.label.setText(remaining > 0 ? String(Math.ceil(remaining)) : '').setStroke('#241b30', 5)
+    if (b.label.style.color !== '#fff0d5') b.label.setColor('#fff0d5')
+    b.sweep.setVisible(remaining > 0)
+    if (remaining > 0) setSweep(this.scene, b.sweep, remaining / total, b.size / 2 - 7)
   }
   radial() {
     const s = this.scene
@@ -310,8 +318,8 @@ export class Hud {
           if (s.previewTower === kind) s.command({ type: 'build', pad: s.selected, kind })
           else {
             s.previewTower = kind
-            for (const item of this.radialButtons) { item.button.glow.clear(); item.button.label.setText(item.kind && s.towerLock(item.kind) ? 'LOCKED' : '') }
-            b.glow.lineStyle(7, 0xffe296).strokeCircle(0, 0, 72)
+            for (const item of this.radialButtons) { item.button.glow.setVisible(false); item.button.label.setText(item.kind && s.towerLock(item.kind) ? 'LOCKED' : '') }
+            b.glow.setVisible(true).setTint(0xffe296)
             b.label.setText('✓').setPosition(43, -43).setFontFamily(BODY).setColor('#ffe296').setStroke('#241b30', 4)
             this.toast(`${config.name} · ${config.description}\n${config.levels[0].cost} candy · Tap again to build${s.options.assets.geometry.pads[s.selected]?.boost ? '\nBoosted pad: +20% range and damage' : ''}`)
           }
@@ -353,7 +361,7 @@ export class Hud {
     const button = this.calls[path], width = Math.max(extra.length ? 560 : 380, counts.size * 112 + 44), tall = extra.length * 40
     const v = s.view
     this.preview.setPosition(Phaser.Math.Clamp(button.root.x + width / 2 + 90, v.left + width / 2 + 24, v.right - 24 - width / 2), Phaser.Math.Clamp(button.root.y, v.top + 340, v.bottom - 300))
-    this.preview.add(s.add.graphics().fillStyle(0xffefd0).lineStyle(4, 0x241b30).fillRoundedRect(-width / 2, -140 - tall / 2, width, 280 + tall, 22).strokeRoundedRect(-width / 2, -140 - tall / 2, width, 280 + tall, 22))
+    this.preview.add(plate(s, -width / 2, -140 - tall / 2, width, 280 + tall, 22, 0xffefd0, 1, 0x241b30, 4))
     this.preview.add(this.text(0, -99 - tall / 2, `WAVE ${s.wave + 1}`, 38, '#35253d').setOrigin(.5))
     let i = 0
     for (const [kind, count] of counts) {
@@ -374,7 +382,7 @@ export class Hud {
     this.wheel.removeAll(true)
     const hero = s.worldToView(s.hero), v = s.view
     this.wheel.setPosition(Phaser.Math.Clamp(hero.x, v.left + 310, v.right - 310), Phaser.Math.Clamp(hero.y - 80, v.top + 350, v.bottom - 460))
-    this.wheel.add(s.add.graphics().fillStyle(0x2e203c, .97).fillCircle(0, 0, 280).lineStyle(4, 0xf3d3e1).strokeCircle(0, 0, 280))
+    this.wheel.add(circle(s, 280, 0x2e203c, .97, 0xf3d3e1, 4))
     const ownedDances = SHOP_ITEMS.filter(i => i.kind === 'dance' && s.options.owned.includes(i.id)).map(i => i.key)
     const pages: string[][] = [[...EMOTES], ownedDances, s.options.owned.includes(22) ? CRYPTO_EMOTES : []]
     const names = pages[this.emotePage]
@@ -408,11 +416,11 @@ export class Hud {
     this.talentLevel = level; this.talentCard.removeAll(true); this.talentCard.setVisible(!!level)
     const choices = hero.choices
     if (!choices) return
-    this.talentCard.add(this.scene.add.graphics().fillStyle(0x2e203c, .97).lineStyle(3, 0xffd58b).fillRoundedRect(-360, -64, 720, 250, 20).strokeRoundedRect(-360, -64, 720, 250, 20))
+    this.talentCard.add(plate(this.scene, -360, -64, 720, 250, 20, 0x2e203c, .97, 0xffd58b, 3))
     this.talentCard.add(this.text(0, -34, `LEVEL ${level} · PICK A TALENT [Z / X]`, 34).setOrigin(.5))
     choices.forEach((choice, i) => {
       const x = i ? 176 : -176, panel = this.scene.add.container(x, 82).setSize(340, 180).setInteractive()
-      panel.add(this.scene.add.graphics().fillStyle(0xffefd0).fillRoundedRect(-166, -90, 332, 180, 12))
+      panel.add(plate(this.scene, -166, -90, 332, 180, 12, 0xffefd0))
       panel.add(this.text(0, -54, choice.name, 34, '#35253d').setOrigin(.5))
       panel.add(this.text(0, 22, choice.effect, 34, '#35253d', true).setOrigin(.5).setWordWrapWidth(302).setAlign('center'))
       panel.on('pointerdown', (_p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); this.scene.command({ type: 'talent', index: i }); this.refresh() })
@@ -449,7 +457,7 @@ export class Hud {
     const fill = s.art.image(-226 * k, -k, 'boss/ui/fill').setOrigin(0, .5); fill.setDisplaySize(452 * k, 22 * k); root.add(fill); root.sendToBack(fill)
     root.add(this.text(0, 46 * k, b.name.toUpperCase(), 34, '#fff0d5').setOrigin(.5).setStroke('#241b30', 6))
     if (b.rig) {
-      root.add(s.add.graphics().lineStyle(6, 0xffc86b).strokeCircle(-250 * k, 0, 40))
+      root.add(circle(s, 40, 0xffc86b, 0, 0xffc86b, 6).setPosition(-250 * k, 0))
       root.add(s.add.image(-250 * k, 0, 'siege-faces', s.art.face(b.id as number)).setDisplaySize(40 * 128 / 61, 40 * 128 / 61)); root.sendToBack(root.list[root.list.length - 1])
     }
     this.boss = { root, fill, width: 452 * k, shown: 1 }
@@ -474,10 +482,10 @@ export class Hud {
     root.add(s.art.image(0, 0, 'boss/ui/banner').setScale(k))
     if (b.rig) {
       const legend = s.options.assets.legends.legends[String(b.id)]
-      root.add(s.add.graphics().fillStyle(0x261442).fillRoundedRect(-130 * k, -29 * k, 358 * k, 60 * k, 8))
+      root.add(plate(s, -130 * k, -29 * k, 358 * k, 60 * k, 8, 0x261442))
       root.add(this.text(70 * k, -10 * k, b.name.toUpperCase(), 46, '#ede3d1').setOrigin(.5))
       root.add(this.text(70 * k, 20 * k, `LEGEND · ${legend.boss.move.toUpperCase()}`, 26, '#f4b551').setOrigin(.5))
-      root.add(s.add.graphics().fillStyle(0x261442).fillCircle(-248 * k, 0, 52 * k).lineStyle(6, 0xffc86b).strokeCircle(-248 * k, 0, 50 * k))
+      root.add([circle(s, 52 * k, 0x261442, 1).setPosition(-248 * k, 0), circle(s, 50 * k, 0xffc86b, 0, 0xffc86b, 6).setPosition(-248 * k, 0)])
       root.add(s.add.image(-248 * k, 0, 'siege-faces', s.art.face(b.id as number)).setDisplaySize(50 * k * 128 / 61, 50 * k * 128 / 61))
     }
     this.bossBannerRoot = root
@@ -511,12 +519,8 @@ export class Hud {
     this.candy.y += (82 - this.candy.y) * .25
     this.toastText.setVisible(time < this.toastUntil)
     if (this.toastText.visible) this.toastText.setText(this.toastPages[Math.floor((time - this.toastStart) / this.toastSeconds)] ?? '')
-    for (const b of [this.ability, this.ultimate, this.rain, this.boo, ...this.calls]) {
-      b.glow.clear()
-      if (b.enabled) b.glow.lineStyle(6, 0xffdf92, motion ? .55 + Math.sin(time * 4) * .25 : .65).strokeCircle(0, 0, b.size / 2 + 3)
-    }
-    this.portrait.glow.clear()
-    if (s.heroSelected) this.portrait.glow.lineStyle(7, 0xffe296).strokeCircle(0, 0, 78)
+    for (const b of this.pulsing) b.glow.setVisible(b.enabled).setAlpha(motion ? .55 + Math.sin(time * 4) * .25 : .65)
+    this.portrait.glow.setVisible(s.heroSelected).setTint(0xffe296)
     this.animateBoss(dt)
     for (const preview of this.dancePreviews) {
       if (!preview.rig.root.active || !this.wheel.visible) continue

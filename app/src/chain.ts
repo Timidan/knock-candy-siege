@@ -31,6 +31,10 @@ const monad = defineChain({
   contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } },
 })
 export const client = createPublicClient({ chain: monad, transport: http(rpc) })
+// Explicit per-session selection; never changes the mainnet client or injected wallet.
+export const holderRpc = import.meta.env.VITE_HOLDER_RPC_URL || 'https://sandbox-rpc.timidan.xyz'
+export const holderUrl = import.meta.env.VITE_HOLDER_URL || `${holderRpc.replace(/\/$/, '')}/holder`
+export const holderClient = createPublicClient({ chain: monad, transport: http(holderRpc, { batch: true, timeout: 6000, retryCount: 0 }) })
 // Fork only: anvil signs for any owner (--auto-impersonate).
 const wallet = isFork ? createWalletClient({ chain: monad, transport: http(rpc) }) : null
 const fork = isFork ? createTestClient({ chain: monad, mode: 'anvil', transport: http(rpc) }) : null
@@ -47,24 +51,29 @@ function accountsChanged(accounts: Address[]) {
   connectedAccount = accounts[0] ?? null
   walletListeners.forEach(listener => listener())
 }
-const chainChanged = () => window.location.reload()
-export async function connectWallet(): Promise<Address> {
+let reloadOnChainChange = true
+const chainChanged = () => { if (reloadOnChainChange) window.location.reload() }
+export async function connectWallet(switchToMonad = true): Promise<Address> {
   const provider = injectedWallet()
   if (!provider) throw new Error("Open this page in your wallet's browser, or install a wallet")
+  // Siege reads both networks independently and observes shop network changes in place.
+  reloadOnChainChange = switchToMonad
   await provider.request({ method: 'eth_requestAccounts' })
-  try {
-    await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x8f' }] })
-  } catch (error) {
-    if ((error as { code?: number })?.code !== 4902) throw error
-    await provider.request({ method: 'wallet_addEthereumChain', params: [{
-      chainId: '0x8f', chainName: 'Monad',
-      nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
-      rpcUrls: ['https://rpc.monad.xyz'], blockExplorerUrls: ['https://monadscan.com'],
-    }] })
-    await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x8f' }] })
+  if (switchToMonad) {
+    try {
+      await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x8f' }] })
+    } catch (error) {
+      if ((error as { code?: number })?.code !== 4902) throw error
+      await provider.request({ method: 'wallet_addEthereumChain', params: [{
+        chainId: '0x8f', chainName: 'Monad',
+        nativeCurrency: { name: 'MON', symbol: 'MON', decimals: 18 },
+        rpcUrls: ['https://rpc.monad.xyz'], blockExplorerUrls: ['https://monadscan.com'],
+      }] })
+      await provider.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x8f' }] })
+    }
+    if (Number(await provider.request({ method: 'eth_chainId' })) !== monad.id)
+      throw new Error('Switch your wallet to Monad.')
   }
-  if (Number(await provider.request({ method: 'eth_chainId' })) !== monad.id)
-    throw new Error('Switch your wallet to Monad.')
   if (listeningTo !== provider) {
     listeningTo?.removeListener('accountsChanged', accountsChanged)
     listeningTo?.removeListener('chainChanged', chainChanged)
@@ -207,8 +216,8 @@ export async function readNight(day: bigint, player: number | null) {
 export const readStreet = () => client.readContract({ address: KNOCK, abi, functionName: 'street' })
 export const readVisits = (id: number) =>
   client.readContract({ address: KNOCK, abi, functionName: 'visits', args: [BigInt(id)] })
-export const ownerOf = (id: number) =>
-  client.readContract({ address: CHOG, abi: chogAbi, functionName: 'ownerOf', args: [BigInt(id)] })
+export const ownerOf = (id: number, sandbox = false) =>
+  (sandbox ? holderClient : client).readContract({ address: CHOG, abi: chogAbi, functionName: 'ownerOf', args: [BigInt(id)] })
 export async function ownedChogs(owner: Address): Promise<number[]> {
   const balance = Number(await client.readContract({ address: CHOG, abi: chogAbi, functionName: 'balanceOf', args: [owner] }))
   const found: number[] = []
@@ -241,8 +250,8 @@ export async function inventory(id: number) {
     args: [Array(7).fill(account), [1n, 2n, 3n, 4n, 5n, 6n, 7n]],
   })
 }
-export const chogBalance = (who: Address) =>
-  client.readContract({ address: CHOG_TOKEN, abi: erc20, functionName: 'balanceOf', args: [who] })
+export const chogBalance = (who: Address, sandbox = false) =>
+  (sandbox ? holderClient : client).readContract({ address: CHOG_TOKEN, abi: erc20, functionName: 'balanceOf', args: [who] })
 export const cleanFee = () => client.readContract({ address: KNOCK, abi, functionName: 'cleanFee' })
 
 // Only owner writes on the fork can impersonate an account or fund its gas.

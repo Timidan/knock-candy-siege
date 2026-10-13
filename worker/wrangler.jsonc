@@ -1,0 +1,11 @@
+{
+  "name": "candy-bank",
+  "main": "index.mjs",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": true,
+  "d1_databases": [{
+    "binding": "DB",
+    "database_name": "candy-bank",
+    "database_id": "69df04dc-0c86-44ea-b727-00114fb6ff86"
+  }]
+}
