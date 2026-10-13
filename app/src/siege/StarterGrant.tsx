@@ -16,7 +16,7 @@ export function StarterGrant({ bank, hasWallet }: { bank: CandyBank; hasWallet: 
     <strong>A little candy to get started</strong>
     <p>300 $KNOCK and 0.0005 test ETH for gas, once per wallet. Testnet only; no real value.</p>
     {!hasWallet && <p>Choose a guest wallet or connected wallet above to claim.</p>}
-    {state === 'queued' ? <p role="status">Grant queued — usually paid within about a minute. Checking every 5 seconds…</p> : state === 'paid' ? <p role="status">Grant paid — your one-time starter grant has been claimed.</p> : <Sticker className="siege-vault-claim" disabled={!hasWallet || bank.busy || state !== 'none'} onClick={() => void bank.claimGrant()}>{bank.busy ? 'Claiming…' : 'Claim 300 $KNOCK'}</Sticker>}
+    {state === 'queued' ? <p role="status">Grant queued — usually paid within about a minute. Checking every 5 seconds…</p> : state === 'paid' ? <p role="status">Grant paid — your one-time starter grant has been claimed.</p> : <Sticker className="siege-vault-claim" sound="ui-confirm" disabled={!hasWallet || bank.busy || state !== 'none'} onClick={() => void bank.claimGrant()}>{bank.busy ? 'Claiming…' : 'Claim 300 $KNOCK'}</Sticker>}
     {bank.error && <p role="status">{bank.error} <button className="siege-text-button" style={{ color: 'inherit' }} disabled={bank.busy} onClick={bank.check}>Check grant status</button></p>}
     {bank.claim?.tx && <p>{grantTx(bank.claim.tx)}</p>}
   </section>

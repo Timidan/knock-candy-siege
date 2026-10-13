@@ -9,8 +9,8 @@ export function WalletChoice({ wallet, disabled = false }: { wallet: SiegeWallet
   const [warning, setWarning] = useState(false), [key, setKey] = useState(''), [details, setDetails] = useState(false), id = useId()
   return <section aria-label="Choose your wallet" className="siege-shop-note siege-wallet">
     <div className="row">
-      <Sticker disabled={disabled || wallet.connecting} aria-pressed={wallet.choice === 'guest' && !!wallet.account} onClick={() => { setKey(''); setWarning(false); wallet.useGuest() }}>Use guest wallet</Sticker>
-      <Sticker disabled={disabled || wallet.connecting} aria-pressed={wallet.choice === 'connected' && !!wallet.account} onClick={() => { setKey(''); setWarning(false); void wallet.useConnected() }}>{wallet.connecting ? 'Connecting…' : 'Use connected wallet'}</Sticker>
+      <Sticker disabled={disabled || wallet.connecting} aria-pressed={wallet.choice === 'guest' && !!wallet.account} sound="ui-select" onClick={() => { setKey(''); setWarning(false); wallet.useGuest() }}>Use guest wallet</Sticker>
+      <Sticker disabled={disabled || wallet.connecting} aria-pressed={wallet.choice === 'connected' && !!wallet.account} sound="ui-select" onClick={() => { setKey(''); setWarning(false); void wallet.useConnected() }}>{wallet.connecting ? 'Connecting…' : 'Use connected wallet'}</Sticker>
     </div>
     {wallet.account && <>
       <span style={pill}>{wallet.guest ? '🎮 Guest pass · testnet' : '🟣 Connected'}</span>

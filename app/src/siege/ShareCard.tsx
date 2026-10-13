@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
-import { Sticker } from '../ui'
+import { useEffect, useRef, useState } from 'react'
+import { Sticker, playUi } from '../ui'
 import type { AssetPack } from './assets'
 import { loadImage } from './assets'
+import { reducedMotion } from './data/save'
+import { thumb } from '../images'
 import type { Kit } from './data/kits'
 import type { Outcome } from './SiegeScene'
 import { LEVELS } from './data/level1'
@@ -30,7 +32,7 @@ function accolade(result: Outcome, boss: string) {
 }
 // A trophy for the NFT: the Chog cheers out of a Monad-purple burst on the right, the result sits on the left. Defeats get a quieter card.
 export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome, boss = '') {
-  const [portrait, heads] = await Promise.all([loadImage(`/chogs-256/${kit.id}.webp`), loadPreviewHeads(), document.fonts.ready])
+  const [portrait, heads] = await Promise.all([loadImage(thumb(kit.id, true)), loadPreviewHeads(), document.fonts.ready])
   const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350
   const ctx = canvas.getContext('2d')!
   const endless = result.mode === 'endless', daily = result.mode === 'daily', proud = result.won || endless, frame = kit.home ? GOLD : proud ? MONAD : '#5b4a7a'
@@ -132,16 +134,19 @@ export function ShareCard({ assets, kit, costume, result, bosses }: { assets: As
     WhatsApp: `https://wa.me/?text=${encodeURIComponent(text)}`,
     Facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(link)}&quote=${encodeURIComponent(text)}`,
   }
+  // The fallback panel opens at the bottom of a tall result card, so it scrolls into view.
+  const panel = useRef<HTMLElement>(null)
+  useEffect(() => { if (open) panel.current?.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' }) }, [open])
   return <div className="siege-sharing">
-    <Sticker tone="gold" disabled={!file} onClick={() => void share()}>{file ? 'Share your night ↗' : 'Making share card…'}</Sticker>
+    <Sticker tone="gold" sound="ui-confirm" disabled={!file} onClick={() => void share()}>{file ? 'Share your night ↗' : 'Making share card…'}</Sticker>
     {status && <p role="status">{status}{!file && <button className="siege-text-button" onClick={() => setAttempt(n => n + 1)}>Retry image</button>}</p>}
-    {open && file && <section className="siege-share-panel" aria-label="Share your result">
+    {open && file && <section ref={panel} className="siege-share-panel" aria-label="Share your result">
       <img src={url} alt={`Candy Siege result: Chog #${kit.id}, ${result.stars} stars, ${result.score} points`} />
-      <div className="row"><a className="sticker sticker--gold" href={url} download={file.name}>Download image</a><Sticker onClick={async () => { try { await navigator.clipboard.writeText(text); setStatus('Text copied.') } catch { setStatus('Copy the text from the box below.') } }}>Copy text</Sticker></div>
+      <div className="row"><a className="sticker sticker--gold" href={url} download={file.name} onClick={() => playUi('ui-confirm')}>Download image</a><Sticker sound="ui-confirm" onClick={async () => { try { await navigator.clipboard.writeText(text); setStatus('Text copied.') } catch { setStatus('Copy the text from the box below.') } }}>Copy text</Sticker></div>
       <textarea aria-label="Share text" value={text} readOnly onFocus={event => event.currentTarget.select()} />
       <div className="row">{Object.entries(intents).map(([name, href]) => <a key={name} href={href} target="_blank" rel="noreferrer">{name} ↗</a>)}</div>
       <small>These links share the text and game link. Download and attach the image to include it. Nothing is uploaded by Knock.</small>
-      <button className="siege-text-button" onClick={() => setOpen(false)}>Close share panel</button>
+      <button className="siege-text-button" onClick={() => { setOpen(false); playUi('ui-close') }}>Close share panel</button>
     </section>}
   </div>
 }

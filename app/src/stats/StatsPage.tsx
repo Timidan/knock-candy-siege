@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Sticker } from '../ui'
+import { Sticker, setUiSound, playUi } from '../ui'
+import { readSave } from '../siege/data/save'
+import { thumb } from '../images'
 import { ENEMIES } from '../siege/data/config'
 import { LEVELS } from '../siege/data/level1'
 import { SHOP_ITEMS } from '../siege/data/shop'
@@ -97,6 +99,20 @@ export default function StatsPage() {
   const [card, setCard] = useState<{ file: File; url: string } | null>(null), [making, setMaking] = useState(false)
   const [attempt, setAttempt] = useState(0)
   useEffect(() => { document.title = 'Live stats · Knock: Candy Siege' }, [])
+  // The stickers' cues play through plain audio elements here: Siege's Sfx would pull in Phaser. Quiet, gently varied, at the saved Effects volume (iOS ignores element volume).
+  useEffect(() => {
+    const volume = readSave().settings.effects * .4
+    let last = -Infinity, playing: HTMLAudioElement | null = null
+    setUiSound(cue => {
+      if (!volume || performance.now() - last < 100) return
+      last = performance.now(); playing?.pause()
+      const audio = new Audio(`/siege/audio/sfx/${cue === 'ui-select' || cue === 'ui-back' ? 'ui-click' : cue === 'ui-deny' ? 'ui-error' : cue}-1.mp3`)
+      playing = audio
+      audio.volume = volume; audio.preservesPitch = false; audio.playbackRate = .96 + Math.random() * .08
+      void audio.play().catch(() => { /* No sound is fine. */ })
+    })
+    return () => { setUiSound(null); playing?.pause() }
+  }, [])
   useEffect(() => { void fetch('/siege/legends.json').then(response => response.json()).then(setLegends).catch(() => { /* Bosses stay unnamed. */ }) }, [])
   useEffect(() => {
     if (!STATS_URL) return
@@ -142,17 +158,17 @@ export default function StatsPage() {
       <h1>Live <span>stats</span></h1>
       <p className="stats-updated">{stats ? `${failed ? 'Could not refresh. Showing numbers from' : 'Updated'} ${ago(age)} · refreshes every 30 seconds` : ' '}</p>
       <div className="row stats-actions">
-        <a className="sticker sticker--orange" href="/">Play Candy Siege →</a>
-        <Sticker tone="gold" disabled={!stats} onClick={() => void copy()}>Copy for X</Sticker>
-        <Sticker tone="purple" disabled={!stats || making} onClick={() => void makeImage()}>{making ? 'Drawing the card…' : 'Share image'}</Sticker>
+        <a className="sticker sticker--orange" href="/" onClick={() => playUi('ui-confirm')}>Play Candy Siege →</a>
+        <Sticker tone="gold" sound="ui-confirm" disabled={!stats} onClick={() => void copy()}>Copy for X</Sticker>
+        <Sticker tone="purple" sound="ui-confirm" disabled={!stats || making} onClick={() => void makeImage()}>{making ? 'Drawing the card…' : 'Share image'}</Sticker>
       </div>
       {copied && <p className="stats-copied" role="status">{copied}</p>}
       {card && <section className="board stats-share" aria-label="Share image">
         <img src={card.url} alt="Knock: Candy Siege community card: the goal, the headline numbers and the top three Chogs" width="1200" height="630" />
         <div className="row">
-          {navigator.canShare?.({ files: [card.file] }) && <Sticker tone="gold" onClick={() => void shareImage(card.file)}>Share…</Sticker>}
-          <a className="sticker sticker--gold" href={card.url} download={card.file.name}>Download image</a>
-          <Sticker onClick={() => setCard(null)}>Close</Sticker>
+          {navigator.canShare?.({ files: [card.file] }) && <Sticker tone="gold" sound="ui-confirm" onClick={() => void shareImage(card.file)}>Share…</Sticker>}
+          <a className="sticker sticker--gold" href={card.url} download={card.file.name} onClick={() => playUi('ui-confirm')}>Download image</a>
+          <Sticker sound="ui-close" onClick={() => setCard(null)}>Close</Sticker>
         </div>
       </section>}
     </div>
@@ -189,7 +205,7 @@ export default function StatsPage() {
         <section className="board" aria-labelledby="stats-heroes">
           <h2 id="stats-heroes">Top porch protectors</h2>
           {stats.heroes.length ? <><ol className="stats-heroes">{stats.heroes.map((hero, index) => <li key={hero.id}>
-            <span className="stats-portrait"><img src={`/chogs-256/${hero.id}.webp`} alt="" width="88" height="88" loading="lazy" onError={event => { event.currentTarget.style.visibility = 'hidden' }} />{index < 3 && <b className="stats-rank" aria-label={`Rank ${index + 1}`}>{index + 1}</b>}</span>
+            <span className="stats-portrait"><img src={thumb(hero.id, true)} alt="" width="88" height="88" loading="lazy" onError={event => { event.currentTarget.style.visibility = 'hidden' }} />{index < 3 && <b className="stats-rank" aria-label={`Rank ${index + 1}`}>{index + 1}</b>}</span>
             <span>Chog #{hero.id}</span><b>{plural(hero.runs, 'run')}</b>
           </li>)}</ol><p className="stats-note">Ranked by runs played.</p></> : <p className="stats-empty">No heroes on porch duty yet.</p>}
         </section>

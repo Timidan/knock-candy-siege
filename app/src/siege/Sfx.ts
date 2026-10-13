@@ -2,15 +2,21 @@ import { hasAsset } from './assets'
 import type { Settings } from './data/save'
 import type { ConsumableKind, TowerKind } from './data/config'
 
+// Menu cues: the React menus play them through ui.tsx (Sticker and setUiSound).
+export type UiCue = 'ui-click' | 'ui-select' | 'ui-open' | 'ui-close' | 'ui-back' | 'ui-deny' | 'ui-confirm' | 'ui-toggle'
 export type Cue = 'throw' | 'splat' | 'coin' | 'build' | 'upgrade' | 'wave-horn' | 'jar-stolen' | 'emote' | 'victory' | 'defeat' | 'hit' | 'armor' | 'laser' | 'boo' | 'hero-step' | 'guard-attack' | 'candy-cascade' | 'trap'
-  | 'block' | 'miss' | 'crit' | 'callout' | 'talent-open' | 'talent-tick' | 'candy-arrive' | 'star'
+  | 'block' | 'miss' | 'crit' | 'callout' | 'talent-open' | 'talent-tick' | 'candy-arrive' | 'star' | UiCue
 export type Track = 'menu' | 'level' | 'boss'
 // Files are public/siege/audio/sfx/<group>-<n>.<ext>. Frequent groups rotate takes; guard-attack-3 is near-silent, so it is skipped.
-const TAKES = { throw: 3, splat: 3, hit: 3, coin: 3, 'hero-step': 3, laser: 3, armor: 2, 'guard-attack': 2, build: 1, upgrade: 1, wave: 1, 'jar-stolen': 1, emote: 1, victory: 1, defeat: 1, boo: 1, 'candy-cascade': 1, trap: 1, 'ui-open': 1 }
+const TAKES = { throw: 3, splat: 3, hit: 3, coin: 3, 'hero-step': 3, laser: 3, armor: 2, 'guard-attack': 2, build: 1, upgrade: 1, wave: 1, 'jar-stolen': 1, emote: 1, victory: 1, defeat: 1, boo: 1, 'candy-cascade': 1, trap: 1, 'ui-open': 1,
+  'ui-click': 1, 'ui-close': 1, 'ui-confirm': 1, 'ui-error': 1, 'ui-toggle': 1 }
 type Group = keyof typeof TAKES
+// Menu cues: one take each (the other takes sound like different buttons), gently varied, and important so they play over a paused game.
+// They share one 'ui' slot, so a tap never stacks two: whichever plays first in a tap wins.
+const menu = (layers: [Group, number, number][]) => ({ layers, vary: true, important: true, gap: .1, slot: 'ui' })
 // Layers are [group, pitch, base gain]; the base gain multiplies the caller's volume and keeps the 0 dBFS takes (splat, hit, coin, laser) down.
 // vary: a different take than last time, ±4% pitch and ±8% volume. important: never squeezed out by routine combat, and still plays while paused.
-const CUES: Record<Cue, { layers: [Group, number, number][]; vary?: boolean; important?: boolean; gap?: number }> = {
+const CUES: Record<Cue, { layers: [Group, number, number][]; vary?: boolean; important?: boolean; gap?: number; slot?: string }> = {
   throw: { layers: [['throw', 1, 1]], vary: true }, splat: { layers: [['splat', 1, .5]], vary: true }, hit: { layers: [['hit', 1, .55]], vary: true },
   coin: { layers: [['coin', 1, .6]], vary: true }, 'hero-step': { layers: [['hero-step', 1, .7]], vary: true }, laser: { layers: [['laser', 1, .5]], vary: true },
   armor: { layers: [['armor', 1, .8]], vary: true }, 'guard-attack': { layers: [['guard-attack', 1, .7]], vary: true },
@@ -21,6 +27,9 @@ const CUES: Record<Cue, { layers: [Group, number, number][]; vary?: boolean; imp
   'candy-arrive': { layers: [['coin', 1.25, .35]], vary: true, gap: .09 }, callout: { layers: [['ui-open', 1, .6]], important: true },
   'talent-open': { layers: [['upgrade', 1.15, .6]], important: true }, 'talent-tick': { layers: [['coin', 1.9, .2]], important: true },
   star: { layers: [['hit', .7, .6], ['coin', 1.25, .45]], important: true },
+  'ui-click': menu([['ui-click', 1, .55]]), 'ui-select': menu([['ui-click', 1.3, .45], ['coin', 2, .1]]), 'ui-back': menu([['ui-click', .8, .5]]),
+  'ui-open': menu([['ui-open', 1, .4]]), 'ui-close': menu([['ui-close', 1, .4]]), 'ui-deny': menu([['ui-error', 1, .35]]),
+  'ui-confirm': menu([['ui-confirm', 1, .35]]), 'ui-toggle': menu([['ui-toggle', 1, .35]]),
 }
 const FORMATS = new Audio().canPlayType('audio/ogg; codecs="vorbis"') ? ['ogg', 'mp3'] : ['mp3', 'ogg']
 const file = (stem: string) => FORMATS.map(ext => `/siege/audio/${stem}.${ext}`).find(hasAsset)
@@ -35,6 +44,7 @@ export class Sfx {
   private musicGain?: GainNode
   private buffers = new Map<string, AudioBuffer>()
   private loading = new Set<string>()
+  private pendingUi?: UiCue
   private lastTake = new Map<Group, AudioBuffer>()
   private last = new Map<string, number>()
   private active = new Map<string, number>()
@@ -50,6 +60,8 @@ export class Sfx {
     this.settings = settings
     for (const type of GESTURES) document.addEventListener(type, this.unlock, true)
     document.addEventListener('visibilitychange', this.visibility)
+    // Menu cues decode before any gesture (an offline context needs none): a touch unlocks on pointerup, just before its click, so even the first tap is heard.
+    try { this.load(new OfflineAudioContext(1, 1, 44100), SFX.filter(([key]) => key.startsWith('ui-'))) } catch { /* They load with the rest on the first gesture. */ }
   }
   // Called inside a gesture: the context is created or resumed synchronously, then anything missing (or failed earlier) is fetched once.
   unlock = () => {
@@ -59,11 +71,19 @@ export class Sfx {
     if (context.state !== 'running') void context.resume().catch(() => {})
     const music = this.tracks.get(this.track)
     if (!music || music.element.paused) this.crossfade()
-    for (const [key, url] of SFX) {
+    this.load(context, SFX)
+  }
+  private load(context: BaseAudioContext, files: typeof SFX) {
+    for (const [key, url] of files) {
       if (this.buffers.has(key) || this.loading.has(key)) continue
       this.loading.add(key)
       void fetch(url).then(response => { if (!response.ok) throw new Error(url); return response.arrayBuffer() }).then(data => context.decodeAudioData(data))
-        .then(buffer => { if (!this.closed) this.buffers.set(key, buffer) }, () => { /* The next gesture retries it. */ }).finally(() => this.loading.delete(key))
+        .then(buffer => {
+          if (this.closed) return
+          this.buffers.set(key, buffer)
+          // A tap before its small audio file finished loading still gets one cue when ready.
+          if (this.pendingUi && key === `${CUES[this.pendingUi].layers[0][0]}-1`) { const cue = this.pendingUi; this.pendingUi = undefined; this.play(cue) }
+        }, () => { /* The next gesture retries it. */ }).finally(() => this.loading.delete(key))
     }
   }
   private create() {
@@ -110,8 +130,10 @@ export class Sfx {
   }
   // delay (seconds) schedules on the audio clock, which a busy main thread cannot make late.
   play(cue: Cue, rate = 1, volume = 1, important = !!CUES[cue].important, delay = 0) {
-    const context = this.context, fx = this.fxGain, spec = CUES[cue], key = important ? `!${cue}` : cue
-    if (!context || !fx || context.state !== 'running' || (this.paused && !important)) return
+    const context = this.context, fx = this.fxGain, spec = CUES[cue], key = spec.slot ?? (important ? `!${cue}` : cue)
+    // A menu cue in the very gesture that is still starting the context (Safari resumes asynchronously) is scheduled anyway: it sounds once the context runs.
+    if (!context || !fx || (context.state !== 'running' && !(spec.slot && navigator.userActivation?.isActive)) || (this.paused && !important)) return
+    if (spec.slot) { this.pendingUi = this.buffers.has(`${spec.layers[0][0]}-1`) ? undefined : cue as UiCue; if (this.pendingUi) return }
     const at = context.currentTime + delay
     if ((this.active.get(key) ?? 0) >= 3 || this.voices.size >= 18 || (!important && this.routine >= 12) || at - (this.last.get(key) ?? -1) < (spec.gap ?? .065)) return
     // Presentation randomness only: Math.random never touches the seeded game RNG.

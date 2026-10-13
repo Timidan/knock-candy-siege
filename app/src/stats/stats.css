@@ -48,7 +48,7 @@
 .stats-tile span { display: block; margin-top: 8px; font: 400 19px/1.1 var(--font-display); letter-spacing: .03em; color: #ff965c; }
 .stats-tile small { display: block; margin-top: 6px; color: #d5bbdb; font-size: 16px; }
 
-.stats-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.stats-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 0 auto; padding: 0; list-style: none; }
 .stats-chips li { padding: 6px 12px; border: 2px solid var(--ink); border-radius: 10px 4px 12px 5px; background: var(--grain), #faddab; color: #39263f; font-size: 17px; box-shadow: 2px 3px 0 var(--ink); }
 .stats-chips b { font: 400 18px var(--font-display); letter-spacing: .02em; }
 

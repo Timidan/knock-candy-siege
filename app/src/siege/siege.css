@@ -105,7 +105,7 @@
 /* Dance chips: one row that scrolls sideways (its bottom padding leaves room for the lips). */
 .siege-dance-pick { display: flex; align-items: center; gap: 8px; padding: 6px 10px 0; font-size: 16px; color: #ffe1a8; white-space: nowrap; }
 .siege-dance-chips { display: flex; flex: 1; min-width: 0; gap: 6px; padding: 2px 2px 8px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: thin; }
-.siege-chip { flex: none; min-height: 36px; padding: 5px 12px; border: 2px solid var(--ink); border-radius: 999px; background: #3a2551; color: var(--paper); font: 400 13px/1 var(--font-display); letter-spacing: .03em; box-shadow: 0 3px 0 var(--ink); scroll-snap-align: start; transition: translate .05s ease-out, box-shadow .05s ease-out; }
+.siege-chip { flex: none; min-height: 44px; padding: 5px 12px; border: 2px solid var(--ink); border-radius: 999px; background: #3a2551; color: var(--paper); font: 400 13px/1 var(--font-display); letter-spacing: .03em; box-shadow: 0 3px 0 var(--ink); scroll-snap-align: start; transition: translate .05s ease-out, box-shadow .05s ease-out; }
 .siege-chip[aria-pressed=true] { background: #ffc93c; color: var(--ink); }
 .siege-chip:active { translate: 0 2px; box-shadow: 0 1px 0 var(--ink); }
 .siege-chip:focus-visible { outline: 3px solid #ffd477; outline-offset: 2px; }
@@ -139,6 +139,7 @@
 .siege-shop-price { display: block; font: 27px var(--font-display); color: #ffe0a1; margin: 20px 0; }
 .siege-shop-status { padding: 2px 16px; margin-top: 22px; border: 1px solid #8d7099; border-radius: 12px; background: #2b2037; text-align: left; }
 .siege-shop-links { gap: 20px; }
+.siege-shop-links a { display: inline-flex; align-items: center; min-height: 44px; }
 .siege-shop a, .siege-sharing a { color: #ffe0a5; text-underline-offset: 4px; }
 .siege-sharing .sticker { color: #35253d; }
 .siege-share-panel { margin-top: 20px; padding: 14px; background: #261b32; border: 1px solid #8d699c; border-radius: 14px; }
@@ -280,7 +281,7 @@
 .siege-modal .siege-title-mark p { margin: 8px 0 0; padding: 2px 12px; border-radius: 999px; background: #1b0f2bcc; font-size: 18px; }
 .siege-title-chog { position: relative; margin: 0; animation: siege-bob 3.2s ease-in-out infinite; }
 /* The Monad glow is a shadow, not a pseudo-element, so it never makes the dialog scroll. */
-.siege-title-chog img { display: block; width: min(72vw, 330px, calc(100dvh - 440px)); min-width: 160px; aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 0 0 0 4px #836ef9, 0 9px 0 4px #1b0f2b, 0 0 70px 24px #836ef9aa; }
+.siege-title-chog img { display: block; width: min(72vw, 330px, calc(100dvh - 510px)); min-width: 160px; aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 0 0 0 4px #836ef9, 0 9px 0 4px #1b0f2b, 0 0 70px 24px #836ef9aa; }
 .siege-title-chog figcaption { width: fit-content; margin: 14px auto 0; padding: 3px 14px; border: 2px solid var(--ink); border-radius: 999px; background: #241632; color: #ffe1a8; font-size: 17px; white-space: nowrap; }
 .siege-modal .siege-title .siege-title-play { min-width: 270px; min-height: 58px; padding: 12px 30px; font-size: 1.45rem; animation: siege-pulse 2s ease-in-out infinite; }
 /* Secondary actions: small icon tiles, labelled underneath the icon. */
@@ -332,6 +333,38 @@
 .siege-levels-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 18px; }
 .siege-modal .siege-levels-foot p { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .siege-level-play { transition: none; } }
+/* Locked tablets (Siege.tsx isOpen): the map dims under a padlock (the dim is a wash in its inline background) and "Beat <night> to unlock" stands where PLAY was. */
+.siege-modal .siege-level--locked.sticker { --lip: #2e2350; border-color: #5b4a99; }
+.siege-level--locked .siege-level-map { border-color: #3d2c58; }
+.siege-level--locked .siege-level-map img { opacity: .45; }
+.siege-level-map > svg { position: absolute; inset: 0; margin: auto; }
+.siege-level--locked strong { color: #cbb7d6; }
+.siege-level-lock { margin-top: auto; color: #ffd477; font: 15px/1.1 var(--font-hand); text-wrap: balance; }
+/* A locked tablet's toast: zero height and sticky, so it floats over the dialog's bottom edge without moving anything. */
+.siege-lock-toast { position: sticky; bottom: 0; height: 0; pointer-events: none; }
+.siege-lock-toast span { position: absolute; bottom: 12px; left: 50%; width: max-content; max-width: 90%; padding: 8px 16px; border: 3px solid var(--ink); border-radius: 12px 5px 12px 5px; background: #ffd477; color: var(--ink); font: 400 15px/1.2 var(--font-display); letter-spacing: .03em; box-shadow: 3px 4px 0 var(--ink); translate: -50% 0; animation: siege-toast 2.4s ease-out both; }
+@keyframes siege-toast { from { opacity: 0; translate: -50% 6px; } 8%, 85% { opacity: 1; translate: -50% 0; } to { opacity: 0; translate: -50% 0; } }
+/* The unlock beat: a gold pill in the result card's jars line that pops in once the last star lands (its delay is inline). */
+.siege-unlocked { display: inline-flex; align-items: center; gap: 6px; padding: 1px 12px 1px 6px; border: 2px solid var(--ink); border-radius: 999px; background: #ffd477; color: var(--ink); font: 400 15px/1.3 var(--font-display); letter-spacing: .04em; text-transform: uppercase; vertical-align: middle; white-space: nowrap; box-shadow: 0 3px 0 -1px #c48a0c, 0 3px 0 var(--ink); animation: siege-pop .4s cubic-bezier(.34, 1.56, .64, 1) both; }
+.siege-unlocked img { width: 20px; height: 20px; }
+@keyframes siege-pop { from { opacity: 0; scale: .6; } to { opacity: 1; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .siege-lock-toast span, .siege-unlocked { animation: none; } }
+/* Settings: Done sticks to the dialog's bottom edge, over a fade of the dialog's own colour, so it is always in view.
+   Sticky stops at the dialog's padding, so the foot reaches through it (the dialog's padding, from .siege-modal) to cover the strip below. */
+.siege-sticky-foot { --pad: clamp(22px, 4vw, 42px); position: sticky; bottom: calc(-1 * var(--pad)); z-index: 1; margin-bottom: calc(-1 * var(--pad)); padding: 8px 0 var(--pad); background: var(--grain), #3a2848; box-shadow: 0 -12px 12px -6px #3a2848; }
+/* The Porch Party lobby on a landscape phone: the Chogs beside their names and the invite on one row, so Copy invite and Leave room fit without scrolling. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .siege-modal--party { padding: 10px 20px 12px; }
+  .siege-modal--party h2 { margin: 0; font-size: 26px; }
+  .siege-modal--party p { margin: 4px auto; font-size: 16px; }
+  .siege-modal--party .siege-party-heroes { margin: 6px 0; gap: 28px; }
+  .siege-modal--party .siege-party-heroes figure { display: flex; align-items: center; gap: 10px; }
+  .siege-modal--party .siege-party-heroes img, .siege-modal--party .siege-party-empty { width: 52px; height: 52px; margin: 0; font-size: 34px; }
+  .siege-modal--party .siege-party-link { grid-template-columns: auto 1fr; align-items: center; gap: 10px; margin: 6px 0; }
+  .siege-modal--party .siege-party-link input { padding: 8px 10px; }
+  .siege-modal--party .row { margin: 8px 0 4px; }
+  .siege-modal--party .siege-hint { display: none; }
+}
 @media (orientation: landscape) and (max-height: 500px) {
   /* Landscape phones (844 x 390, 740 x 360): a one-line header, the tablets in one row that scrolls sideways, and Back beside the star key, so nothing scrolls up and down. */
   .siege-modal--levels { padding: 8px 18px 10px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 12px); }

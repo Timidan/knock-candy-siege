@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { flushSync } from 'react-dom'
 import Phaser from 'phaser'
-import { Sticker, PlaqueInput } from '../ui'
+import { Sticker, PlaqueInput, setUiSound, playUi } from '../ui'
 import type { WalletState } from '../wallet'
 import { loadAssets, loadAtlas, loadHeroAssets, loadLevelAssets } from './assets'
 import type { AssetPack } from './assets'
@@ -33,6 +33,7 @@ import { useSiegeWallet } from './guestWallet'
 import { WalletChoice } from './WalletChoice'
 import { useCandyBank } from './candyBank'
 import { holderUrl } from '../chain'
+import { thumb } from '../images'
 import { reopenShop } from './shopChain'
 import { SHOP_ITEMS, canDance } from './data/shop'
 import { ShareCard } from './ShareCard'
@@ -51,24 +52,27 @@ track('session') // once per page load: this module is evaluated once
 // Random picks never land on a Chog with crude cap or shirt text; those stay playable by number.
 const randomHero = (random: () => number) => { let id: number; do id = Math.floor(random() * 1969) + 1; while (CRUDE_TEXT_CHOGS.has(id)); return String(id) }
 // Dialogs settle in (siege.css); `closing` plays the exit while the parent waits to remove it. One replacing another keeps its backdrop steady.
-function Modal({ children, label, onEscape, className = '', closing = false }: { children: ReactNode; label: string; onEscape: () => void; className?: string; closing?: boolean }) {
+// A dialog opening fresh (pause, a new enemy, the in-level shop) plays the open cue; one replacing another came from a tap, which has its own cue.
+// quiet: the result card, which has its fanfare. Buttons and links that aren't stickers click here, after any cue of their own (which wins).
+function Modal({ children, label, onEscape, className = '', closing = false, quiet = false }: { children: ReactNode; label: string; onEscape: () => void; className?: string; closing?: boolean; quiet?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null)
   const [swap] = useState(() => !!document.querySelector('dialog.siege-modal[open]'))
-  useEffect(() => { const dialog = ref.current; dialog?.showModal(); dialog?.querySelector<HTMLElement>('[data-initial-focus]')?.focus(); return () => dialog?.close() }, [])
-  return <dialog ref={ref} inert={closing} className={`siege-modal board ${className}${swap ? ' siege-modal--swap' : ''}${closing ? ' siege-modal--closing' : ''}`} aria-label={label} onCancel={event => { event.preventDefault(); onEscape() }}>{children}</dialog>
+  // Opening focus (the first button, or [data-initial-focus]) must not scroll: a card taller than a landscape phone (the boss card, the Porch Party lobby) opens at its top.
+  useEffect(() => { const dialog = ref.current; dialog?.showModal(); dialog?.querySelector<HTMLElement>('[data-initial-focus]')?.focus({ preventScroll: true }); if (dialog) dialog.scrollTop = 0; if (!swap && !quiet && !document.hidden) playUi('ui-open'); return () => dialog?.close() }, [])
+  return <dialog ref={ref} inert={closing} className={`siege-modal board ${className}${swap ? ' siege-modal--swap' : ''}${closing ? ' siege-modal--closing' : ''}`} aria-label={label} onCancel={event => { event.preventDefault(); onEscape() }} onClick={event => { if ((event.target as Element).closest('button:not(.sticker), a')) playUi('ui-click') }}>{children}</dialog>
 }
 function EnemyPortrait({ assets, kind, id }: { assets: AssetPack; kind: EnemyKind; id: number }) {
   const atlas = assets.atlases.find(a => a.data.frames[`enemy/${kind}/walk/0`]), frame = atlas?.data.frames[`enemy/${kind}/walk/0`]?.frame
   const anchor = assets.faces[kind] ?? { x: 64, y: 52, r: 27 }
   if (!atlas || !frame) return <div className={`siege-enemy-token siege-enemy-token--${kind}`} aria-hidden="true">{kind === 'ghost' ? '☁' : kind === 'pumpkin' ? '◉' : kind === 'bat' ? '⌁' : '✦'}</div>
-  return <div className="siege-intro-body" aria-hidden="true" style={{ width: frame.w, height: frame.h, backgroundImage: `url(${atlas.image.src})`, backgroundPosition: `-${frame.x}px -${frame.y}px` }}><img src={`/chogs-256/${id}.webp`} alt="" style={{ left: anchor.x - anchor.r, top: anchor.y - anchor.r, width: anchor.r * 2, height: anchor.r * 2 }} onError={event => { event.currentTarget.hidden = true }} /></div>
+  return <div className="siege-intro-body" aria-hidden="true" style={{ width: frame.w, height: frame.h, backgroundImage: `url(${atlas.image.src})`, backgroundPosition: `-${frame.x}px -${frame.y}px` }}><img src={thumb(id, true)} alt="" style={{ left: anchor.x - anchor.r, top: anchor.y - anchor.r, width: anchor.r * 2, height: anchor.r * 2 }} onError={event => { event.currentTarget.hidden = true }} /></div>
 }
 // The first meeting with a legend (or the Great Pumpkin) gets a card of its own.
 function BossCard({ assets, id, sheet }: { assets: AssetPack; id: string; sheet?: AssetPack['atlases'][number] }) {
   const legend = assets.legends.legends[id], pumpkin = id === 'pumpkin'
   return <>
-    <span className="siege-eyebrow">{pumpkin ? 'THE FINAL BOSS' : 'A LEGEND AT THE DOOR'}</span><h2>{pumpkin ? assets.legends.greatPumpkin.name : legend?.name}</h2>
-    {pumpkin ? <div className="siege-boss-art">{sheet ? <AtlasSprite atlas={sheet} name="boss/pumpkin/walk/2" size={210} /> : <span>◉</span>}</div> : <div className="siege-boss-art siege-boss-art--legend"><img src={`/chogs-256/${id}.webp`} alt="" /></div>}
+    <span className="siege-eyebrow">{pumpkin ? 'THE FINAL BOSS' : 'A LEGEND AT THE DOOR'}</span><h2 tabIndex={-1} data-initial-focus>{pumpkin ? assets.legends.greatPumpkin.name : legend?.name}</h2>
+    {pumpkin ? <div className="siege-boss-art">{sheet ? <AtlasSprite atlas={sheet} name="boss/pumpkin/walk/2" size={210} /> : <span>◉</span>}</div> : <div className="siege-boss-art siege-boss-art--legend"><img src={thumb(id, true)} alt="" /></div>}
     {pumpkin ? <ul className="siege-boss-moves">{assets.legends.greatPumpkin.phases.map(phase => <li key={phase}>{phase}</li>)}</ul> : legend && <p><b>{legend.boss.move}.</b> {legend.boss.effect[0].toUpperCase() + legend.boss.effect.slice(1)}.</p>}
     <p className="siege-hint">{pumpkin ? 'Magic and splash work best. Guards get flattened.' : 'It enters with a flourish, casts on a timer, and gets angrier at half health.'}</p>
   </>
@@ -88,6 +92,14 @@ function RetryPanel({ stage, onRetry, children }: { stage: Stage; onRetry: () =>
   return <p className="siege-retry" role="alert">{STAGES[stage][1]} Check your connection and try again.<Sticker tone="orange" onClick={onRetry}>Retry</Sticker>{children}</p>
 }
 const stars = (count: number) => <span className="siege-stars" aria-label={`${count} of 3 stars`}>{[1, 2, 3].map(n => <span key={n} className={n <= count ? 'earned-star' : ''} aria-hidden="true">★</span>)}</span>
+// Each story win opens only the next night; Night 01 also opens Daily and Endless.
+// Keep previously played nights available, including saves from when every night was open.
+const isOpen = (save: Save, id: number) => id === ENDLESS_LEVEL ? save.stars[1] > 0 || save.endless.wave > 0 : id === DAILY_LEVEL ? save.stars[1] > 0 || Object.keys(save.daily).length > 0 : !!LEVELS[id - 1] && (id === 1 || save.stars[id - 1] > 0 || save.stars[id] > 0 || id in save.scores)
+// The night to beat first: the one before, or Rosie Row for Endless and the Daily.
+const unlockHint = (id: number) => `Beat ${LEVELS[id === ENDLESS_LEVEL || id === DAILY_LEVEL ? 0 : id - 2].name} to unlock`
+// A locked tablet's map shows at about 45% under this wash of the card's own colour, with the padlock on top at full strength.
+const DIM = 'linear-gradient(#25183a8c, #25183a8c), '
+const PADLOCK = <svg viewBox="0 0 24 28" width="30" height="35" aria-hidden="true"><path d="M6.5 13V9a5.5 5.5 0 0 1 11 0v4" fill="none" stroke="#141414" strokeWidth="6" /><path d="M6.5 13V9a5.5 5.5 0 0 1 11 0v4" fill="none" stroke="#f4eedd" strokeWidth="2.4" /><rect x="2.5" y="12" width="19" height="14" rx="3" fill="#ffc800" stroke="#141414" strokeWidth="2.2" /><circle cx="12" cy="18" r="2.2" fill="#141414" /><path d="M12 19v4" stroke="#141414" strokeWidth="2.2" strokeLinecap="round" /></svg>
 // The title's Settings cog, inked like the /art/icons set: an ink rim under cream teeth (dashes on a ring), then the hub.
 const GEAR = <svg viewBox="-12 -12 24 24" width="28" height="28" aria-hidden="true"><circle r="8.4" fill="none" stroke="#141414" strokeWidth="6.6" strokeDasharray="4.6 1.997" strokeDashoffset=".6" /><circle r="8.4" fill="none" stroke="#f4eedd" strokeWidth="4.6" strokeDasharray="3.4 3.197" /><circle r="6.6" fill="#f4eedd" stroke="#141414" strokeWidth="2" /><circle r="2.4" fill="#836ef9" stroke="#141414" strokeWidth="1.6" /></svg>
 // The win fanfare: earned stars start slamming in at these times (ms; siege.css uses the same delays) and land IMPACT ms later.
@@ -186,9 +198,13 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   useEffect(() => () => { startToken.current++; clearTimeout(closeTimer.current) }, [])
   const [outcome, setOutcome] = useState<Outcome | null>(null), [defeatTip, setDefeatTip] = useState('')
   const [intro, setIntro] = useState('treater')
+  // The toast a locked tablet raises, and the night a win has just unlocked (the result card's beat).
+  const [lockNote, setLockNote] = useState<{ text: string; at: number } | null>(null)
+  useEffect(() => { if (!lockNote) return; const timer = setTimeout(() => setLockNote(null), 2400); return () => clearTimeout(timer) }, [lockNote])
+  const [opened, setOpened] = useState(0)
   const [icons, setIcons] = useState<AssetPack['atlases'][number]>()
   // The daily challenge: the UTC date picks the level and the night's modifier.
-  const daily = dailyInfo(), mapLevel = level === DAILY_LEVEL ? daily.level : level
+  const daily = dailyInfo(), mapLevel = level === DAILY_LEVEL ? daily.level : level, dailyOpen = isOpen(save, DAILY_LEVEL)
   const mode: Mode = level === ENDLESS_LEVEL ? 'endless' : level === DAILY_LEVEL ? 'daily' : 'level'
   const levelName = (id: number) => id === DAILY_LEVEL ? `Daily #${daily.number}` : LEVELS[id - 1].name
   const [ready, setReady] = useState(false)
@@ -212,7 +228,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     if (tryingHolder) return
     const guest = activeWallet.useGuest()
     if (!guest) return
-    setTryingHolder(true); setHolderError('')
+    setTryingHolder(true); setHolderError(''); setPartyError('')
     try {
       const response = await fetch(holderUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: guest.address }), signal: AbortSignal.timeout(20_000) })
       const data = await response.json()
@@ -221,7 +237,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       const [owned, perks] = await Promise.all([readHomeAdvantage(id, guest.address, true), readHolderBonuses(id, guest.address, true)])
       if (!owned || !perks.bonuses.chog) throw new Error('Not ready')
       activeWallet.setSandboxId(id); setHero(String(id))
-    } catch { setHolderError('The holder demo is taking a break. You can still choose any hero and play with your guest wallet. Try again later.') }
+    } catch { setHolderError('The holder demo is taking a break. Try again later, or connect a wallet with a Chog for Porch Party. You can still borrow any hero for solo play.') }
     finally { setTryingHolder(false) }
   }
   const kit = assets && valid ? resolveKit(assets.kits, assets.traits, assets.chogs, Number(hero), home) : null
@@ -291,9 +307,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     return () => controller.abort()
   }, [loadAttempt])
   useEffect(() => {
-    // Sfx unlocks itself inside the first gesture and retries anything that failed on later ones.
-    const audio = new Sfx(saveRef.current.settings); sfx.current = audio
-    return () => { audio.destroy(); sfx.current = null }
+    // Sfx unlocks itself inside the first gesture and retries anything that failed on later ones. The menus' stickers play their cues through it.
+    const audio = new Sfx(saveRef.current.settings); sfx.current = audio; setUiSound(cue => audio.play(cue))
+    return () => { setUiSound(null); audio.destroy(); sfx.current = null }
   }, [])
   // Music follows the screen: the level theme in a run, the menu theme on menus and the result card. Boss.ts switches to the boss theme.
   const musicTrack = run && menu !== 'result' ? 'level' : 'menu'
@@ -315,13 +331,17 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       onReady: () => { setReady(true); if (run.coop) { lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; return }; if (!started) { started = true; track('run_start', info) } },
       onEnd: result => {
         endRun({ ...result, quit: false })
-        setOutcome(result); setDefeatTip(result.won ? '' : counterTip(result, world)); setMenu('result')
+        setOutcome(result); setDefeatTip(result.won ? '' : counterTip(result, world)); setMenu('result'); setOpened(0)
         if (run.coop) return
         const now = saveRef.current
         // Each mode keeps its own best: stars and score per level, the best endless wave, and the best score of each daily.
         if (run.mode === 'endless') persist({ ...now, endless: { wave: Math.max(now.endless.wave, result.wave), score: Math.max(now.endless.score, result.score) } })
         else if (run.mode === 'daily' && run.daily) persist({ ...now, daily: { ...now.daily, [run.daily.day]: Math.max(now.daily[run.daily.day] ?? 0, result.score) } })
-        else persist({ ...now, stars: { ...now.stars, [run.level]: Math.max(now.stars[run.level] ?? 0, result.stars) }, scores: { ...now.scores, [run.level]: Math.max(now.scores[run.level] ?? 0, result.score) } })
+        else {
+          const next = { ...now, stars: { ...now.stars, [run.level]: Math.max(now.stars[run.level] ?? 0, result.stars) }, scores: { ...now.scores, [run.level]: Math.max(now.scores[run.level] ?? 0, result.score) } }, after = run.level + 1
+          if (LEVELS[run.level]?.waves.length && !isOpen(now, after) && isOpen(next, after)) setOpened(after)
+          persist(next)
+        }
       },
     })
     scene.current = world
@@ -365,19 +385,26 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     setClosing(true); clearTimeout(closeTimer.current)
     closeTimer.current = window.setTimeout(() => { flushSync(() => { setClosing(false); setMenu(null) }); after() }, 120)
   }
-  const resume = () => closeMenu(() => { scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() })
-  const leaveLevel = () => { startToken.current++; setStarting(false); partyAbort.current?.abort(); partyAbort.current = null; lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; partyClient.current?.close(); partyClient.current = null; setParty(null); setPartyStatus(''); setPartyError(''); setInviteCode(''); const url = new URL(location.href); url.searchParams.delete('room'); history.replaceState(null, '', url); setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
+  const resume = () => { playUi('ui-close'); closeMenu(() => { scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() }) }
+  const leaveLevel = (keepInvite = false) => { startToken.current++; setStarting(false); partyAbort.current?.abort(); partyAbort.current = null; lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; partyClient.current?.close(); partyClient.current = null; setParty(null); setPartyStatus(''); setPartyError(''); if (!keepInvite) { setInviteCode(''); const url = new URL(location.href); url.searchParams.delete('room'); history.replaceState(null, '', url) } setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
   // Retry only the stage that failed: the base pack, the hero and level art, or the scene (a fresh run object rebuilds the game).
   const retry = () => { const stage = failed; setFailed(null); if (stage === 'candy') setLoadAttempt(n => n + 1); else if (stage === 'lanterns') setRun(r => r && { ...r }); else setPrepAttempt(n => n + 1) }
   // A story win with a playable level after it leads on to that night's hero picker, keeping the hero and costume.
-  const nextLevel = outcome?.won && run?.mode === 'level' && LEVELS[run.level]?.waves.length ? run.level + 1 : 0
+  const nextLevel = outcome?.won && run?.mode === 'level' && LEVELS[run.level]?.waves.length && isOpen(save, run.level + 1) ? run.level + 1 : 0
   const nextNight = () => { if (!run) return; const id = run.id; leaveLevel(); setLevel(nextLevel); setHero(String(id)); setMenu('hero') }
+  // A locked tablet shakes and says which night opens it; an open one leads to the hero picker.
+  const pick = (id: number, card: HTMLElement) => {
+    if (isOpen(save, id)) { setLevel(id); setMenu('hero'); return }
+    if (!reducedMotion()) card.animate(SHAKE, { duration: 300 })
+    setLockNote({ text: `${unlockHint(id)} ${id === DAILY_LEVEL ? 'the Daily' : id === ENDLESS_LEVEL ? 'Endless' : LEVELS[id - 1].name}.`, at: Date.now() })
+  }
   const launchRun = (next: Run) => {
     closeMenu(() => { setRun(next); pendingRun.current = null; setStreetRead(null); setOutcome(null) })
     void sfx.current?.unlock(); sfx.current?.pause(false)
   }
+  const plainInvite = (reason: string) => /^(Invalid room or build|Room unavailable or full|Room expired)$/.test(reason) ? 'This invite is no longer available. Ask your friend for a new one, or start your own Porch Party.' : reason === 'Could not connect to room' || reason === 'Room connection timed out' ? 'Couldn’t reach the Porch Party. Check your connection and try again.' : reason
   const startParty = async () => {
-    if (starting || !assets || !valid || mode !== 'level') return
+    if (starting || !assets || !valid || mode !== 'level' || (!inviteCode && !isOpen(saveRef.current, level))) return
     setStarting(true); setPartyError('')
     const token = ++startToken.current, controller = new AbortController()
     partyAbort.current?.abort(); partyAbort.current = controller
@@ -385,8 +412,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       const account = activeWallet.account, id = Number(hero)
       const [ownedHero, perks] = await Promise.all([readHomeAdvantage(id, account, activeWallet.sandbox), readHolderBonuses(id, account, activeWallet.sandbox)])
       if (token !== startToken.current || controller.signal.aborted) return
-      if (!ownedHero) throw new Error('Pick a Chog owned by your connected wallet, or use the holder demo.')
-      if (perks.status === 'unavailable') throw new Error('Could not check your holder perks. Please try again.')
+      // Checked before any room exists, so the note stays on the hero picker and an invite is kept.
+      if (!ownedHero || perks.status === 'unavailable') { setPartyError(!ownedHero ? 'Porch Party needs a Chog you own. Pick one of yours, or tap Try as a holder.' : 'Could not check your holder perks. Please try again.'); return }
       const selection: HeroSelection = { id, home: ownedHero, costume, owned: [...shop.owned], victoryDance, stars: { ...saveRef.current.stars }, street: perks.bonuses }
       const ticket = inviteCode ? null : await createRoom(COOP_RELAY, __COOP_BUILD__, level, controller.signal)
       const client = await RoomClient.connect(COOP_RELAY, ticket?.room.code ?? inviteCode, __COOP_BUILD__, selection, ticket?.hostToken)
@@ -408,11 +435,11 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       lobbyUnsubscribe.current = client.subscribe(message => {
         if (message.type === 'roster') { setParty({ code: client.room.code, players: message.players }); void prepare() }
         if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') {
-          controller.abort(); setPartyError(message.type === 'desync' ? 'Out of sync: restart together' : message.type === 'disconnected' ? 'Partner disconnected' : message.reason); setMenu('party-error')
+          controller.abort(); setPartyError(message.type === 'desync' ? 'Out of sync: restart together' : message.type === 'disconnected' ? 'Partner disconnected' : plainInvite(message.reason)); setMenu('party-error')
         }
       })
       void prepare()
-    } catch (error) { if (!controller.signal.aborted) { setPartyError(error instanceof Error ? error.message : 'Could not open the room.'); setMenu('party-error') } }
+    } catch (error) { if (!controller.signal.aborted) { setPartyError(plainInvite(error instanceof Error ? error.message : 'Could not open the room.')); setMenu('party-error') } }
     finally { if (token === startToken.current) setStarting(false) }
   }
   const start = async (tutorial = level === 1 && !save.tutorial) => {
@@ -421,7 +448,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     let next: Run
     if (run && menu !== 'hero') next = { ...run, serial: Date.now(), tutorial, owned: shop.owned, stars: saveRef.current.stars, street: NO_STREET, assets: scene.current?.options.assets ?? run.assets }
     else {
-      if (!valid || !prepared || prepared.id !== Number(hero) || prepared.home !== home || prepared.costume !== costume) return
+      if (!valid || !prepared || prepared.id !== Number(hero) || prepared.home !== home || prepared.costume !== costume || !isOpen(saveRef.current, level)) return
       next = { id: Number(hero), home, level: mapLevel, mode, daily: mode === 'daily' ? daily : null, seed: mode === 'daily' ? daily.seed : crypto.getRandomValues(new Uint32Array(1))[0], serial: Date.now(), tutorial, costume, owned: shop.owned, victoryDance, assets: prepared.assets, street: NO_STREET, stars: saveRef.current.stars }
     }
     mobileFullscreen(); setStarting(true)
@@ -439,7 +466,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const subMenu = (next: Menu) => { setReturnMenu(menu); setMenu(next) }
   const escape = () => {
     if (closing) return
-    if (menu === 'settings' || menu === 'book' || menu === 'shop') setMenu(returnMenu)
+    if (menu === 'settings' || menu === 'book' || menu === 'shop') { playUi('ui-close'); setMenu(returnMenu) }
     else if (menu === 'pause' || menu === 'intro') resume()
     else if (menu === 'street') { startToken.current++; pendingRun.current = null; setStreetRead(null); setMenu(run ? 'pause' : 'hero') }
     else if (menu === 'hero') { if (inviteCode || partyAbort.current) leaveLevel(); else setMenu('levels') }
@@ -455,21 +482,21 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     {!run && <div className="siege-night" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#24163233, #24163277), url(/siege/levels/level1.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>}
     {onBack && <div className="siege-back"><Sticker onClick={onBack}>← Knock</Sticker></div>}
     <div className="siege-rotate bubble">Turn your phone sideways for the best view</div>
-    {run && !ready && <div className="boot"><img className="boot-logo" src="/art/ui/logo.svg" alt="" width="240" height="80" />{failed === 'lanterns' ? <RetryPanel stage="lanterns" onRetry={retry}><Sticker onClick={() => { setFailed(null); leaveLevel() }}>Level select</Sticker></RetryPanel> : <><span className="boot-candy" aria-hidden="true" /><p role="status">{STAGES.lanterns[0]}</p></>}</div>}
-    {menu && <Modal key={menu} closing={closing} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={['result', 'shop', 'hero', 'title', 'levels'].includes(menu) ? `siege-modal--${menu}` : ''}>
+    {run && !ready && <div className="boot"><img className="boot-logo" src="/art/ui/logo.svg" alt="" width="240" height="80" />{failed === 'lanterns' ? <RetryPanel stage="lanterns" onRetry={retry}><Sticker sound="ui-back" onClick={() => { setFailed(null); leaveLevel() }}>Level select</Sticker></RetryPanel> : <><span className="boot-candy" aria-hidden="true" /><p role="status">{STAGES.lanterns[0]}</p></>}</div>}
+    {menu && <Modal key={menu} closing={closing} quiet={menu === 'result'} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={['result', 'shop', 'hero', 'title', 'levels', 'party', 'settings'].includes(menu) ? `siege-modal--${menu}` : ''}>
       {installTip && <aside className="siege-install-tip" aria-label="Play full screen on iPhone">
         <strong>Add Knock to your Home Screen to play full screen</strong>
         <p>In Safari, tap Share (the square with an arrow). Scroll down and tap “Add to Home Screen”, then “Add”. Open Knock from its new icon.</p>
         <button className="siege-text-button" onClick={() => setInstallTip(false)}>Got it</button>
       </aside>}
       {displayNotice && <p role="status">{displayNotice}</p>}
-      {perksFailed === menu && pendingRun.current && <p className="siege-perks-failed" role="alert">Couldn’t check your $CHOG perks.<Sticker disabled={starting} onClick={() => void start(pendingRun.current?.tutorial)}>Retry</Sticker><Sticker tone="orange" onClick={() => { const next = pendingRun.current; setPerksFailed(null); if (next) launchRun(next) }}>Continue</Sticker></p>}
+      {perksFailed === menu && pendingRun.current && <p className="siege-perks-failed" role="alert">Couldn’t check your $CHOG perks.<Sticker disabled={starting} onClick={() => void start(pendingRun.current?.tutorial)}>Retry</Sticker><Sticker tone="orange" sound="ui-confirm" onClick={() => { const next = pendingRun.current; setPerksFailed(null); if (next) launchRun(next) }}>Continue</Sticker></p>}
       {menu === 'title' && <div className="siege-title">
         <header className="siege-title-mark"><img className="siege-wordmark" src="/art/ui/logo.svg" alt="Knock" /><h1>Candy <span>Siege</span></h1><p>The whole neighbourhood wants your candy.</p></header>
         {/* Tonight's hero, the same Chog the hero picker opens on. */}
-        {valid && <figure className="siege-title-chog"><img src={`/chogs-256/${Number(hero)}.webp`} alt="" /><figcaption>Chog #{Number(hero)} · on porch duty</figcaption></figure>}
+        {valid && <figure className="siege-title-chog"><img src={thumb(Number(hero), true)} alt="" /><figcaption>Chog #{Number(hero)} · on porch duty</figcaption></figure>}
         <Sticker tone="orange" className="siege-title-play" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Hold the porch →</Sticker>
-        <nav className="siege-title-more" aria-label="More"><Sticker tone="purple" icon="coin-pile" onClick={() => subMenu('shop')}>Shop</Sticker><Sticker tone="purple" icon="ghost-sheet" aria-label="Field guide" onClick={() => subMenu('book')}>Guide</Sticker><Sticker tone="purple" onClick={() => subMenu('settings')}>{GEAR}Settings</Sticker></nav>
+        <nav className="siege-title-more" aria-label="More"><Sticker tone="purple" icon="coin-pile" sound="ui-open" onClick={() => subMenu('shop')}>Shop</Sticker><Sticker tone="purple" icon="ghost-sheet" aria-label="Field guide" sound="ui-open" onClick={() => subMenu('book')}>Guide</Sticker><Sticker tone="purple" sound="ui-open" onClick={() => subMenu('settings')}>{GEAR}Settings</Sticker></nav>
         <div className="siege-title-links">
           {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK</button>}
           {STATS_URL && <a className="siege-text-button" href="/stats">Live stats</a>}
@@ -477,19 +504,22 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       </div>}
       {menu === 'levels' && <>
         <span className="siege-eyebrow">CHOG TOWN · AFTER DARK</span><h2>Pick your porch</h2>
-        {/* Night tablets: every level is open. The green PLAY is part of the card, so the whole tablet stays one big tap target. */}
-        <div className="siege-levels">{LEVELS.map((item, index) => { const night = String(index + 1).padStart(2, '0'), best = item.endless ? save.endless.wave : save.stars[item.id] ?? 0, fresh = item.id === 1 && !best, boss = item.waves.map(wave => wave.boss?.id).filter(id => typeof id === 'number').pop(); return <Sticker key={item.id} aria-label={item.endless ? `Endless mode, Town Square, best wave ${best}` : `${item.name}, night ${night}, ${best} of 3 stars${fresh ? ', start here' : ''}`} className="siege-level" data-initial-focus={index ? undefined : ''} onClick={() => { setLevel(item.id); setMenu('hero') }}>
-          <span className="siege-level-night">{item.endless ? 'Endless' : `Night ${night}`}</span><span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/${mapFile(item.id)}.webp)` }}>{boss && <img src={`/chogs-256/${boss}.webp`} alt="" />}</span><strong>{item.endless ? 'Town Square' : item.name}</strong>{item.endless ? <small>{best ? `Best: wave ${best}` : 'Waves never stop'}</small> : stars(best)}<span className="siege-level-play">{fresh ? 'Start here' : 'Play'}</span>
+        {/* Night tablets: Night 01 is open, and each win opens the next (isOpen). A locked tablet stays tappable (aria-disabled, not disabled) so it can shake and say which night opens it.
+            The green PLAY is part of the card, so the whole tablet stays one big tap target. */}
+        <div className="siege-levels">{LEVELS.map((item, index) => { const night = String(index + 1).padStart(2, '0'), open = isOpen(save, item.id), best = item.endless ? save.endless.wave : save.stars[item.id] ?? 0, fresh = item.id === 1 && !best, boss = item.waves.map(wave => wave.boss?.id).filter(id => typeof id === 'number').pop(); return <Sticker key={item.id} aria-label={`${item.endless ? `Endless mode, Town Square, ${open ? `best wave ${best}` : 'locked'}` : `${item.name}, night ${night}, ${open ? `${best} of 3 stars${fresh ? ', start here' : ''}` : 'locked'}`}${open ? '' : `. ${unlockHint(item.id)}`}`} aria-disabled={open ? undefined : true} className={`siege-level${open ? '' : ' siege-level--locked'}`} sound={open ? 'ui-select' : 'ui-deny'} data-initial-focus={index ? undefined : ''} onClick={event => pick(item.id, event.currentTarget)}>
+          <span className="siege-level-night">{item.endless ? 'Endless' : `Night ${night}`}</span><span className="siege-level-map" style={{ backgroundImage: `${open ? '' : DIM}url(/siege/levels/${mapFile(item.id)}.webp)` }}>{boss && <img src={thumb(boss, true)} alt="" />}{!open && PADLOCK}</span><strong>{item.endless ? 'Town Square' : item.name}</strong>{item.endless ? <small>{best ? `Best: wave ${best}` : 'Waves never stop'}</small> : stars(best)}{open ? <span className="siege-level-play">{fresh ? 'Start here' : 'Play'}</span> : <span className="siege-level-lock">{unlockHint(item.id)}</span>}
         </Sticker> })}
-          <Sticker aria-label={`Daily challenge number ${daily.number}: ${LEVELS[daily.level - 1].name}, ${NIGHTS[daily.theme].name}. ${NIGHTS[daily.theme].text}`} className="siege-level siege-daily" onClick={() => { setLevel(DAILY_LEVEL); setMenu('hero') }}>
-            <span className="siege-level-night">{icons ? <AtlasSprite atlas={icons} name={NIGHTS[daily.theme].icon} size={24} /> : '☾'} Daily #{daily.number}</span><span className="siege-level-map" style={{ backgroundImage: `url(/siege/levels/level${daily.level}.webp)` }} /><strong>{NIGHTS[daily.theme].name}</strong><small>{LEVELS[daily.level - 1].name} · {save.daily[daily.day] ? `best today ${save.daily[daily.day].toLocaleString()}` : NIGHTS[daily.theme].text}</small><span className="siege-level-play">Play</span>
+          <Sticker aria-label={`Daily challenge number ${daily.number}: ${LEVELS[daily.level - 1].name}, ${NIGHTS[daily.theme].name}. ${dailyOpen ? NIGHTS[daily.theme].text : `Locked. ${unlockHint(DAILY_LEVEL)}`}`} aria-disabled={dailyOpen ? undefined : true} className={`siege-level siege-daily${dailyOpen ? '' : ' siege-level--locked'}`} sound={dailyOpen ? 'ui-select' : 'ui-deny'} onClick={event => pick(DAILY_LEVEL, event.currentTarget)}>
+            <span className="siege-level-night">{icons ? <AtlasSprite atlas={icons} name={NIGHTS[daily.theme].icon} size={24} /> : '☾'} Daily #{daily.number}</span><span className="siege-level-map" style={{ backgroundImage: `${dailyOpen ? '' : DIM}url(/siege/levels/level${daily.level}.webp)` }}>{!dailyOpen && PADLOCK}</span><strong>{NIGHTS[daily.theme].name}</strong><small>{LEVELS[daily.level - 1].name} · {save.daily[daily.day] ? `best today ${save.daily[daily.day].toLocaleString()}` : NIGHTS[daily.theme].text}</small>{dailyOpen ? <span className="siege-level-play">Play</span> : <span className="siege-level-lock">{unlockHint(DAILY_LEVEL)}</span>}
           </Sticker>
         </div>
-        <div className="siege-levels-foot"><Sticker onClick={() => setMenu('title')}>← Back</Sticker><p className="siege-hint">3 stars: 18–20 jars · 2 stars: 10–17 · 1 star: 1–9</p></div>
+        <div className="siege-levels-foot"><Sticker sound="ui-back" onClick={() => setMenu('title')}>← Back</Sticker><p className="siege-hint">3 stars: 18–20 jars · 2 stars: 10–17 · 1 star: 1–9</p></div>
+        {/* The locked tablet's toast floats over the dialog's bottom edge, in view however far the tablets have scrolled. */}
+        <div className="siege-lock-toast" role="status">{lockNote && <span key={lockNote.at}>{lockNote.text}</span>}</div>
       </>}
       {menu === 'hero' && <>
         <span className="siege-eyebrow">{level === DAILY_LEVEL ? `${levelName(level).toUpperCase()} · ${LEVELS[daily.level - 1].name.toUpperCase()} · ${NIGHTS[daily.theme].name.toUpperCase()}` : level === ENDLESS_LEVEL ? 'ENDLESS · TOWN SQUARE' : `${levelName(level).toUpperCase()} · LEVEL ${level}`}</span><h2>Who’s on porch duty?</h2>
-        {inviteCode && <p className="siege-party-invite">Porch Party invite · choose your own Chog to join.</p>}
+        {inviteCode && <p className="siege-party-invite">Porch Party invite · join with a Chog you own, or tap Try as a holder for a demo Chog.</p>}
         <WalletChoice wallet={activeWallet} disabled={starting || tryingHolder || shop.busy} />
         <div className="siege-hero-pick">
           <div className={`siege-portrait ${home ? 'siege-portrait--home' : ''} ${kit?.legend ? 'siege-portrait--legend' : ''}`}>
@@ -497,24 +527,26 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
             {kit?.legend && <b className="siege-legendary">★ LEGENDARY ★</b>}
             <b>{home ? 'HOME ADVANTAGE' : 'GUEST HERO'}</b>
             {valid && <div className="siege-chog-comparison">
-              <figure className="siege-nft"><figcaption>{home ? "Your Chog" : "Chog portrait"}</figcaption><img key={hero} src={`/chogs-256/${Number(hero)}.webp`} alt={`Original portrait of Chog #${Number(hero)}`} /><small>Chog #{Number(hero)}</small></figure>
+              <figure className="siege-nft"><figcaption>{home ? "Your Chog" : "Chog portrait"}</figcaption><img key={hero} src={thumb(Number(hero), true)} alt={`Original portrait of Chog #${Number(hero)}`} /><small>Chog #{Number(hero)}</small></figure>
               <figure className="siege-in-game"><figcaption>In Siege</figcaption>{prepared && kit && prepared.id === kit.id && prepared.costume === costume ? <HeroPreview lite={save.settings.lite} assets={prepared.assets} kit={kit} costume={costume || kit.costume} dance={previewDance === 'idle' || canDance(previewDance, kit.emote, shop.owned, prepared.assets.dances) ? previewDance : 'idle'} /> : <span className="siege-character-loading" role="status">Dressing your Chog…</span>}</figure>
             </div>}
             {/* One tap previews a dance; the row scrolls sideways. The ★ marks this Chog's signature. */}
-            {kit && assets && <div className="siege-dance-pick"><span aria-hidden="true">Try a dance</span><div className="siege-dance-chips" role="group" aria-label="Try a dance">{[['idle', 'Idle'], ...Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => [name, dance.name])].map(([name, label]) => <button key={name} className="siege-chip" aria-pressed={(canDance(previewDance, kit.emote, shop.owned, assets.dances) ? previewDance : 'idle') === name} aria-label={name === kit.emote ? `${label}, signature` : undefined} onClick={() => setPreviewDance(name)}>{label}{name === kit.emote && ' ★'}</button>)}</div></div>}
-            <label className="siege-dance-select">Victory dance<select aria-label="Victory dance" value={victoryDance} onChange={event => persist({ ...save, victoryDance: event.target.value })}>{assets && kit && Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => <option value={name} key={name}>{dance.name}</option>)}</select></label>
+            {kit && assets && <div className="siege-dance-pick"><span aria-hidden="true">Try a dance</span><div className="siege-dance-chips" role="group" aria-label="Try a dance">{[['idle', 'Idle'], ...Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => [name, dance.name])].map(([name, label]) => <button key={name} className="siege-chip" aria-pressed={(canDance(previewDance, kit.emote, shop.owned, assets.dances) ? previewDance : 'idle') === name} aria-label={name === kit.emote ? `${label}, signature` : undefined} onClick={() => { setPreviewDance(name); playUi('ui-select') }}>{label}{name === kit.emote && ' ★'}</button>)}</div></div>}
+            <label className="siege-dance-select">Victory dance<select aria-label="Victory dance" value={victoryDance} onChange={event => { persist({ ...save, victoryDance: event.target.value }); playUi('ui-select') }}>{assets && kit && Object.entries(assets.dances).filter(([name]) => canDance(name, kit.emote, shop.owned, assets.dances)).map(([name, dance]) => <option value={name} key={name}>{dance.name}</option>)}</select></label>
           </div>
           {/* The start button sits right under the Chog choice so a landscape phone never scrolls to play. */}
           <div className="siege-hero-side">
-            <div className="row"><PlaqueInput label="Chog #" value={hero} onChange={setHero} min={1} max={1969} /><Sticker onClick={() => setHero(randomHero(menuRandom))}>Random</Sticker>
-              {activeWallet.account && <Sticker tone="gold" disabled={!myChogs.length} onClick={() => { const index = myChogs.indexOf(Number(hero)); setHero(String(myChogs[(index + 1) % myChogs.length])) }}>My Chog</Sticker>}
-              <Sticker tone="gold" disabled={tryingHolder || starting || shop.busy} onClick={() => void tryHolder()}>{tryingHolder ? 'Preparing holder demo…' : 'Try as a holder'}</Sticker>{hasChog && <strong className="siege-shop-note">$CHOG holder</strong>}
+            <div className="row"><PlaqueInput label="Chog #" value={hero} onChange={value => { setHero(value); playUi('ui-select') }} min={1} max={1969} /><Sticker sound="ui-select" onClick={() => setHero(randomHero(menuRandom))}>Random</Sticker>
+              {activeWallet.account && <Sticker tone="gold" sound="ui-select" disabled={!myChogs.length} onClick={() => { const index = myChogs.indexOf(Number(hero)); setHero(String(myChogs[(index + 1) % myChogs.length])) }}>My Chog</Sticker>}
+              <Sticker tone="gold" sound="ui-select" disabled={tryingHolder || starting || shop.busy} onClick={() => void tryHolder()}>{tryingHolder ? 'Preparing holder demo…' : 'Try as a holder'}</Sticker>{hasChog && <strong className="siege-shop-note">$CHOG holder</strong>}
             </div>
             {holderError && <p role="status">{holderError}</p>}
+            {partyError && <p className="siege-perks-failed" role="alert">{partyError}</p>}
             {failed && failed !== 'lanterns' ? <RetryPanel stage={failed} onRetry={retry} /> : (!assets || (valid && !prepared)) && <StageLabel stage={assets ? loading : 'candy'} />}
-            <div className="row"><Sticker tone="orange" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)} onClick={() => inviteCode ? startParty() : start()}>{starting ? 'Checking your $CHOG perks…' : inviteCode ? 'Join Porch Party →' : 'Let’s make mischief →'}</Sticker><Sticker onClick={() => inviteCode || partyAbort.current ? leaveLevel() : setMenu('levels')}>← Back</Sticker></div>
-            {mode === 'level' && !inviteCode && <Sticker tone="purple" disabled={starting || tryingHolder || !valid || !prepared} onClick={() => void startParty()}>Porch Party · play together</Sticker>}
-            {save.tutorial && level === 1 && !inviteCode && <button className="siege-text-button" onClick={() => start(true)} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
+            <div className="row"><Sticker tone="orange" sound="ui-confirm" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero) || (!!inviteCode && !home)} onClick={() => inviteCode ? startParty() : start()}>{starting ? 'Checking your $CHOG perks…' : inviteCode ? 'Join Porch Party →' : 'Let’s make mischief →'}</Sticker><Sticker sound="ui-back" onClick={() => inviteCode || partyAbort.current ? leaveLevel(!!inviteCode) : setMenu('levels')}>← Back</Sticker></div>
+            {mode === 'level' && !inviteCode && <Sticker tone="purple" sound="ui-confirm" disabled={starting || tryingHolder || !valid || !prepared || !home} onClick={() => void startParty()}>{holderCurrent && !home ? 'Porch Party · needs your own Chog' : 'Porch Party · play together'}</Sticker>}
+            {mode === 'level' && !inviteCode && !home && <p className="siege-hint">Porch Party needs a Chog you own. Connect its wallet, or tap Try as a holder for a demo Chog.</p>}
+            {save.tutorial && level === 1 && !inviteCode && <button className="siege-text-button" onClick={() => { playUi('ui-confirm'); void start(true) }} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
             <p>{home ? 'Home advantage: your own Chog starts one level higher and wears a gold frame.' : 'Borrow any Chog. Its real traits are your perks.'}</p>
             {activeWallet.choice === 'connected' && wallet.account && wallet.loading && <small>Checking your Chogs…</small>}
             {kit && assets && <div className="siege-kit">{(['weapon', 'special', 'ultimate', 'passive', 'headgear', 'trinket'] as const).map(slot => {
@@ -525,7 +557,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
 
           </div>
         </div>
-        <div className="siege-costumes" aria-label="Hero costume"><span>Wear</span><Sticker aria-pressed={!costume} onClick={() => persist({ ...save, costume: '' })}>Original outfit</Sticker>{SHOP_ITEMS.filter(i => i.kind === 'costume' && shop.owned.includes(i.id)).map(i => <Sticker key={i.id} aria-pressed={costume === i.key} tone={costume === i.key ? 'gold' : 'paper'} onClick={() => persist({ ...save, costume: i.key })}>{i.name}</Sticker>)}<Sticker tone="gold" onClick={() => subMenu('shop')}>Costume shop ↗</Sticker></div>
+        <div className="siege-costumes" aria-label="Hero costume"><span>Wear</span><Sticker aria-pressed={!costume} sound="ui-select" onClick={() => persist({ ...save, costume: '' })}>Original outfit</Sticker>{SHOP_ITEMS.filter(i => i.kind === 'costume' && shop.owned.includes(i.id)).map(i => <Sticker key={i.id} aria-pressed={costume === i.key} tone={costume === i.key ? 'gold' : 'paper'} sound="ui-select" onClick={() => persist({ ...save, costume: i.key })}>{i.name}</Sticker>)}<Sticker tone="gold" sound="ui-open" onClick={() => subMenu('shop')}>Costume shop ↗</Sticker></div>
       </>}
       {menu === 'street' && streetRead && <section className="siege-street-card">
         <span className="siege-eyebrow">CHOG #{pendingRun.current?.id} · A SWEETER NIGHT</span>
@@ -533,28 +565,28 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         {holderLines(streetRead.bonuses).length ? <ul>{holderLines(streetRead.bonuses).map(row => <li key={row.source}><strong>{row.source}</strong><span>{row.bonus}</span></li>)}</ul> : <p>No holder perks this time. Every Chog can still defend the porch.</p>}
         {pendingRun.current?.home && <p><strong>Home advantage</strong> · Your own Chog starts one level higher and wears a gold frame.</p>}
         {activeWallet.sandbox && <p><strong>Sandbox: a demo copy of Monad, nothing is real</strong></p>}
-        <Sticker tone="orange" onClick={() => { if (pendingRun.current) launchRun(pendingRun.current) }}>Defend the porch →</Sticker>
-        <button className="siege-text-button" onClick={escape}>← Back</button>
+        <Sticker tone="orange" sound="ui-confirm" onClick={() => { if (pendingRun.current) launchRun(pendingRun.current) }}>Defend the porch →</Sticker>
+        <button className="siege-text-button" onClick={() => { playUi('ui-back'); escape() }}>← Back</button>
       </section>}
       {menu === 'party' && party && <>
-        <span className="siege-eyebrow">TWO CHOGS · ONE PORCH</span><h2>Porch Party</h2>
+        <span className="siege-eyebrow">TWO CHOGS · ONE PORCH</span><h2 tabIndex={-1} data-initial-focus>Porch Party</h2>
         <p>{LEVELS[level - 1].name} · shared candy and jars</p>
-        <div className="siege-party-heroes">{party.players.map((player, slot) => <figure key={slot}>{player ? <><img src={`/chogs-256/${player.id}.webp`} alt={`Chog #${player.id}`} /><figcaption>Chog #{player.id}</figcaption></> : <><span className="siege-party-empty">?</span><figcaption>Waiting for a friend</figcaption></>}</figure>)}</div>
+        <div className="siege-party-heroes">{party.players.map((player, slot) => <figure key={slot}>{player ? <><img src={thumb(player.id, true)} alt={`Chog #${player.id}`} /><figcaption>Chog #{player.id}</figcaption></> : <><span className="siege-party-empty">?</span><figcaption>Waiting for a friend</figcaption></>}</figure>)}</div>
         <p role="status">{partyStatus}</p>
         <label className="siege-party-link">Invite a friend<input readOnly value={`https://knock.timidan.xyz/?room=${party.code}`} onFocus={event => event.target.select()} /></label>
-        <div className="row"><Sticker tone="orange" onClick={() => { void navigator.clipboard.writeText(`https://knock.timidan.xyz/?room=${party.code}`).then(() => setPartyStatus('Invite copied!')).catch(() => setPartyStatus('Select and copy the invite link above.')) }}>Copy invite</Sticker><Sticker onClick={leaveLevel}>Leave room</Sticker></div>
+        <div className="row"><Sticker tone="orange" sound="ui-confirm" onClick={() => { void navigator.clipboard.writeText(`https://knock.timidan.xyz/?room=${party.code}`).then(() => setPartyStatus('Invite copied!')).catch(() => setPartyStatus('Select and copy the invite link above.')) }}>Copy invite</Sticker><Sticker sound="ui-back" onClick={() => leaveLevel()}>Leave room</Sticker></div>
         <p className="siege-hint">Both players bring their own Chog. The game starts when both are ready.</p>
       </>}
-      {menu === 'party-error' && <><h2>{partyError || 'Could not continue this room'}</h2><p>Start a new room to play together again.</p><Sticker tone="orange" onClick={leaveLevel}>Return to menu</Sticker></>}
-      {menu === 'party-leave' && <><h2>Leave the porch?</h2><p>Your partner is still playing. Leaving ends this room.</p><div className="row"><Sticker tone="orange" onClick={() => setMenu(null)}>Keep playing</Sticker><Sticker onClick={leaveLevel}>Leave room</Sticker></div></>}
+      {menu === 'party-error' && <><h2>{partyError || 'Could not continue this room'}</h2><div className="row">{inviteCode && <Sticker tone="orange" sound="ui-back" onClick={() => { leaveLevel(true); setMenu('hero') }}>Back to invite</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>{inviteCode ? 'Start my own party' : 'Return to menu'}</Sticker></div></>}
+      {menu === 'party-leave' && <><h2>Leave the porch?</h2><p>Your partner is still playing. Leaving ends this room.</p><div className="row"><Sticker tone="orange" sound="ui-close" onClick={() => setMenu(null)}>Keep playing</Sticker><Sticker sound="ui-back" onClick={() => leaveLevel()}>Leave room</Sticker></div></>}
       {menu === 'pause' && <>
         <span className="siege-eyebrow">EVERYONE, FREEZE.</span><h2>Candy break</h2><p>Your jars are safe while you’re here.</p>
-        <div className="siege-menu-actions"><Sticker tone="orange" onClick={resume}>Keep playing →</Sticker><Sticker onClick={() => subMenu('settings')}>Settings</Sticker><Sticker onClick={() => subMenu('book')}>Field guide</Sticker><Sticker disabled={starting} onClick={() => void start(run?.tutorial ?? false)}>{starting ? 'Checking your $CHOG perks…' : 'Restart level'}</Sticker><Sticker onClick={leaveLevel}>Level select</Sticker></div>
+        <div className="siege-menu-actions"><Sticker tone="orange" onClick={resume}>Keep playing →</Sticker><Sticker sound="ui-open" onClick={() => subMenu('settings')}>Settings</Sticker><Sticker sound="ui-open" onClick={() => subMenu('book')}>Field guide</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(run?.tutorial ?? false)}>{starting ? 'Checking your $CHOG perks…' : 'Restart level'}</Sticker><Sticker sound="ui-back" onClick={() => leaveLevel()}>Level select</Sticker></div>
         <p className="siege-hint"><span className="siege-keys">Space: pause · 1 / 2: spells · Q: ability · R: ultimate · Z / X: talents · E: emotes · N: next wave<br /></span>Tap a pad to build. Select your hero, then tap ground to move. Drag traps onto the path.</p>
       </>}
       {menu === 'settings' && <>
         <h2>Set the mood</h2>
-        <div className="siege-settings">
+        <div className="siege-settings" onChange={event => { if ((event.target as HTMLInputElement).type === 'checkbox') playUi('ui-toggle') }}>
           {(['music', 'effects'] as const).map(key => <label key={key}><span>{key === 'music' ? 'Music' : 'Effects'} <b>{Math.round(save.settings[key] * 100)}%</b></span><input type="range" min="0" max="1" step="0.05" value={save.settings[key]} onChange={event => updateSettings({ ...save.settings, [key]: Number(event.target.value) })} /></label>)}
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.lite} onChange={event => updateSettings({ ...save.settings, lite: event.target.checked })} /><span>Lite mode<small>No ambience, fewer effects and less idle animation, for slower phones.</small></span></label>
           <label className="siege-toggle"><input type="checkbox" checked={save.settings.shake} onChange={event => updateSettings({ ...save.settings, shake: event.target.checked })} /><span>Screen shake<small>Reduced-motion preferences always take priority.</small></span></label>
@@ -563,12 +595,13 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
           <label className="siege-toggle"><input type="checkbox" disabled={!shop.owned.includes(21)} checked={save.settings.gold && shop.owned.includes(21)} onChange={event => updateSettings({ ...save.settings, gold: event.target.checked })} /><span>Golden towers<small>{shop.owned.includes(21) ? 'Dress all four classic towers in gold.' : 'Available in the $KNOCK shop.'}</small></span></label>
           {STATS_URL && <label className="siege-toggle"><input type="checkbox" checked={shareStats} onChange={event => { setStatsEnabled(event.target.checked); setShareStats(event.target.checked) }} /><span>Share anonymous play stats<small>Your runs count toward the public live stats. A random id per browser. No wallet or IP address is stored; a salted IP hash is kept for one day only to stop spam.</small></span></label>}
         </div>
-        <Sticker tone="orange" onClick={() => setMenu(returnMenu)}>Done</Sticker>
+        {/* Done stays in view at the dialog's bottom edge however far the list scrolls. */}
+        <div className="siege-sticky-foot"><Sticker tone="orange" sound="ui-close" onClick={() => setMenu(returnMenu)}>Done</Sticker></div>
       </>}
       {menu === 'book' && <>
         <span className="siege-eyebrow">THE PORCH KEEPER’S</span><h2 tabIndex={-1} data-initial-focus>Field guide</h2>
         {assets && <FieldGuide assets={run?.assets ?? assets} seen={save.seen} heroId={run?.id ?? (valid ? Number(hero) : 1)} />}
-        <h3>How your score adds up</h3><p>100 per Chog stopped + 250 per jar saved + 1,000 per star + 300 per early wave call. On victory, add 10 for each full second remaining from 300 seconds (up to 3,000). Time counts simulated play, excluding pauses and tutorial waiting. Defeats get no time bonus. Your best score is saved for each level.</p><p className="siege-hint">Scores live in this browser; they are not verified leaderboards and never earn $KNOCK.</p><Sticker onClick={() => setMenu(returnMenu)}>← Back</Sticker>
+        <h3>How your score adds up</h3><p>100 per Chog stopped + 250 per jar saved + 1,000 per star + 300 per early wave call. On victory, add 10 for each full second remaining from 300 seconds (up to 3,000). Time counts simulated play, excluding pauses and tutorial waiting. Defeats get no time bonus. Your best score is saved for each level.</p><p className="siege-hint">Scores live in this browser; they are not verified leaderboards and never earn $KNOCK.</p><Sticker sound="ui-back" onClick={() => setMenu(returnMenu)}>← Back</Sticker>
       </>}
       {menu === 'intro' && <>
         {intro.startsWith('boss:') ? assets && <BossCard assets={assets} id={intro.slice(5)} sheet={scene.current?.bossSheet} /> : <>
@@ -577,17 +610,18 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <Sticker tone="orange" onClick={resume}>{intro.startsWith('boss:') ? 'Bring it on →' : 'Got it. Come on in →'}</Sticker>
       </>}
       {menu === 'result' && outcome && <div className={outcome.won ? 'siege-win' : ''}>
-        {outcome.party && <div className="siege-party-heroes" aria-label="Porch Party result">{outcome.party.map((player, slot) => <figure key={slot}><img src={`/chogs-256/${player.id}.webp`} alt={`Chog #${player.id}`} /><figcaption>Chog #{player.id} · Lv {player.level}</figcaption></figure>)}</div>}
+        {outcome.party && <div className="siege-party-heroes" aria-label="Porch Party result">{outcome.party.map((player, slot) => <figure key={slot}><img src={thumb(player.id, true)} alt={`Chog #${player.id}`} /><figcaption>Chog #{player.id} · Lv {player.level}</figcaption></figure>)}</div>}
         <span className="siege-eyebrow">{outcome.party ? 'PORCH PARTY' : outcome.mode === 'endless' ? 'ENDLESS · TOWN SQUARE' : outcome.mode === 'daily' ? `DAILY #${outcome.daily} · ${NIGHTS[outcome.theme].name.toUpperCase()}` : outcome.won ? 'THE SWEET TASTE OF' : 'THE NEIGHBOURHOOD SAYS THANKS'}</span>
         <h2>{outcome.mode === 'endless' ? `Wave ${outcome.wave}!` : outcome.won ? 'Sweet victory!' : 'They got the candy.'}</h2>
-        {outcome.mode !== 'endless' && (outcome.won ? <ResultStars count={outcome.stars} fx={(run?.assets ?? assets)?.atlases.find(a => a.key === 'fx')} shake={save.settings.shake} sfx={sfx} /> : stars(0))}<p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.won ? `${outcome.jars} jars saved. The porch is yours.` : defeatTip}</p>
+        {outcome.mode !== 'endless' && (outcome.won ? <ResultStars count={outcome.stars} fx={(run?.assets ?? assets)?.atlases.find(a => a.key === 'fx')} shake={save.settings.shake} sfx={sfx} /> : stars(0))}{/* A win that opens the next night says so in place of "The porch is yours.", popping in just after the last star lands; the card has no room for another line on a landscape phone. */}
+        <p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.won ? <>{outcome.jars} jars saved. {opened ? <b className="siege-unlocked" style={{ animationDelay: `${SLAMS[Math.max(1, outcome.stars) - 1] + IMPACT + 150}ms` }}><img src="/art/icons/key.svg" alt="" />Night {String(opened).padStart(2, '0')} unlocked!</b> : 'The porch is yours.'}</> : defeatTip}</p>
         <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.party ? 'Team score' : outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span><span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span><span><b>{outcome.heroLevel}</b> hero level</span></div>
-        <div className="row">{outcome.party ? <Sticker tone="orange" onClick={leaveLevel}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker onClick={leaveLevel}>Level select</Sticker></div>
+        <div className="row">{outcome.party ? <Sticker tone="orange" onClick={() => leaveLevel()}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Level select</Sticker></div>
         {run && !run.coop && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} />}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
-      {menu === 'shop' && !assets && (failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry}><Sticker onClick={() => setMenu(returnMenu)}>← Back</Sticker></RetryPanel> : <StageLabel stage="candy" />)}
+      {menu === 'shop' && !assets && (failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry}><Sticker sound="ui-back" onClick={() => setMenu(returnMenu)}>← Back</Sticker></RetryPanel> : <StageLabel stage="candy" />)}
       {saveWarning && <p className="siege-save-warning" role="status">This browser couldn’t save progress. Your current game is still safe.</p>}
       {onBack && <button className="siege-text-button" onClick={onBack}>← Back to Knock</button>}
     </Modal>}

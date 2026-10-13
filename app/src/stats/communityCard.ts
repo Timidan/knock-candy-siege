@@ -1,4 +1,5 @@
 import type { Stats } from './StatsPage'
+import { thumb } from '../images'
 
 // The /stats share image: a 1200 x 630 community card drawn the way ShareCard.tsx draws a result card (canvas, the game's fonts, a PNG blob).
 // It loads its own portraits: importing siege/assets would pull Phaser into this page.
@@ -7,7 +8,7 @@ const RANKS = [GOLD, '#DFE3EE', '#E8914F']
 const fmt = (n: number) => n.toLocaleString('en-US')
 // A missing or slow portrait leaves an empty ring; it never stops the card.
 const portrait = (id: number) => new Promise<HTMLImageElement | null>(resolve => {
-  const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = `/chogs-256/${id}.webp`
+  const img = new Image(); img.onload = () => resolve(img); img.onerror = () => resolve(null); img.src = thumb(id, true)
   setTimeout(() => resolve(null), 8000)
 })
 export async function renderCommunityCard(stats: Stats, goal: number) {

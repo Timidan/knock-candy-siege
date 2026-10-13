@@ -4,7 +4,7 @@ export const SHOP_ITEMS = [
   { id: 21, key: 'gold-towers', name: 'Golden towers', price: 600, kind: 'towers' as const, card: 'gold-towers' },
   { id: 22, key: 'emote-pack', name: 'Crypto emote pack', price: 300, kind: 'emotes' as const, card: 'emote-pack' },
   { id: 23, key: 'starter-candy', name: 'A sweeter start', price: 200, kind: 'candy' as const, card: 'starter-candy' },
-  { id: 31, key: 'roost', name: 'Bat Roost', price: 1000, kind: 'tower' as const, card: 'bat-roost' },
+  { id: 31, key: 'roost', name: 'Bat Roost', price: 400, kind: 'tower' as const, card: 'bat-roost' },
 ]
 export const CRYPTO_EMOTES = ['gm', 'lfg', 'wagmi', 'rekt', 'hodl', 'moon', 'gn', 'ngmi']
 export type ShopItem = typeof SHOP_ITEMS[number]
