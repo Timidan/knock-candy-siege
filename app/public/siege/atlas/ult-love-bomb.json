@@ -1,0 +1,255 @@
+{
+  "frames": {
+    "wave/0": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 288,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "wave/1": {
+      "frame": {
+        "x": 294,
+        "y": 2,
+        "w": 288,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "wave/2": {
+      "frame": {
+        "x": 586,
+        "y": 2,
+        "w": 288,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "wave/3": {
+      "frame": {
+        "x": 2,
+        "y": 214,
+        "w": 288,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "wave/4": {
+      "frame": {
+        "x": 294,
+        "y": 214,
+        "w": 288,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "wave/5": {
+      "frame": {
+        "x": 586,
+        "y": 214,
+        "w": 288,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/0": {
+      "frame": {
+        "x": 2,
+        "y": 426,
+        "w": 192,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/1": {
+      "frame": {
+        "x": 198,
+        "y": 426,
+        "w": 192,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/2": {
+      "frame": {
+        "x": 394,
+        "y": 426,
+        "w": 192,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/3": {
+      "frame": {
+        "x": 590,
+        "y": 426,
+        "w": 192,
+        "h": 208
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 208
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 208
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege batch 2B",
+    "version": "2.0",
+    "image": "ult-love-bomb.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 876,
+      "h": 636
+    },
+    "scale": "1"
+  }
+}

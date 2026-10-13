@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+<title>Toilet Paper — Left Chog</title>
+<desc>Original Knock art. Independently drawn left placement, in 1000px portrait coordinates.</desc>
+<defs>
+ <filter id="paper" x="0" y="0" width="1000" height="1000" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="2" seed="9" result="wobble"/>
+  <feDisplacementMap in="SourceGraphic" in2="wobble" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/>
+  <feTurbulence type="fractalNoise" baseFrequency=".68" numOctaves="3" seed="17" stitchTiles="stitch" result="noise"/>
+  <feColorMatrix in="noise" type="matrix" values=".2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  0 0 0 0 1" result="gray"/>
+  <feComposite in="gray" in2="ink" operator="arithmetic" k1="0" k2=".44" k3="1" k4="-.22" result="grain"/>
+  <feComposite in="grain" in2="ink" operator="in"/>
+ </filter>
+</defs>
+<g filter="url(#paper)" stroke="#141414" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+<path fill="#E3DBC8" d="M198 -40 Q132 169 149 340 L257 374 Q218 176 325 -40Z"/>
+<path fill="#F4EEDD" d="M356 236 C283 334 303 409 321 483 C337 552 288 603 307 677 C319 722 362 744 352 789 L312 910 L344 929 L373 904 L401 931 C443 822 459 769 413 703 C380 656 396 625 421 568 C452 496 415 444 429 396 Q446 334 482 301Z"/>
+<path fill="#DDD1BA" stroke="none" d="M347 392 C328 458 369 507 346 565 C314 641 340 680 377 722 C414 765 391 838 355 911 L370 918 C412 834 433 778 398 728 C359 670 351 650 379 579 C404 515 370 462 382 405Z"/>
+<path d="M315 463 L430 471 M307 657 L400 647 M338 837 L427 851" stroke="#B6AA98" stroke-width="5" stroke-dasharray="13 15" fill="none"/>
+<path fill="#F4EEDD" d="M715 209 C814 299 753 399 770 478 C784 540 831 549 820 597 C805 663 765 691 786 758 L824 841 L849 817 L880 836 L904 809 C850 702 919 662 923 587 C927 505 865 482 875 412 C890 315 870 230 819 182Z"/>
+<path fill="#DDD1BA" stroke="none" d="M801 384 C775 497 849 520 851 574 C858 632 803 697 821 752 L852 824 L870 826 C838 747 839 719 872 650 C905 580 891 542 852 501 C824 470 831 424 837 388Z"/>
+<path d="M771 440 L875 454 M824 598 L922 615 M791 738 L870 710" stroke="#B6AA98" stroke-width="5" stroke-dasharray="13 15" fill="none"/>
+<path fill="#F4EEDD" d="M447 449 Q523 395 590 427 Q654 456 643 519 Q632 579 575 576 Q533 574 534 538 Q538 510 569 513 Q541 487 502 515 L441 558Z"/>
+<path d="M467 475 Q507 454 551 461 M443 552 Q483 533 525 540" fill="none" stroke="#B6AA98" stroke-width="5" stroke-dasharray="12 13"/>
+<path d="M314 709 Q361 724 409 706 M811 690 Q859 714 903 683" fill="none" stroke="#D2C4AE" stroke-width="7"/>
+<path fill="#F4EEDD" d="M230 307 C385 339 534 179 696 173 Q770 169 824 210 L788 303 Q719 269 646 290 C500 329 407 429 259 408Z"/>
+<path d="M385 301 L416 389 M541 225 L582 315 M690 173 L699 280" stroke="#B6AA98" stroke-width="5" stroke-dasharray="13 15" fill="none"/>
+<path fill="#E3DBC8" d="M207 284 Q159 348 219 405 Q263 438 319 406 L370 366 L313 250Z"/>
+<ellipse cx="325" cy="313" rx="67" ry="87" transform="rotate(-25 325 313)" fill="#F4EEDD"/>
+<ellipse cx="325" cy="313" rx="24" ry="36" transform="rotate(-25 325 313)" fill="#82654B" stroke-width="13"/>
+<path d="M292 267 Q318 246 344 269" fill="none" stroke="#D2C4AE" stroke-width="7"/>
+</g>
+</svg>

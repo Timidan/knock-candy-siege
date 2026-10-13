@@ -1,0 +1,186 @@
+{
+  "frames": {
+    "body/sample": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 226,
+        "h": 244
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 69,
+        "w": 226,
+        "h": 244
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "referenceOnly": true
+    },
+    "base/back": {
+      "frame": {
+        "x": 232,
+        "y": 2,
+        "w": 226,
+        "h": 170
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 69,
+        "w": 226,
+        "h": 170
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      },
+      "tint": "skin"
+    },
+    "base/face": {
+      "frame": {
+        "x": 2,
+        "y": 250,
+        "w": 166,
+        "h": 120
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 45,
+        "y": 114,
+        "w": 166,
+        "h": 120
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "eyes/placeholder": {
+      "frame": {
+        "x": 172,
+        "y": 250,
+        "w": 112,
+        "h": 40
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 72,
+        "y": 147,
+        "w": 112,
+        "h": 40
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "base/blush": {
+      "frame": {
+        "x": 288,
+        "y": 250,
+        "w": 154,
+        "h": 22
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 51,
+        "y": 185,
+        "w": 154,
+        "h": 22
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "mouth/placeholder": {
+      "frame": {
+        "x": 446,
+        "y": 250,
+        "w": 42,
+        "h": 10
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 107,
+        "y": 198,
+        "w": 42,
+        "h": 10
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "base/nose": {
+      "frame": {
+        "x": 492,
+        "y": 250,
+        "w": 12,
+        "h": 7
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 122,
+        "y": 176,
+        "w": 12,
+        "h": 7
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege Chog drawing masters",
+    "version": "1",
+    "image": "chog-base.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 512,
+      "h": 512
+    },
+    "scale": "1",
+    "padding": 2
+  }
+}

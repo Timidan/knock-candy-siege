@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+<title>Egg Splat — Left Chog</title>
+<desc>Original Knock art. Independently drawn left placement, in 1000px portrait coordinates.</desc>
+<defs>
+ <filter id="paper" x="0" y="0" width="1000" height="1000" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="2" seed="9" result="wobble"/>
+  <feDisplacementMap in="SourceGraphic" in2="wobble" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/>
+  <feTurbulence type="fractalNoise" baseFrequency=".68" numOctaves="3" seed="17" stitchTiles="stitch" result="noise"/>
+  <feColorMatrix in="noise" type="matrix" values=".2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  0 0 0 0 1" result="gray"/>
+  <feComposite in="gray" in2="ink" operator="arithmetic" k1="0" k2=".44" k3="1" k4="-.22" result="grain"/>
+  <feComposite in="grain" in2="ink" operator="in"/>
+ </filter>
+</defs>
+<g filter="url(#paper)" stroke="#141414" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+<path fill="#F4EEDD" d="M529 217 C510 194 476 173 463 194 C451 215 484 240 466 255 C447 270 406 244 396 268 C386 294 435 307 430 328 C424 350 376 349 382 379 C387 403 424 387 440 405 C459 425 432 465 456 475 C480 488 492 450 509 455 C532 464 510 551 529 565 C549 580 563 554 561 534 L559 436 C558 416 579 411 588 429 C604 463 583 588 600 619 C613 642 637 626 635 605 C632 547 623 466 639 455 C656 444 678 476 694 462 C714 444 683 419 697 397 C710 376 745 399 758 378 C773 355 735 335 742 315 C750 292 789 290 782 265 C775 241 734 254 719 243 C697 227 713 195 690 187 C664 177 658 218 638 218 C617 217 610 179 587 187 C565 194 561 243 529 217Z"/>
+<path fill="#E0D7C4" stroke="none" d="M598 433 C610 472 595 588 606 615 Q617 636 628 614 C620 552 623 477 638 452Z"/>
+<path fill="#FFB51C" d="M508 277 C548 243 607 252 639 284 C670 315 658 363 626 379 C605 389 583 379 584 405 L587 533 C587 555 563 557 561 535 L551 401 C551 384 531 390 510 377 C476 357 477 302 508 277Z"/>
+<path fill="#FF7A1A" stroke="none" d="M635 291 C648 330 622 354 595 358 C574 361 570 375 572 405 L577 536 L581 536 L579 405 C578 377 610 389 634 369 C658 349 658 316 635 291Z"/>
+<path d="M515 310 Q528 282 556 282" stroke="#FFF0A7" stroke-width="14" fill="none"/>
+<path fill="#F4EEDD" d="M394 238 Q363 211 353 233 Q344 252 366 265 Q385 269 394 238Z M795 384 Q818 366 827 389 Q838 411 820 419 Q801 416 795 384Z"/>
+<path fill="#FFB51C" stroke-width="12" d="M618 665 C637 691 638 705 623 711 C604 716 600 694 618 665Z"/>
+</g>
+</svg>

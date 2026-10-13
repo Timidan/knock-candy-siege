@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1200" viewBox="0 0 1000 1200">
+  <title>The crooked Chog house — Moss</title>
+  <desc>A hand drawn purple-roofed haunted house with a blank number plaque and an open square portrait window.</desc>
+  <!-- Portrait aperture: exact rect x=470 y=440 width=380 height=380. Frame is outside this rect. -->
+  <!-- Number plaque: center (290,600); safe text area x=235 y=574 width=110 height=48. -->
+  <defs>
+    <mask id="portrait-cutout"><rect width="1000" height="1200" fill="white"/><rect x="470" y="440" width="380" height="380" fill="black"/></mask>
+    <filter id="paper" x="0" y="0" width="1000" height="1200" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency=".68" numOctaves="3" seed="12" stitchTiles="stitch" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values=".2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  0 0 0 0 1" result="gray"/>
+      <feComposite in="gray" in2="SourceGraphic" operator="arithmetic" k1="0" k2=".44" k3="1" k4="-.22" result="grain"/>
+      <feComposite in="grain" in2="SourceAlpha" operator="in"/>
+    </filter>
+  </defs>
+  <g mask="url(#portrait-cutout)" filter="url(#paper)" stroke="#141414" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+    <!-- A chimney and an off-balance witch-hat roof. -->
+    <path d="M714 290 695 159 808 137 829 331Z" fill="#A65581"/>
+    <path d="m682 158 12-42 123-21 14 42-22 17Z" fill="#EFE9D1"/>
+    <path d="m713 194 92-14m-89 57 96-13m-46-77 9 36m-24 13 8 43" fill="none" stroke-width="10"/>
+    <path d="M122 423Q280 299 360 187L420 70 450 135 496 183Q682 308 922 381L894 435 630 457 330 461Z" fill="#283F2D"/>
+    <path d="M135 410Q271 306 360 187L420 70 427 156Q541 294 872 383L690 417 422 413Z" fill="#82A65D"/>
+    <path d="M203 351Q419 309 704 366M263 289Q432 258 605 311" fill="none" stroke-width="11"/>
+    <path d="m400 172 45 25-22 56-39-30Z" fill="#DA8A2E" stroke-width="12"/>
+    <!-- Leaning wood facade; the open portrait aperture is masked out above. -->
+    <path d="M166 407 865 399 900 1078Q529 1105 130 1084Z" fill="#EFE9D1"/>
+    <path d="m167 442 100-6-14 632-111 12Z" fill="#A65581"/>
+    <path d="m825 426 43-2 30 654-57 6Z" fill="#A65581"/>
+    <path d="m266 474 566-13m-571 88 575-5m-579 76 582 8m-588 73 592 8m-597 73 599 3m-603 76 611 4m-615 82 617 2m-622 79 627-1" fill="none" stroke-width="9"/>
+    <path d="m340 462-4 81m54 6 4 76m-71 76-8 74m73 8-6 69m-53 85-6 77m440-80 7 82m-71-80-5 76" fill="none" stroke-width="8"/>
+    <path d="m175 486 48-5m-52 79 45-4m-49 91 49 2m-54 113 44-2m-49 112 48-4m-57 108 51 4" fill="none" stroke-width="10"/>
+    <!-- Roof lip deliberately wobbles rather than following a perfect ruler. -->
+    <path d="M108 417Q274 381 464 397T902 385L919 437Q730 449 520 441T111 466Z" fill="#283F2D"/>
+    <path d="M125 430Q303 412 470 423T895 412" fill="none" stroke="#82A65D" stroke-width="10"/>
+    <!-- Square portrait frame is outside x470..850 / y440..820. -->
+    <path d="M452 426 866 424 871 837 450 840Z" fill="#DA8A2E"/>
+    <path d="M464 434 856 433 859 830 461 830Z" fill="#A65581" stroke-width="10"/>
+    <path d="M462 431 470 440m387-8-7 8m-390 388 10-8m389 9-9-9" fill="none" stroke-width="8"/>
+    <!-- Blank plaque, door and the little attic face. -->
+    <path d="M214 563Q291 549 366 565L372 633Q293 647 213 632Z" fill="#283F2D" stroke-width="13"/>
+    <path d="M229 574 352 577 354 620 229 624Z" fill="#EFE9D1" stroke-width="7"/>
+    <path d="M183 1061 188 759Q180 670 286 667 391 671 395 758L404 1064Z" fill="#283F2D"/>
+    <path d="M205 1046 209 758Q207 692 286 693 369 692 373 758L381 1046Z" fill="#DA8A2E" stroke-width="11"/>
+    <path d="m265 701-8 341m62-339 10 343m-108-104 147 3" fill="none" stroke-width="9"/>
+    <path d="M229 766Q241 724 267 750L274 790 237 802ZM307 751Q345 727 351 768L347 797 312 789Z" fill="#EFE9D1" stroke-width="10"/>
+    <path d="m265 786 44-5" stroke-width="10"/>
+    <path d="m265 858 39-11 19 27-24 24-39-12Z" fill="#A65581" stroke-width="10"/>
+    <ellipse cx="351" cy="912" rx="15" ry="19" fill="#EFE9D1" stroke-width="8"/>
+    <path d="m195 1068 222-3 23 40-269 9Z" fill="#82A65D" stroke-width="13"/>
+    <path d="m168 1111 274-5 22 39-319 9Z" fill="#283F2D" stroke-width="13"/>
+    <path d="M463 327Q469 277 509 279 548 281 550 326L549 369 462 370Z" fill="#DA8A2E" stroke-width="13"/>
+    <path d="m482 309 4 20m42-24-2 21m-36 18 28-2" fill="none" stroke-width="9"/>
+    <!-- Ground skirt and a few wood-grain marks, kept within the architecture. -->
+    <path d="m463 1068 433-6 13 53-445 15Z" fill="#283F2D" stroke-width="14"/>
+    <path d="m492 1089 64-3m43 1 96-1m46-3 93-1" fill="none" stroke="#82A65D" stroke-width="9"/>
+    <path d="m463 928 55-7m34 61 67 4m81-54 47 3m-68 81 73-4m-357-511 34-6m-14 57 31 2" fill="none" stroke-width="5"/>
+  </g>
+</svg>

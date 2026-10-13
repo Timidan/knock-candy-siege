@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+<title>Painted Mustache — Right Chog</title>
+<desc>Original Knock art. Independently drawn right placement, in 1000px portrait coordinates.</desc>
+<defs>
+ <filter id="paper" x="0" y="0" width="1000" height="1000" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="2" seed="9" result="wobble"/>
+  <feDisplacementMap in="SourceGraphic" in2="wobble" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/>
+  <feTurbulence type="fractalNoise" baseFrequency=".68" numOctaves="3" seed="17" stitchTiles="stitch" result="noise"/>
+  <feColorMatrix in="noise" type="matrix" values=".2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  0 0 0 0 1" result="gray"/>
+  <feComposite in="gray" in2="ink" operator="arithmetic" k1="0" k2=".44" k3="1" k4="-.22" result="grain"/>
+  <feComposite in="grain" in2="ink" operator="in"/>
+ </filter>
+</defs>
+<g filter="url(#paper)" stroke="#141414" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+<path fill="#141414" stroke-width="9" d="M520 594 C497 563 469 573 442 586 C419 597 400 591 398 576 C397 568 403 562 412 565 C407 548 384 554 383 572 C381 615 422 642 460 632 C487 627 505 617 519 618 C534 629 548 654 575 664 C615 679 654 664 659 630 C661 612 650 597 636 602 C647 608 645 621 637 625 C619 637 601 621 587 610 C564 590 544 578 520 594Z"/>
+<path d="M426 612 Q448 616 472 601 M574 635 Q591 650 612 648" stroke="#514A50" stroke-width="6" fill="none"/>
+<path d="M394 642 L403 646 M631 682 L638 680" stroke-width="8"/>
+</g>
+</svg>

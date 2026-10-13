@@ -1,0 +1,14 @@
+node_modules/
+dist/
+app/public/chogs/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+.env
+.cache/
+contracts/lib/
+
+app/.env.local
+.fork.log
+.fork.pid
+.env.relay

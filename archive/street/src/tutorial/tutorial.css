@@ -1,0 +1,117 @@
+.knock-tutorial {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  border: 0;
+  overflow: hidden;
+  background: radial-gradient(ellipse at top, #513363, #180e27);
+  color: #f4eedd;
+  font: 18px/1.25 var(--font-hand);
+}
+.knock-tutorial::backdrop { background: #180e27; }
+.knock-tutorial *, .knock-tutorial *::before, .knock-tutorial *::after { box-sizing: border-box; }
+.knock-tutorial .tutorial-sheet {
+  width: min(100%, 560px);
+  height: 100%;
+  max-height: 850px;
+  margin: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 18px;
+}
+.knock-tutorial .tutorial-sheet::before, .knock-tutorial .tutorial-sheet::after { display: none; }
+.knock-tutorial .tutorial-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 16px; flex: none; }
+.knock-tutorial .tutorial-sheet h2 { margin: 0; font-size: clamp(24px, 5vw, 32px); line-height: 1.12; flex: none; }
+.knock-tutorial .tutorial-content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; padding: 5px 5px 8px; }
+.knock-tutorial .tutorial-step { display: flex; flex-direction: column; gap: 10px; animation: tutorial-arrive 180ms ease-out; }
+.knock-tutorial p { margin: 0; line-height: 1.2; }
+.knock-tutorial img { display: block; max-width: 100%; }
+.knock-tutorial .sticker { min-height: 44px; min-width: 44px; padding: 7px 9px; font-size: 16px; line-height: 1.15; }
+.knock-tutorial .sticker[aria-pressed='true'] { --fill: #ffc93c; color: #141414; outline: 2px solid #ffc93c; outline-offset: 2px; }
+.knock-tutorial .sticker:focus-visible { outline: 3px dashed #f4eedd; outline-offset: 3px; }
+.knock-tutorial h2:focus { outline: none; }
+.knock-tutorial .tutorial-toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.knock-tutorial .tutorial-door-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.knock-tutorial .tutorial-door-options .sticker { font: 16px/1.1 var(--font-hand); padding: 5px 3px; }
+.knock-tutorial .tutorial-tricks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.knock-tutorial .tutorial-tricks .sticker { font: 16px/1 var(--font-hand); flex-direction: column; gap: 3px; padding: 5px 2px; }
+.knock-tutorial .tutorial-tricks img { width: 25px; height: 25px; }
+.knock-tutorial .tutorial-result { padding: 9px 11px; min-height: 62px; background: #241536; border: 2px dashed #b7a5ef; border-radius: 10px 5px 13px 7px; display: flex; flex-direction: column; justify-content: center; gap: 3px; font-size: 16px; line-height: 1.2; }
+.knock-tutorial .tutorial-result strong { color: #ffc93c; font-weight: 400; font-size: 18px; }
+.knock-tutorial .tutorial-portrait { display: block; position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 4px; background: #836ef9; }
+.knock-tutorial .tutorial-portrait > img { width: 100%; height: 100%; object-fit: cover; }
+.knock-tutorial .tutorial-portrait .tutorial-mark { position: absolute; inset: 0; animation: tutorial-arrive 180ms ease-out; }
+.knock-tutorial .tutorial-house { display: block; position: relative; width: 150px; max-width: 100%; aspect-ratio: 5 / 6; flex: none; }
+.knock-tutorial .tutorial-facade { position: absolute; inset: 0; width: 100%; height: 100%; }
+.knock-tutorial .tutorial-window { position: absolute; left: 47%; top: calc(440% / 12); width: 38%; }
+.knock-tutorial .tutorial-bowl { position: absolute; inset: 0; width: 100%; height: 100%; }
+.knock-tutorial .tutorial-trap { position: absolute; left: 4%; bottom: 1%; width: 30%; }
+.knock-tutorial .tutorial-street-demo { display: flex; align-items: center; justify-content: center; gap: 16px; background: url('/art/scenery/street.svg') center bottom / auto 80px repeat-x; }
+.knock-tutorial .tutorial-house-button { padding: 0; background: none; border: 0; box-shadow: none; overflow: visible; }
+.knock-tutorial .tutorial-door-button { flex-direction: column; gap: 0; }
+.knock-tutorial .tutorial-door-label { position: absolute; bottom: -2px; background: #ffc93c; padding: 3px 7px; border: 2px solid #141414; border-radius: 6px 3px 8px 4px; }
+.knock-tutorial .tutorial-house-button .tutorial-facade { width: 100%; height: 100%; }
+.knock-tutorial .tutorial-street-bag { display: flex; flex-direction: column; gap: 10px; font-size: 16px; }
+.knock-tutorial .tutorial-street-bag strong { font: 20px/1.2 var(--font-display); color: #ffc93c; }
+.knock-tutorial .tutorial-door-stage { position: relative; display: flex; align-items: end; justify-content: center; gap: 32px; height: 116px; }
+.knock-tutorial .tutorial-door-stage .tutorial-house { width: 95px; }
+.knock-tutorial .tutorial-visitor { width: 64px; text-align: center; font-size: 14px; }
+.knock-tutorial .tutorial-callout { position: absolute; right: 1px; top: 0; width: 104px; height: 56px; object-fit: contain; pointer-events: none; filter: drop-shadow(2px 3px 0 #141414); animation: tutorial-arrive 200ms ease-out; }
+.knock-tutorial .tutorial-raid-stage { height: 190px; }
+.knock-tutorial .tutorial-raid-stage .tutorial-house { width: 150px; }
+.knock-tutorial .tutorial-raid-stage .tutorial-visitor { width: 80px; }
+.knock-tutorial .tutorial-aim { width: 100%; height: 200px; border: 2px dashed #b7a5ef; border-radius: 15px 7px 10px 4px; background: #241536; }
+.knock-tutorial .tutorial-aim-readout { min-height: 22px; text-align: center; color: #ffc93c; font-size: 16px; }
+.knock-tutorial .tutorial-aim, .knock-tutorial .tutorial-throw { touch-action: none; user-select: none; -webkit-user-select: none; }
+.knock-tutorial .tutorial-aim { cursor: grab; }
+.knock-tutorial .tutorial-aim:active { cursor: grabbing; }
+.knock-tutorial .tutorial-plans { display: flex; flex-direction: column; gap: 10px; }
+.knock-tutorial .tutorial-plans .sticker { justify-content: start; text-align: left; }
+.knock-tutorial .tutorial-plans img { width: 42px; height: 42px; object-fit: contain; }
+.knock-tutorial .tutorial-plans strong { display: block; margin-top: 2px; font: 16px/1.1 var(--font-hand); }
+.knock-tutorial .tutorial-plan-result { min-height: 115px; text-align: center; animation: tutorial-fade 180ms ease-out; }
+.knock-tutorial .tutorial-stamps, .knock-tutorial .tutorial-crews { display: flex; justify-content: center; gap: 10px; }
+.knock-tutorial .tutorial-stamps img { width: 44px; height: 44px; }
+.knock-tutorial .tutorial-boss { width: 65px; height: 55px; object-fit: contain; margin: auto; }
+.knock-tutorial .tutorial-crews span { font-size: 14px; text-transform: capitalize; }
+.knock-tutorial .tutorial-crews img { width: 42px; height: 42px; margin: auto; }
+.knock-tutorial .tutorial-themes { font-size: 16px; }
+.knock-tutorial .tutorial-home-stage { position: relative; display: flex; justify-content: center; height: 180px; }
+.knock-tutorial .tutorial-cauldron { position: absolute; width: 80px; height: 80px; right: 15%; bottom: 0; animation: tutorial-arrive 180ms ease-out; }
+.knock-tutorial .tutorial-rewards .sticker { min-height: 66px; }
+.knock-tutorial .tutorial-rewards strong { display: block; margin-top: 5px; font-size: 22px; }
+.knock-tutorial .tutorial-receipt { align-items: center; text-align: center; }
+.knock-tutorial .tutorial-receipt img { width: 64px; height: 64px; }
+.knock-tutorial .tutorial-finish { display: grid; gap: 10px; margin-top: 2px; }
+.knock-tutorial .tutorial-nav { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 9px; padding-top: 9px; border-top: 2px dashed #b7a5ef; }
+.knock-tutorial .tutorial-pips { display: flex; gap: 1px; }
+.knock-tutorial .tutorial-pips span { opacity: .3; }
+.knock-tutorial .tutorial-pips img { width: 17px; height: 20px; object-fit: contain; }
+.knock-tutorial .tutorial-pips .tutorial-pip-done { opacity: 1; }
+.knock-tutorial .tutorial-nav-end { font-size: 16px; min-width: 62px; text-align: center; }
+@keyframes tutorial-arrive { from { opacity: 0; transform: translateY(5px) rotate(-1deg); } to { opacity: 1; transform: none; } }
+@keyframes tutorial-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (max-height: 680px) {
+  .knock-tutorial .tutorial-step { gap: 8px; }
+  .knock-tutorial .tutorial-step > p { font-size: 16px; }
+  .knock-tutorial .tutorial-door-stage:not(.tutorial-raid-stage) { height: 96px; }
+  .knock-tutorial .tutorial-door-stage:not(.tutorial-raid-stage) .tutorial-house { width: 78px; }
+  .knock-tutorial .tutorial-tricks .sticker { flex-direction: row; }
+  .knock-tutorial .tutorial-tricks img { width: 18px; height: 18px; }
+  .knock-tutorial .tutorial-aim { height: 180px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .knock-tutorial *, .knock-tutorial .sticker:hover:not(:disabled) { animation-name: tutorial-fade; animation-duration: 120ms; transition: none; }
+  .knock-tutorial .sticker, .knock-tutorial .sticker:hover:not(:disabled), .knock-tutorial .sticker:active:not(:disabled) { transform: none; }
+  .knock-tutorial .tutorial-aim-holding .tutorial-reticle { visibility: hidden; }
+  .knock-tutorial .sticker .splash { display: none; }
+}

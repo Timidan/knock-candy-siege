@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+<title>Ghost Sheet — Right Chog</title>
+<desc>Original Knock art. Independently drawn right placement, in 1000px portrait coordinates.</desc>
+<defs>
+ <filter id="paper" x="0" y="0" width="1000" height="1000" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="2" seed="9" result="wobble"/>
+  <feDisplacementMap in="SourceGraphic" in2="wobble" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/>
+  <feTurbulence type="fractalNoise" baseFrequency=".68" numOctaves="3" seed="17" stitchTiles="stitch" result="noise"/>
+  <feColorMatrix in="noise" type="matrix" values=".2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  0 0 0 0 1" result="gray"/>
+  <feComposite in="gray" in2="ink" operator="arithmetic" k1="0" k2=".44" k3="1" k4="-.22" result="grain"/>
+  <feComposite in="grain" in2="ink" operator="in"/>
+ </filter>
+</defs><defs><mask id="holes" maskUnits="userSpaceOnUse" x="0" y="0" width="1000" height="1000"><rect width="1000" height="1000" fill="white"/><g fill="black"><path d="M322 303 C345 254 416 249 470 278 C519 305 535 371 512 421 C495 463 437 481 386 464 C335 450 299 356 322 303Z"/>
+<path d="M723 445 C756 395 849 378 912 413 C983 452 1009 524 978 579 C948 635 845 659 777 620 C720 587 691 500 723 445Z"/></g></mask></defs>
+<g filter="url(#paper)" stroke="#141414" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"><g mask="url(#holes)">
+<path fill="#F4EEDD" d="M99 -40 C61 61 36 137 30 246 C18 384 41 503 5 636 L-40 1035 L1045 1040 L1046 -42Z"/>
+<path fill="#D9CDE9" stroke="none" d="M77 -20 C57 156 67 315 103 492 C122 587 98 742 163 935 L209 1008 L-10 1020 C-21 841 44 610 36 463 C23 277 23 100 77 -20Z M890 659 C976 651 1009 607 1033 568 L1032 1014 L870 1006 Q938 832 890 659Z"/>
+<path fill="#E8DCCB" stroke="none" d="M541 -30 L477 214 L587 99 L676 -30Z M557 852 L513 1004 L657 1005Z"/>
+<path d="M122 169 Q99 252 128 333 M164 676 Q125 809 205 977 M365 712 Q319 859 324 1021 M803 804 Q831 923 791 1020 M940 140 Q900 223 949 328" fill="none" stroke-width="13"/>
+<path d="M574 689 C598 669 621 683 625 716 C628 745 612 776 591 772 C568 767 556 716 574 689Z" fill="#200052" stroke-width="15"/>
+<path d="M263 528 Q303 508 327 535 Q337 557 317 566 Q283 575 263 552Z M883 706 Q916 686 945 710 Q958 731 933 742 Q901 748 883 726Z" fill="#E9A0B5" stroke="none"/>
+<path d="M443 839 L480 827 L503 911 L466 923Z" fill="#836EF9" stroke-width="8"/>
+<path d="M437 850 L456 845 M444 875 L464 870 M451 899 L470 894 M478 839 L495 835 M485 864 L504 860 M491 889 L510 885" stroke-width="5"/>
+</g><g fill="none" stroke-width="19"><path d="M322 303 C345 254 416 249 470 278 C519 305 535 371 512 421 C495 463 437 481 386 464 C335 450 299 356 322 303Z"/>
+<path d="M723 445 C756 395 849 378 912 413 C983 452 1009 524 978 579 C948 635 845 659 777 620 C720 587 691 500 723 445Z"/></g></g>
+</svg>

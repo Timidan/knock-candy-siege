@@ -1,0 +1,284 @@
+/* The 3D street fills the screen; the hand-drawn controls float on top of it. */
+.game { position: relative; height: 100svh; min-height: 0; padding: 0; display: block; overflow: hidden; background: #120a24; font-family: var(--font-hand); }
+.game-canvas { position: absolute; inset: 0; }
+.game > :not(.game-canvas) { z-index: 2; }
+
+.hud-top {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  display: grid;
+  gap: 0.55rem;
+  max-width: min(30rem, calc(100% - 32px));
+  pointer-events: none; /* only the controls themselves take clicks, so you can see the street behind */
+}
+.hud-top > * { pointer-events: auto; justify-self: start; }
+.hud-top .sandbox-banner { min-width: 0; min-height: 0; padding: .3rem .5rem; font-size: .8rem; }
+.hud-logo { width: 170px; height: auto; filter: drop-shadow(3px 4px 0 #141414); animation: sway 4s ease-in-out infinite; transform-origin: 50% 80%; }
+@keyframes sway { 50% { transform: rotate(-2deg) translateY(-2px); } }
+.hud-line { color: var(--paper); font-size: 1.05rem; text-shadow: 2px 2px 0 #141414; }
+.play-session { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; max-width: 100%; min-width: 0; text-shadow: none; }
+.play-session > .sticker { font-size: .8rem; padding: .4rem .5rem; }
+.play-session-chip { max-width: 100%; white-space: normal; text-align: left; line-height: 1.3; }
+.play-session-sheet { position: fixed; inset: 0; height: fit-content; width: min(440px, calc(100vw - 32px)); max-width: calc(100vw - 32px); max-height: calc(100svh - 32px); overflow-y: auto; overscroll-behavior: contain; margin: auto; }
+.play-session-sheet::backdrop { background: rgb(12 7 24 / .8); }
+.play-session-sheet p { color: var(--paper); }
+.play-session-sheet .play-session-note { font-size: .9rem; color: var(--lilac); margin: .7rem 0; }
+.play-session-sheet .row { gap: .6rem; margin-top: .7rem; }
+.play-session-sheet .sticker { white-space: normal; line-height: 1.2; min-height: 44px; max-width: 100%; font-size: .85rem; padding: .45rem; }
+.play-session-amounts .sticker { flex: 1; justify-content: center; }
+.play-session-amounts [aria-pressed="true"] { outline: 2px dashed var(--paper); outline-offset: 2px; }
+.knocks { display: inline-flex; gap: 2px; }
+.knocks img { width: 30px; height: 30px; filter: drop-shadow(1px 2px 0 #141414); transition: transform 0.2s; }
+.knocks img.used { filter: grayscale(1) opacity(0.35); transform: scale(0.85); }
+
+/* The door prompt: a signboard at the bottom centre. */
+.hud-door {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  translate: -50% 0;
+  width: max-content;
+  max-width: calc(100% - 32px);
+  animation: rise 0.25s ease-out;
+}
+.hud-door h2 { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.hud-door h2 img { width: 34px; height: 34px; }
+.revenge {
+  padding: 0.15rem 0.5rem;
+  border: 2px solid #141414;
+  border-radius: 999px;
+  background: #ff7a1a;
+  color: #141414;
+  font: 400 0.85rem/1.2 var(--font-display);
+  animation: throb 0.9s ease-in-out infinite;
+}
+@keyframes throb { 50% { transform: scale(1.08) rotate(-2deg); } }
+@keyframes rise { from { transform: translateY(14px); opacity: 0; } }
+
+/* Comic callout: SPLAT!, TREAT!… */
+.hud-callout { position: absolute; top: 26%; left: 50%; translate: -50% 0; width: min(420px, 80vw); pointer-events: none; animation: burst 1.4s ease-out forwards; }
+.hud-callout img { width: 100%; height: auto; filter: drop-shadow(4px 6px 0 #141414); }
+@keyframes burst {
+  0% { transform: scale(0.2) rotate(-14deg); opacity: 0; }
+  14% { transform: scale(1.12) rotate(4deg); opacity: 1; }
+  24% { transform: scale(1) rotate(-2deg); }
+  80% { opacity: 1; }
+  100% { transform: scale(1.05) rotate(0); opacity: 0; }
+}
+
+/* Your house, as a drawer from the right. */
+.hud-drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(34rem, 100%);
+  padding: 64px 16px 16px; /* clear of the view switch */
+  overflow-y: auto;
+  background: rgb(18 10 36 / 0.72);
+  backdrop-filter: blur(3px);
+  animation: slide 0.3s ease-out;
+}
+@keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+.sticker.drawer-close { position: absolute; top: 66px; right: 22px; z-index: 1; }
+.hud-drawer .board { padding-top: 2.6rem; }
+
+.hud-feed { position: absolute; right: 16px; top: 70px; width: min(22rem, 40vw); font-size: 1rem; }
+.hud-feed h3 { margin-top: 0; }
+.hud-feed p { margin: 0.2rem 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-logo, .revenge, .hud-callout, .hud-door, .hud-drawer, .aim-grade { animation: none; }
+}
+
+.game canvas { touch-action: none; }
+.game .hud-top .bubble { max-height: 100px; overflow: auto; margin: 0; font-size: .95rem; }
+.top-compact { order: -1; }
+.controls-toggle { display: none; }
+.style-streak { color: #ffc93c; text-shadow: 1px 2px #141414; }
+.aim-help { position: absolute; bottom: max(20px, env(safe-area-inset-bottom)); left: 50%; translate: -50% 0; width: max-content; max-width: calc(100% - 24px); display: flex; gap: 12px; align-items: center; }
+.aim-grade { position: absolute; top: 28%; right: 8%; font: clamp(1.5rem, 5vw, 3rem) var(--font-display); color: #ffc93c; text-shadow: 3px 3px #141414; pointer-events: none; }
+.game .earned { position: absolute; right: max(12px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); z-index: 8; }
+.hud-joystick { display: none; position: absolute; left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); touch-action: none; }
+/* CSS discs are the temporary joystick art if batch 4 hasn't arrived. */
+.sticker.joystick { width: 124px; height: 124px; border-radius: 49% 51% 47% 53%; background: url('/art/ui/joystick-base.svg') center / contain no-repeat, rgb(183 165 239 / .3); touch-action: none; transform: none; animation: none; }
+.joystick-knob { display: block; width: 54px; height: 54px; border: 3px solid var(--ink); border-radius: 47% 51% 49% 53%; background: url('/art/ui/joystick-knob.svg') center / contain no-repeat, var(--paper); pointer-events: none; }
+.gossip-toggle { display: none; }
+.render-stats { position: absolute; left: 12px; bottom: 4px; max-width: 90%; pointer-events: none; background: #141414; font: 11px monospace; color: #f4eedd; }
+.is-aiming .hud-top { pointer-events: none; opacity: .3; }
+.is-aiming .hud-top * { pointer-events: none; }
+@media (pointer: coarse) { .hud-joystick { display: block; } }
+@media (max-width: 720px) {
+  /* Reserve a control shelf so the door prompt cannot cover the player. */
+  .game-canvas { bottom: calc(200px + env(safe-area-inset-bottom)); }
+  .game .hud-top { top: calc(max(12px, env(safe-area-inset-top)) + 55px); max-width: calc(100% - 28px); gap: .4rem; }
+  .hud-logo { display: none; }
+  .controls-toggle { display: inline-flex; position: absolute; top: -55px; left: 0; font-size: .7rem; }
+  .player-controls { display: none; background: #241536; padding: .5rem; border-radius: 8px; }
+  .player-controls.open { display: flex; }
+  .top-compact { gap: .4rem; }
+  .hud-line { font-size: .85rem; gap: .5rem; }
+  .hud-line .sticker { font-size: .75rem; padding: .3rem .45rem; }
+  .knocks img { width: 22px; height: 22px; }
+  .next-night { display: none; }
+  .hud-door { left: auto; right: max(12px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); translate: none; width: calc(100% - 164px); max-height: 180px; overflow: auto; padding: .65rem .55rem; }
+  .hud-door h2 { font-size: .95rem; gap: .2rem; }
+  .hud-door h2 img { width: 22px; height: 22px; }
+  .hud-door .row { gap: .4rem; }
+  .hud-door .sticker { font-size: .65rem; padding: .3rem; gap: .2rem; flex: 1; }
+  .hud-door .sticker img { width: 24px; height: 24px; }
+  /* Three trick names don't fit beside the joystick; the icon and count stay, and aria-label keeps the name. */
+  .hud-door .trick-name { display: none; }
+  .hud-door .badge { padding: 2px; font-size: .65rem; }
+  .hud-door .house-badges { margin-bottom: .3rem; }
+  .hud-door .house-badges span { font-size: .65rem; }
+  .hud-door .house-badges img { width: 18px; height: 18px; }
+  .gossip-toggle { display: inline-flex; position: absolute; top: calc(max(12px, env(safe-area-inset-top)) + 55px); right: 12px; }
+  .top-compact { padding-right: 54px; flex-wrap: wrap; }
+  .candy-chip { font-size: .7rem; padding: .3rem; }
+  .candy-chip img { width: 24px; height: 24px; }
+  .hud-feed { display: none; }
+  .hud-feed.open { display: block; top: 180px; right: 12px; width: calc(100% - 24px); max-height: 160px; overflow: auto; }
+  .hud-drawer { top: auto; height: 78svh; width: 100%; padding: 55px max(12px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)); border-top: 3px solid var(--ink); border-radius: 20px 20px 0 0; background: #241536; z-index: 10 !important; }
+  .sticker.drawer-close { top: 6px; right: 16px; }
+  .hud-drawer .board { padding-top: 1rem; }
+  .aim-help { font-size: .9rem; }
+  .aim-grade { top: 35%; right: 8%; }
+  .render-stats { bottom: 145px; }
+}
+@media (max-height: 500px) and (pointer: coarse) {
+  .hud-top .hud-line, .hud-top .bubble { display: none; }
+  .game-canvas { bottom: 0; right: 252px; }
+  .hud-door { left: auto; right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); translate: none; width: 220px; max-height: calc(100svh - 24px); }
+}
+.hud-door .sticker { touch-action: none; }
+
+.town-map { width: min(1160px, calc(100vw - 24px)); max-width: calc(100vw - 24px); max-height: calc(100svh - 24px); padding: 0; margin: auto; overflow: auto; overscroll-behavior: contain; color: #241536; background: #f4eedd; border: 4px solid #141414; border-radius: 16px 9px 20px 12px; box-shadow: 6px 8px 0 #141414; font-family: var(--font-hand); }
+.town-map::backdrop { background: rgb(12 7 24 / .88); }
+.town-map-heading { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px; background: #f4eedd; border-bottom: 3px dashed #76657f; }
+.town-map-heading h2, .town-map-heading p { margin: 0; }
+.town-map-heading h2 { font: 1.8rem var(--font-display); }
+.town-map-heading .sticker { flex: none; }
+.town-map-paper { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; padding: 22px; align-items: center; background: repeating-linear-gradient(12deg, transparent 0 48px, #2415360c 49px 50px); }
+.town-square { grid-column: 3; grid-row: 2 / span 3; padding: 22px 4px; text-align: center; border: 3px dashed #76657f; border-radius: 48% 42% 45% 40%; background: #e6d9bd; }
+.town-square img { width: 60px; }
+.town-square h3 { font: 1.2rem var(--font-display); }
+.town-square p { line-height: 1.3; }
+.town-patch { min-width: 0; padding: 12px 8px; color: #160c25; background: var(--patch); border: 3px solid #241536; border-radius: 16px 25px 18px 28px; box-shadow: 3px 4px 0 #241536; transform: rotate(var(--tilt)); }
+.town-patch h3 { margin: 0 0 10px; text-align: center; font-size: 1.1rem; line-height: 1.15; overflow-wrap: anywhere; color: #fff; text-shadow: -1px -1px #241536, 1px 1px #241536, 1px -1px #241536, -1px 1px #241536; }
+.town-streets { display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; align-items: start; }
+.town-street { display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 100%; }
+.town-map .town-street-dot { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 0; width: 48px; height: 48px; padding: 2px; overflow: visible; border-radius: 48% 53% 44% 50%; font-size: 1rem; transform: none; }
+.town-street-dot small { font: .65rem var(--font-hand); }
+.town-map .town-current { outline: 3px dashed #241536; outline-offset: 3px; background: #ffc93c; }
+.town-here { position: absolute; right: -5px; top: -10px; font-size: 14px; }
+.town-map .town-marker { padding: 4px 6px; min-height: 44px; max-width: 105px; flex-direction: column; gap: 0; white-space: normal; font: .7rem/1.2 var(--font-display); text-align: center; }
+.town-marker small { font-family: var(--font-hand); }
+.town-map button:focus-visible { outline: 3px solid #241536; outline-offset: 4px; }
+@media (max-width: 900px) {
+  .town-map-paper { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 16px; }
+  .town-square { grid-column: 2; grid-row: 4 / span 2; }
+}
+@media (max-width: 540px) {
+  .town-map-heading { padding: 10px; gap: 8px; }
+  .town-map-heading h2 { font-size: 1.3rem; }
+  .town-map-heading p { font-size: .85rem; }
+  .town-map-heading .sticker { padding: 8px; font-size: .8rem; }
+  .town-map-paper { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 10px; padding: 14px 10px; }
+  .town-square { grid-column: 1 / -1; grid-row: 6; padding: 12px; }
+  .town-square img { width: 36px; }
+  .town-square h3, .town-square p { margin: 4px; }
+  .town-patch { padding: 10px 5px; }
+}
+/* Keep the captured trick button mounted throughout a touch drag. */
+.is-aiming .hud-door { opacity: 0; pointer-events: none; }
+.aim-grade { animation: grade-pop 1.4s ease-out both; }
+@keyframes grade-pop {
+  0% { opacity: 0; transform: scale(.65) rotate(-5deg); }
+  15% { opacity: 1; transform: scale(1.08) rotate(2deg); }
+  25%, 70% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+@keyframes grade-fade { 0%, 100% { opacity: 0; } 15%, 70% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) { .aim-grade { animation: grade-fade 1.4s linear both; } }
+
+.hud-tonight { position: absolute; top: 76px; right: 16px; width: min(660px, calc(100% - 32px)); max-height: calc(100svh - 270px); padding: .4rem; font-size: .95rem; display: flex; flex-direction: column; }
+.hud-tonight::before, .hud-tonight::after { display: none; }
+.tonight-row { display: flex; gap: .4rem; align-items: center; flex: none; }
+.hud-tonight .sticker { font-size: .8rem; padding: .3rem .5rem; }
+.hud-tonight .tonight-toggle { flex: 1; min-width: 0; display: flex; justify-content: space-between; gap: .5rem; white-space: nowrap; color: var(--paper); background: transparent; border-color: transparent; box-shadow: none; transform: none; font-family: var(--font-hand); letter-spacing: 0; }
+.hud-tonight .tonight-toggle:hover { animation: none; transform: none; background: rgb(255 255 255 / .08); }
+.hud-tonight .tonight-toggle:focus-visible { outline-offset: -3px; }
+.tonight-theme.blood-moon { filter: sepia(1) saturate(5) hue-rotate(310deg); }
+.tonight-boss { display: grid; gap: 4px; min-width: 52px; text-align: center; }
+.tonight-vitals { display: flex; align-items: center; gap: .3rem; }
+.tonight-hp { display: block; flex: 1; height: 10px; border: 2px solid var(--ink); border-radius: 3px 5px 2px 4px; background: #23112d; overflow: hidden; }
+.tonight-hp > span { display: block; height: 100%; background: #ff9b32; }
+.tonight-crew { display: flex; gap: 3px; align-items: center; text-transform: capitalize; }
+.hud-tonight .tonight-crew img { width: 22px; height: 22px; }
+.tonight-go, .tonight-claim { flex: none; }
+.tonight-go { white-space: nowrap; }
+.hud-tonight .tonight-claim { max-width: 62px; line-height: 1.15; }
+.tonight-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .4rem; }
+.tonight-heading { display: flex; justify-content: space-between; align-items: center; }
+.hud-tonight .tonight-heading h3 { margin: 0; }
+.night-banner { display: flex; gap: .6rem; align-items: center; }
+.night-banner > img { width: 48%; max-height: 66px; object-fit: contain; }
+.night-banner p { font-size: .85rem; }
+.boss-heading { display: flex; align-items: center; justify-content: space-between; gap: .4rem; margin-top: .4rem; }
+.boss-heading strong { font-size: .95rem; }
+.boss-health { position: relative; width: 100%; aspect-ratio: 800 / 120; }
+.boss-health > img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hp-track { position: absolute; left: 10.25%; top: 36.67%; width: 79%; height: 25.83%; background: #23112d; }
+.hp-track > span { display: block; height: 100%; background: #ff9b32; }
+.hud-tonight .hp-label { margin: -.25rem 0 .3rem; text-align: center; }
+.route-stops, .crew-scores { padding: 0; margin: .3rem 0; list-style: none; }
+.route-stops li, .crew-scores li { display: flex; gap: .5rem; align-items: center; padding: .25rem; }
+.route-stops img, .crew-scores img { width: 36px; height: 36px; object-fit: contain; }
+.route-stops span, .crew-scores span { flex: 1; }
+.crew-scores span, .crew-options .sticker { text-transform: capitalize; }
+.crew-scores .my-crew { background: #ffc93c; color: #141414; }
+.crew-scores small { font-size: .75rem; }
+.crew-picker { max-width: min(440px, calc(100vw - 24px)); max-height: calc(100svh - 32px); overflow: auto; }
+.crew-picker::backdrop { background: rgb(12 7 24 / .8); }
+.crew-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: .7rem; margin: 1rem 0; }
+.crew-options .sticker { flex-direction: column; min-width: 0; }
+.crew-options small { font-family: var(--font-hand); text-transform: none; }
+.crew-options .sticker img { width: 60px; height: 60px; }
+.hud-feed { top: auto; bottom: 18px; max-height: 180px; overflow: auto; }
+.hud-door { width: min(540px, calc(100% - 32px)); max-height: 42svh; overflow: auto; }
+.hud-door p { font-size: .95rem; }
+.hud-callout p { text-align: center; font: 1.8rem var(--font-display); color: #ffc93c; text-shadow: 3px 3px #141414; }
+.is-aiming .hud-tonight { visibility: hidden; }
+.game-lite .hud-tonight { background-image: none; }
+
+@media (max-width: 1200px) {
+  .hud-tonight { top: auto; bottom: 220px; max-height: 42svh; }
+}
+@media (max-width: 1000px) {
+  .hud-feed { display: none; }
+}
+@media (max-width: 720px) {
+  .hud-tonight { right: 12px; bottom: calc(210px + env(safe-area-inset-bottom)); width: min(440px, calc(100% - 24px)); max-height: min(42svh, calc(100svh - 290px - env(safe-area-inset-bottom) - env(safe-area-inset-top))); font-size: .85rem; }
+  .tonight-row { flex-wrap: wrap; gap: .4rem; }
+  .hud-tonight .tonight-toggle { flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-start; gap: .5rem; padding: .2rem; }
+  .hud-tonight .tonight-theme { width: 24px; height: 28px; }
+  .tonight-boss { min-width: 44px; }
+  .hud-tonight .tonight-go { min-width: 36px; padding: .2rem; }
+  .hud-tonight .tonight-claim { min-width: 48px; max-width: 52px; padding: .2rem; font-size: .65rem; }
+  .night-banner > img { max-height: 40px; }
+  .night-banner p { font-size: .75rem; }
+  .hud-tonight .boss-heading strong { font-size: .8rem; }
+  .hud-tonight .boss-health { max-width: 220px; margin: auto; }
+  .hud-door { width: calc(100% - 164px); max-height: 180px; }
+  .hud-door p { font-size: .8rem; }
+  .hud-feed.open { bottom: auto; z-index: 5; }
+}
+@media (max-height: 500px) and (pointer: coarse) {
+  .hud-tonight { top: auto; left: 12px; right: 252px; bottom: calc(152px + env(safe-area-inset-bottom)); width: auto; max-height: calc(100svh - 176px - env(safe-area-inset-bottom) - env(safe-area-inset-top)); }
+  .tonight-row { flex-wrap: wrap; }
+  .hud-tonight .tonight-toggle { flex-basis: 100%; flex-wrap: wrap; justify-content: flex-start; }
+  .hud-door { width: 220px; max-height: calc(100svh - 24px); }
+}

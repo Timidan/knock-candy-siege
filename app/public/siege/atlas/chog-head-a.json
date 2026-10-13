@@ -1,0 +1,1964 @@
+{
+  "frames": {
+    "head/russian-hat/front": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 198,
+        "h": 175
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 18,
+        "w": 198,
+        "h": 175
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/mcga/front": {
+      "frame": {
+        "x": 204,
+        "y": 2,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/chog-cap/front": {
+      "frame": {
+        "x": 418,
+        "y": 2,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/mega-chog/front": {
+      "frame": {
+        "x": 632,
+        "y": 2,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/retard-cap/front": {
+      "frame": {
+        "x": 2,
+        "y": 181,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/wagmi-cap/front": {
+      "frame": {
+        "x": 216,
+        "y": 181,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/buttcoin-cap/front": {
+      "frame": {
+        "x": 430,
+        "y": 181,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/10k-tps-cap/front": {
+      "frame": {
+        "x": 644,
+        "y": 181,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/jeet-cap/front": {
+      "frame": {
+        "x": 2,
+        "y": 306,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/btc-cap/front": {
+      "frame": {
+        "x": 216,
+        "y": 306,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/mcga-cap/front": {
+      "frame": {
+        "x": 430,
+        "y": 306,
+        "w": 210,
+        "h": 121
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 25,
+        "w": 210,
+        "h": 121
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/btc-beanie/front": {
+      "frame": {
+        "x": 644,
+        "y": 306,
+        "w": 190,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 33,
+        "y": 16,
+        "w": 190,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/wizard-beanie/front": {
+      "frame": {
+        "x": 2,
+        "y": 431,
+        "w": 190,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 33,
+        "y": 16,
+        "w": 190,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/choggie-beanie/front": {
+      "frame": {
+        "x": 196,
+        "y": 431,
+        "w": 190,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 33,
+        "y": 16,
+        "w": 190,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/rh-beanie/front": {
+      "frame": {
+        "x": 390,
+        "y": 431,
+        "w": 190,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 33,
+        "y": 16,
+        "w": 190,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/mon-beanie/front": {
+      "frame": {
+        "x": 584,
+        "y": 431,
+        "w": 190,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 33,
+        "y": 16,
+        "w": 190,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/8-ball-beanie/front": {
+      "frame": {
+        "x": 778,
+        "y": 431,
+        "w": 190,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 33,
+        "y": 16,
+        "w": 190,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/mafia-hat/front": {
+      "frame": {
+        "x": 2,
+        "y": 554,
+        "w": 214,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 21,
+        "y": 27,
+        "w": 214,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/tism-cap/front": {
+      "frame": {
+        "x": 220,
+        "y": 554,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/horny-cap/front": {
+      "frame": {
+        "x": 419,
+        "y": 554,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/mon-cap/front": {
+      "frame": {
+        "x": 618,
+        "y": 554,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/dollar-cap/front": {
+      "frame": {
+        "x": 817,
+        "y": 554,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/boob-cap/front": {
+      "frame": {
+        "x": 2,
+        "y": 677,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/mmga-cap/front": {
+      "frame": {
+        "x": 201,
+        "y": 677,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/peace-hat/front": {
+      "frame": {
+        "x": 400,
+        "y": 677,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/choggie-cap/front": {
+      "frame": {
+        "x": 599,
+        "y": 677,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/eth-cap/front": {
+      "frame": {
+        "x": 798,
+        "y": 677,
+        "w": 195,
+        "h": 109
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 35,
+        "w": 195,
+        "h": 109
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/plumber/front": {
+      "frame": {
+        "x": 2,
+        "y": 790,
+        "w": 68,
+        "h": 105
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 94,
+        "y": 2,
+        "w": 68,
+        "h": 105
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/red-peace-cap/front": {
+      "frame": {
+        "x": 74,
+        "y": 790,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/thunder-cap/front": {
+      "frame": {
+        "x": 284,
+        "y": 790,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/star-cap/front": {
+      "frame": {
+        "x": 494,
+        "y": 790,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/cloud-cap/front": {
+      "frame": {
+        "x": 704,
+        "y": 790,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/balls-cap/front": {
+      "frame": {
+        "x": 2,
+        "y": 899,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/peace-cap/front": {
+      "frame": {
+        "x": 212,
+        "y": 899,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/orange-bucket-cap/front": {
+      "frame": {
+        "x": 422,
+        "y": 899,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/blue-bucket-cap/front": {
+      "frame": {
+        "x": 632,
+        "y": 899,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/gray-bucket-cap/front": {
+      "frame": {
+        "x": 2,
+        "y": 1007,
+        "w": 206,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 25,
+        "y": 37,
+        "w": 206,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/8-ball-beanie/decal": {
+      "frame": {
+        "x": 212,
+        "y": 1007,
+        "w": 50,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 105,
+        "y": 40,
+        "w": 50,
+        "h": 56
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 68.0
+        },
+        "size": {
+          "w": 50,
+          "h": 56
+        }
+      }
+    },
+    "head/eth-cap/decal": {
+      "frame": {
+        "x": 266,
+        "y": 1007,
+        "w": 28,
+        "h": 45
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 116,
+        "y": 57,
+        "w": 28,
+        "h": 45
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 79.5
+        },
+        "size": {
+          "w": 28,
+          "h": 45
+        }
+      }
+    },
+    "head/10k-tps-cap/decal": {
+      "frame": {
+        "x": 298,
+        "y": 1007,
+        "w": 55,
+        "h": 42
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 103,
+        "y": 52,
+        "w": 55,
+        "h": 42
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.5,
+          "y": 73.0
+        },
+        "size": {
+          "w": 55,
+          "h": 42
+        }
+      }
+    },
+    "head/thunder-cap/decal": {
+      "frame": {
+        "x": 357,
+        "y": 1007,
+        "w": 29,
+        "h": 40
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 116,
+        "y": 57,
+        "w": 29,
+        "h": 40
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.5,
+          "y": 77.0
+        },
+        "size": {
+          "w": 29,
+          "h": 40
+        }
+      }
+    },
+    "head/horny-cap/decal": {
+      "frame": {
+        "x": 390,
+        "y": 1007,
+        "w": 29,
+        "h": 40
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 116,
+        "y": 59,
+        "w": 29,
+        "h": 40
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.5,
+          "y": 79.0
+        },
+        "size": {
+          "w": 29,
+          "h": 40
+        }
+      }
+    },
+    "head/buttcoin-cap/decal": {
+      "frame": {
+        "x": 423,
+        "y": 1007,
+        "w": 29,
+        "h": 40
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 116,
+        "y": 59,
+        "w": 29,
+        "h": 40
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.5,
+          "y": 79.0
+        },
+        "size": {
+          "w": 29,
+          "h": 40
+        }
+      }
+    },
+    "head/btc-cap/decal": {
+      "frame": {
+        "x": 456,
+        "y": 1007,
+        "w": 20,
+        "h": 40
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 121,
+        "y": 58,
+        "w": 20,
+        "h": 40
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 131.0,
+          "y": 78.0
+        },
+        "size": {
+          "w": 20,
+          "h": 40
+        }
+      }
+    },
+    "head/red-peace-cap/decal": {
+      "frame": {
+        "x": 480,
+        "y": 1007,
+        "w": 38,
+        "h": 38
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 111,
+        "y": 58,
+        "w": 38,
+        "h": 38
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 77.0
+        },
+        "size": {
+          "w": 38,
+          "h": 38
+        }
+      }
+    },
+    "head/peace-cap/decal": {
+      "frame": {
+        "x": 522,
+        "y": 1007,
+        "w": 38,
+        "h": 38
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 111,
+        "y": 58,
+        "w": 38,
+        "h": 38
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 77.0
+        },
+        "size": {
+          "w": 38,
+          "h": 38
+        }
+      }
+    },
+    "head/peace-hat/decal": {
+      "frame": {
+        "x": 564,
+        "y": 1007,
+        "w": 38,
+        "h": 38
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 111,
+        "y": 60,
+        "w": 38,
+        "h": 38
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 79.0
+        },
+        "size": {
+          "w": 38,
+          "h": 38
+        }
+      }
+    },
+    "head/star-cap/decal": {
+      "frame": {
+        "x": 606,
+        "y": 1007,
+        "w": 37,
+        "h": 35
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 111,
+        "y": 59,
+        "w": 37,
+        "h": 35
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 76.5
+        },
+        "size": {
+          "w": 37,
+          "h": 35
+        }
+      }
+    },
+    "head/tism-cap/decal": {
+      "frame": {
+        "x": 647,
+        "y": 1007,
+        "w": 37,
+        "h": 35
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 111,
+        "y": 61,
+        "w": 37,
+        "h": 35
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 78.5
+        },
+        "size": {
+          "w": 37,
+          "h": 35
+        }
+      }
+    },
+    "head/mega-chog/decal": {
+      "frame": {
+        "x": 688,
+        "y": 1007,
+        "w": 60,
+        "h": 35
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 100,
+        "y": 57,
+        "w": 60,
+        "h": 35
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 74.5
+        },
+        "size": {
+          "w": 60,
+          "h": 35
+        }
+      }
+    },
+    "head/retard-cap/decal": {
+      "frame": {
+        "x": 752,
+        "y": 1007,
+        "w": 37,
+        "h": 35
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 111,
+        "y": 61,
+        "w": 37,
+        "h": 35
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 78.5
+        },
+        "size": {
+          "w": 37,
+          "h": 35
+        }
+      }
+    },
+    "head/dollar-cap/decal": {
+      "frame": {
+        "x": 793,
+        "y": 1007,
+        "w": 97,
+        "h": 34
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 81,
+        "y": 60,
+        "w": 97,
+        "h": 34
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 77.0
+        },
+        "size": {
+          "w": 97,
+          "h": 34
+        }
+      }
+    },
+    "head/btc-beanie/decal": {
+      "frame": {
+        "x": 894,
+        "y": 1007,
+        "w": 33,
+        "h": 33
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 114,
+        "y": 96,
+        "w": 33,
+        "h": 33
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.5,
+          "y": 112.5
+        },
+        "size": {
+          "w": 33,
+          "h": 33
+        }
+      }
+    },
+    "head/balls-cap/decal": {
+      "frame": {
+        "x": 931,
+        "y": 1007,
+        "w": 36,
+        "h": 32
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 112,
+        "y": 59,
+        "w": 36,
+        "h": 32
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 75.0
+        },
+        "size": {
+          "w": 36,
+          "h": 32
+        }
+      }
+    },
+    "head/mon-cap/decal": {
+      "frame": {
+        "x": 971,
+        "y": 1007,
+        "w": 32,
+        "h": 32
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 114,
+        "y": 63,
+        "w": 32,
+        "h": 32
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 79.0
+        },
+        "size": {
+          "w": 32,
+          "h": 32
+        }
+      }
+    },
+    "head/boob-cap/decal": {
+      "frame": {
+        "x": 2,
+        "y": 1115,
+        "w": 36,
+        "h": 32
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 112,
+        "y": 61,
+        "w": 36,
+        "h": 32
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 77.0
+        },
+        "size": {
+          "w": 36,
+          "h": 32
+        }
+      }
+    },
+    "head/cloud-cap/decal": {
+      "frame": {
+        "x": 42,
+        "y": 1115,
+        "w": 61,
+        "h": 31
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 101,
+        "y": 59,
+        "w": 61,
+        "h": 31
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 131.5,
+          "y": 74.5
+        },
+        "size": {
+          "w": 61,
+          "h": 31
+        }
+      }
+    },
+    "head/choggie-beanie/decal": {
+      "frame": {
+        "x": 107,
+        "y": 1115,
+        "w": 32,
+        "h": 30
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 114,
+        "y": 94,
+        "w": 32,
+        "h": 30
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 109.0
+        },
+        "size": {
+          "w": 32,
+          "h": 30
+        }
+      }
+    },
+    "head/mcga/decal": {
+      "frame": {
+        "x": 143,
+        "y": 1115,
+        "w": 83,
+        "h": 28
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 88,
+        "y": 63,
+        "w": 83,
+        "h": 28
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 77.0
+        },
+        "size": {
+          "w": 83,
+          "h": 28
+        }
+      }
+    },
+    "head/chog-cap/decal": {
+      "frame": {
+        "x": 230,
+        "y": 1115,
+        "w": 83,
+        "h": 28
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 88,
+        "y": 63,
+        "w": 83,
+        "h": 28
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 77.0
+        },
+        "size": {
+          "w": 83,
+          "h": 28
+        }
+      }
+    },
+    "head/orange-bucket-cap/decal": {
+      "frame": {
+        "x": 317,
+        "y": 1115,
+        "w": 34,
+        "h": 25
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 113,
+        "y": 62,
+        "w": 34,
+        "h": 25
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 74.5
+        },
+        "size": {
+          "w": 34,
+          "h": 25
+        }
+      }
+    },
+    "head/blue-bucket-cap/decal": {
+      "frame": {
+        "x": 355,
+        "y": 1115,
+        "w": 34,
+        "h": 25
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 113,
+        "y": 62,
+        "w": 34,
+        "h": 25
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 74.5
+        },
+        "size": {
+          "w": 34,
+          "h": 25
+        }
+      }
+    },
+    "head/gray-bucket-cap/decal": {
+      "frame": {
+        "x": 393,
+        "y": 1115,
+        "w": 34,
+        "h": 25
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 113,
+        "y": 62,
+        "w": 34,
+        "h": 25
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 130.0,
+          "y": 74.5
+        },
+        "size": {
+          "w": 34,
+          "h": 25
+        }
+      }
+    },
+    "head/jeet-cap/decal": {
+      "frame": {
+        "x": 431,
+        "y": 1115,
+        "w": 62,
+        "h": 25
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 98,
+        "y": 68,
+        "w": 62,
+        "h": 25
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.0,
+          "y": 80.5
+        },
+        "size": {
+          "w": 62,
+          "h": 25
+        }
+      }
+    },
+    "head/rh-beanie/decal": {
+      "frame": {
+        "x": 497,
+        "y": 1115,
+        "w": 43,
+        "h": 22
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 108,
+        "y": 65,
+        "w": 43,
+        "h": 22
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 76.0
+        },
+        "size": {
+          "w": 43,
+          "h": 22
+        }
+      }
+    },
+    "head/mcga-cap/decal": {
+      "frame": {
+        "x": 544,
+        "y": 1115,
+        "w": 74,
+        "h": 18
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 94,
+        "y": 69,
+        "w": 74,
+        "h": 18
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 131.0,
+          "y": 78.0
+        },
+        "size": {
+          "w": 74,
+          "h": 18
+        }
+      }
+    },
+    "head/wagmi-cap/decal": {
+      "frame": {
+        "x": 622,
+        "y": 1115,
+        "w": 81,
+        "h": 17
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 89,
+        "y": 70,
+        "w": 81,
+        "h": 17
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 78.5
+        },
+        "size": {
+          "w": 81,
+          "h": 17
+        }
+      }
+    },
+    "head/mmga-cap/decal": {
+      "frame": {
+        "x": 707,
+        "y": 1115,
+        "w": 72,
+        "h": 17
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 95,
+        "y": 69,
+        "w": 72,
+        "h": 17
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 131.0,
+          "y": 77.5
+        },
+        "size": {
+          "w": 72,
+          "h": 17
+        }
+      }
+    },
+    "head/choggie-cap/decal": {
+      "frame": {
+        "x": 783,
+        "y": 1115,
+        "w": 65,
+        "h": 17
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 97,
+        "y": 70,
+        "w": 65,
+        "h": 17
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 129.5,
+          "y": 78.5
+        },
+        "size": {
+          "w": 65,
+          "h": 17
+        }
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege Chog drawing masters",
+    "version": "1",
+    "image": "chog-head-a.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1024,
+      "h": 2048
+    },
+    "scale": "1",
+    "padding": 2,
+    "values": [
+      "MCGA",
+      "Chog Cap",
+      "Red Peace Cap",
+      "Thunder Cap",
+      "Star Cap",
+      "TISM Cap",
+      "Horny Cap",
+      "Mon Cap",
+      "Cloud Cap",
+      "Balls Cap",
+      "MEGA Chog",
+      "Dollar Cap",
+      "BTC Beanie",
+      "Boob Cap",
+      "Orange Bucket Cap",
+      "Blue Bucket Cap",
+      "RETARD Cap",
+      "Wizard Beanie",
+      "WAGMI Cap",
+      "MMGA Cap",
+      "Gray Bucket Cap",
+      "BOOB Cap",
+      "Buttcoin Cap",
+      "Choggie Beanie",
+      "10k TPS Cap",
+      "Peace hat",
+      "JEET Cap",
+      "BTC Cap",
+      "Choggie Cap",
+      "RH Beanie",
+      "Mon Beanie",
+      "Peace Cap",
+      "ETH Cap",
+      "MCGA Cap",
+      "8 Ball Beanie",
+      "Jeet Cap",
+      "Russian Hat",
+      "Mafia Hat",
+      "Plumber"
+    ],
+    "references": {
+      "MCGA": [
+        1,
+        11,
+        1596
+      ],
+      "Chog Cap": [
+        2,
+        273,
+        1832
+      ],
+      "Red Peace Cap": [
+        3,
+        17,
+        49
+      ],
+      "Thunder Cap": [
+        4,
+        14,
+        29
+      ],
+      "Star Cap": [
+        5,
+        38,
+        64
+      ],
+      "TISM Cap": [
+        6,
+        23,
+        24
+      ],
+      "Horny Cap": [
+        9,
+        54,
+        160
+      ],
+      "Mon Cap": [
+        10,
+        32,
+        33
+      ],
+      "Cloud Cap": [
+        12,
+        136,
+        166
+      ],
+      "Balls Cap": [
+        13,
+        16,
+        25
+      ],
+      "MEGA Chog": [
+        15,
+        31,
+        365
+      ],
+      "Dollar Cap": [
+        20,
+        120,
+        167
+      ],
+      "BTC Beanie": [
+        26,
+        84,
+        112
+      ],
+      "Boob Cap": [
+        35,
+        59,
+        82
+      ],
+      "Orange Bucket Cap": [
+        36,
+        65,
+        146
+      ],
+      "Blue Bucket Cap": [
+        40,
+        71,
+        158
+      ],
+      "RETARD Cap": [
+        44,
+        253,
+        74
+      ],
+      "Wizard Beanie": [
+        45,
+        256,
+        630
+      ],
+      "WAGMI Cap": [
+        46,
+        67,
+        88
+      ],
+      "MMGA Cap": [
+        47,
+        139,
+        223
+      ],
+      "Gray Bucket Cap": [
+        50,
+        107,
+        172
+      ],
+      "BOOB Cap": [
+        61,
+        1354,
+        1587
+      ],
+      "Buttcoin Cap": [
+        63,
+        91,
+        281
+      ],
+      "Choggie Beanie": [
+        76,
+        244,
+        408
+      ],
+      "10k TPS Cap": [
+        77,
+        198,
+        79
+      ],
+      "Peace hat": [
+        85,
+        114,
+        117
+      ],
+      "JEET Cap": [
+        94,
+        174,
+        152
+      ],
+      "BTC Cap": [
+        118,
+        135,
+        991
+      ],
+      "Choggie Cap": [
+        122,
+        208,
+        221
+      ],
+      "RH Beanie": [
+        127,
+        210,
+        141
+      ],
+      "Mon Beanie": [
+        165,
+        325,
+        1797
+      ],
+      "Peace Cap": [
+        181
+      ],
+      "ETH Cap": [
+        428,
+        1821
+      ],
+      "MCGA Cap": [
+        432,
+        593,
+        439
+      ],
+      "8 Ball Beanie": [
+        896
+      ],
+      "Jeet Cap": [
+        1729
+      ],
+      "Russian Hat": [
+        52,
+        55,
+        57
+      ],
+      "Mafia Hat": [
+        1819
+      ],
+      "Plumber": [
+        19,
+        51,
+        492
+      ]
+    },
+    "referenceLimits": {
+      "Chog Cap": "Purple MAKE CHOG GREAT AGAIN on #2/#273; #1832 has white CHOG artwork under the same trait.",
+      "Mon Cap": "Purple crown on #10/#33; #32 has a white crown under the same trait.",
+      "Russian Hat": "Brown/tan ushanka on #52/#55; #57 has a purple shell under the same trait.",
+      "Peace Cap": "Only one matching NFT exists; preview repeats #181 in opposite facings.",
+      "8 Ball Beanie": "Only one matching NFT exists; preview repeats #896 in opposite facings.",
+      "Mafia Hat": "Only one matching NFT exists; preview repeats #1819 in opposite facings.",
+      "Jeet Cap": "Only one case-variant NFT exists; shared jeet-cap art also checked on JEET Cap."
+    },
+    "neutralEmblems": [
+      "TISM Cap",
+      "Horny Cap",
+      "Balls Cap",
+      "Boob Cap",
+      "BOOB Cap",
+      "RETARD Cap",
+      "Buttcoin Cap"
+    ],
+    "spikes": "Full crowns and beanies cover top spikes; perched caps/buckets retain side tufts; Plumber retains crown spikes."
+  }
+}

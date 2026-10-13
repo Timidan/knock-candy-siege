@@ -1,0 +1,303 @@
+{
+  "frames": {
+    "light/0": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 176,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 176,
+        "h": 320
+      },
+      "sourceSize": {
+        "w": 176,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "light/1": {
+      "frame": {
+        "x": 182,
+        "y": 2,
+        "w": 176,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 176,
+        "h": 320
+      },
+      "sourceSize": {
+        "w": 176,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "light/2": {
+      "frame": {
+        "x": 362,
+        "y": 2,
+        "w": 176,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 176,
+        "h": 320
+      },
+      "sourceSize": {
+        "w": 176,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "light/3": {
+      "frame": {
+        "x": 2,
+        "y": 326,
+        "w": 176,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 176,
+        "h": 320
+      },
+      "sourceSize": {
+        "w": 176,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "light/4": {
+      "frame": {
+        "x": 182,
+        "y": 326,
+        "w": 176,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 176,
+        "h": 320
+      },
+      "sourceSize": {
+        "w": 176,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "light/5": {
+      "frame": {
+        "x": 362,
+        "y": 326,
+        "w": 176,
+        "h": 320
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 176,
+        "h": 320
+      },
+      "sourceSize": {
+        "w": 176,
+        "h": 320
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "ring/0": {
+      "frame": {
+        "x": 2,
+        "y": 650,
+        "w": 256,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "ring/1": {
+      "frame": {
+        "x": 262,
+        "y": 650,
+        "w": 256,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "ring/2": {
+      "frame": {
+        "x": 2,
+        "y": 766,
+        "w": 256,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "ring/3": {
+      "frame": {
+        "x": 262,
+        "y": 766,
+        "w": 256,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "ring/4": {
+      "frame": {
+        "x": 2,
+        "y": 882,
+        "w": 256,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "ring/5": {
+      "frame": {
+        "x": 262,
+        "y": 882,
+        "w": 256,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 256,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege batch 2B",
+    "version": "2.0",
+    "image": "ult-purify.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 540,
+      "h": 996
+    },
+    "scale": "1"
+  }
+}

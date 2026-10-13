@@ -1,0 +1,351 @@
+{
+  "frames": {
+    "meteor/0": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 192,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "meteor/1": {
+      "frame": {
+        "x": 198,
+        "y": 2,
+        "w": 192,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "meteor/2": {
+      "frame": {
+        "x": 394,
+        "y": 2,
+        "w": 192,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "meteor/3": {
+      "frame": {
+        "x": 590,
+        "y": 2,
+        "w": 192,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 192,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 192,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "impact/0": {
+      "frame": {
+        "x": 2,
+        "y": 230,
+        "w": 288,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 176
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 176
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "impact/1": {
+      "frame": {
+        "x": 294,
+        "y": 230,
+        "w": 288,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 176
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 176
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "impact/2": {
+      "frame": {
+        "x": 586,
+        "y": 230,
+        "w": 288,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 176
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 176
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "impact/3": {
+      "frame": {
+        "x": 2,
+        "y": 410,
+        "w": 288,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 176
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 176
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "impact/4": {
+      "frame": {
+        "x": 294,
+        "y": 410,
+        "w": 288,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 176
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 176
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "impact/5": {
+      "frame": {
+        "x": 586,
+        "y": 410,
+        "w": 288,
+        "h": 176
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 176
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 176
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "fire/0": {
+      "frame": {
+        "x": 2,
+        "y": 590,
+        "w": 208,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 208,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 208,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "fire/1": {
+      "frame": {
+        "x": 214,
+        "y": 590,
+        "w": 208,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 208,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 208,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "fire/2": {
+      "frame": {
+        "x": 426,
+        "y": 590,
+        "w": 208,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 208,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 208,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "fire/3": {
+      "frame": {
+        "x": 638,
+        "y": 590,
+        "w": 208,
+        "h": 112
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 208,
+        "h": 112
+      },
+      "sourceSize": {
+        "w": 208,
+        "h": 112
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege batch 2B",
+    "version": "2.0",
+    "image": "ult-meteor.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 876,
+      "h": 704
+    },
+    "scale": "1"
+  }
+}

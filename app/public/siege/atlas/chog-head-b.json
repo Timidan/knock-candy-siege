@@ -1,0 +1,941 @@
+{
+  "frames": {
+    "head/rainbow-wig/front": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 246,
+        "h": 218
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 5,
+        "y": 19,
+        "w": 246,
+        "h": 218
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "meta": {
+        "hidesSpikes": true
+      }
+    },
+    "head/bob-hair/front": {
+      "frame": {
+        "x": 252,
+        "y": 2,
+        "w": 244,
+        "h": 209
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 6,
+        "y": 27,
+        "w": 244,
+        "h": 209
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "meta": {
+        "hidesSpikes": true
+      }
+    },
+    "head/spartan-helmet/front": {
+      "frame": {
+        "x": 500,
+        "y": 2,
+        "w": 186,
+        "h": 164
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 35,
+        "y": 56,
+        "w": 186,
+        "h": 164
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/poison-shroom/front": {
+      "frame": {
+        "x": 690,
+        "y": 2,
+        "w": 234,
+        "h": 143
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 53,
+        "w": 234,
+        "h": 143
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/robber/front": {
+      "frame": {
+        "x": 2,
+        "y": 224,
+        "w": 168,
+        "h": 142
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 44,
+        "y": 98,
+        "w": 168,
+        "h": 142
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/wizard-hat/front": {
+      "frame": {
+        "x": 174,
+        "y": 224,
+        "w": 198,
+        "h": 139
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 5,
+        "w": 198,
+        "h": 139
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/blue-laser/front": {
+      "frame": {
+        "x": 376,
+        "y": 224,
+        "w": 136,
+        "h": 123
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 113,
+        "y": 21,
+        "w": 136,
+        "h": 123
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/void-horn/front": {
+      "frame": {
+        "x": 516,
+        "y": 224,
+        "w": 244,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 6,
+        "y": 59,
+        "w": 244,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/demon-horn/front": {
+      "frame": {
+        "x": 764,
+        "y": 224,
+        "w": 244,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 6,
+        "y": 59,
+        "w": 244,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/devil-horn/front": {
+      "frame": {
+        "x": 2,
+        "y": 370,
+        "w": 244,
+        "h": 119
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 6,
+        "y": 59,
+        "w": 244,
+        "h": 119
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/crown/front": {
+      "frame": {
+        "x": 250,
+        "y": 370,
+        "w": 184,
+        "h": 113
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 36,
+        "y": 27,
+        "w": 184,
+        "h": 113
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/neet/front": {
+      "frame": {
+        "x": 438,
+        "y": 370,
+        "w": 183,
+        "h": 104
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 39,
+        "y": 43,
+        "w": 183,
+        "h": 104
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/durag/front": {
+      "frame": {
+        "x": 625,
+        "y": 370,
+        "w": 170,
+        "h": 100
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 43,
+        "y": 49,
+        "w": 170,
+        "h": 100
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/wizard-hat/decal": {
+      "frame": {
+        "x": 799,
+        "y": 370,
+        "w": 101,
+        "h": 98
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 74,
+        "y": 25,
+        "w": 101,
+        "h": 98
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 124.5,
+          "y": 74.0
+        },
+        "size": {
+          "w": 101,
+          "h": 98
+        }
+      }
+    },
+    "head/holy-seal/decal": {
+      "frame": {
+        "x": 904,
+        "y": 370,
+        "w": 84,
+        "h": 84
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 86,
+        "y": 58,
+        "w": 84,
+        "h": 84
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 128.0,
+          "y": 100.0
+        },
+        "size": {
+          "w": 84,
+          "h": 84
+        }
+      }
+    },
+    "head/red-bandana/front": {
+      "frame": {
+        "x": 2,
+        "y": 493,
+        "w": 172,
+        "h": 83
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 42,
+        "y": 67,
+        "w": 172,
+        "h": 83
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/head-wrap/front": {
+      "frame": {
+        "x": 178,
+        "y": 493,
+        "w": 174,
+        "h": 82
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 41,
+        "y": 65,
+        "w": 174,
+        "h": 82
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/spartan-helmet/back": {
+      "frame": {
+        "x": 356,
+        "y": 493,
+        "w": 66,
+        "h": 80
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 100,
+        "y": 7,
+        "w": 66,
+        "h": 80
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/purple-horn/front": {
+      "frame": {
+        "x": 426,
+        "y": 493,
+        "w": 246,
+        "h": 77
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 5,
+        "y": 45,
+        "w": 246,
+        "h": 77
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/red-horn/front": {
+      "frame": {
+        "x": 676,
+        "y": 493,
+        "w": 246,
+        "h": 77
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 5,
+        "y": 45,
+        "w": 246,
+        "h": 77
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/silver-wreath/front": {
+      "frame": {
+        "x": 2,
+        "y": 580,
+        "w": 188,
+        "h": 68
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 78,
+        "w": 188,
+        "h": 68
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/taped-banana/front": {
+      "frame": {
+        "x": 194,
+        "y": 580,
+        "w": 62,
+        "h": 62
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 96,
+        "y": 99,
+        "w": 62,
+        "h": 62
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/durag/back": {
+      "frame": {
+        "x": 260,
+        "y": 580,
+        "w": 51,
+        "h": 56
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 16,
+        "y": 111,
+        "w": 51,
+        "h": 56
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/holy-seal/front": {
+      "frame": {
+        "x": 315,
+        "y": 580,
+        "w": 52,
+        "h": 54
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 102,
+        "y": 73,
+        "w": 52,
+        "h": 54
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/silver-thorn/front": {
+      "frame": {
+        "x": 371,
+        "y": 580,
+        "w": 188,
+        "h": 49
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 98,
+        "w": 188,
+        "h": 49
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/gold-thorn/front": {
+      "frame": {
+        "x": 563,
+        "y": 580,
+        "w": 188,
+        "h": 49
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 34,
+        "y": 98,
+        "w": 188,
+        "h": 49
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/diamond/front": {
+      "frame": {
+        "x": 755,
+        "y": 580,
+        "w": 39,
+        "h": 40
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 108,
+        "y": 115,
+        "w": 39,
+        "h": 40
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/japan-headband/back": {
+      "frame": {
+        "x": 798,
+        "y": 580,
+        "w": 40,
+        "h": 38
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 13,
+        "y": 111,
+        "w": 40,
+        "h": 38
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/red-headband/back": {
+      "frame": {
+        "x": 842,
+        "y": 580,
+        "w": 40,
+        "h": 38
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 13,
+        "y": 111,
+        "w": 40,
+        "h": 38
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/japan-headband/front": {
+      "frame": {
+        "x": 2,
+        "y": 652,
+        "w": 170,
+        "h": 35
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 43,
+        "y": 113,
+        "w": 170,
+        "h": 35
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/red-headband/front": {
+      "frame": {
+        "x": 176,
+        "y": 652,
+        "w": 170,
+        "h": 35
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 43,
+        "y": 113,
+        "w": 170,
+        "h": 35
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/clown-nose/front": {
+      "frame": {
+        "x": 350,
+        "y": 652,
+        "w": 38,
+        "h": 34
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 109,
+        "y": 162,
+        "w": 38,
+        "h": 34
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/neet/decal": {
+      "frame": {
+        "x": 392,
+        "y": 652,
+        "w": 113,
+        "h": 29
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 72,
+        "y": 75,
+        "w": 113,
+        "h": 29
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 128.5,
+          "y": 89.5
+        },
+        "size": {
+          "w": 113,
+          "h": 29
+        }
+      }
+    },
+    "head/3rd-eye/front": {
+      "frame": {
+        "x": 509,
+        "y": 652,
+        "w": 38,
+        "h": 21
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 109,
+        "y": 125,
+        "w": 38,
+        "h": 21
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "head/japan-headband/decal": {
+      "frame": {
+        "x": 551,
+        "y": 652,
+        "w": 22,
+        "h": 20
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 117,
+        "y": 123,
+        "w": 22,
+        "h": 20
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 128.0,
+          "y": 133.0
+        },
+        "size": {
+          "w": 22,
+          "h": 20
+        }
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege Chog drawing masters",
+    "version": "1",
+    "image": "chog-head-b.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1024,
+      "h": 1024
+    },
+    "scale": "1",
+    "padding": 2,
+    "traits": {
+      "head/wizard-hat": {
+        "references": [
+          7,
+          18,
+          34
+        ]
+      },
+      "head/rainbow-wig": {
+        "references": [
+          8,
+          103,
+          110
+        ],
+        "hidesSpikes": true
+      },
+      "head/japan-headband": {
+        "references": [
+          27,
+          73,
+          93
+        ]
+      },
+      "head/bob-hair": {
+        "references": [
+          30,
+          246,
+          260
+        ],
+        "hidesSpikes": true
+      },
+      "head/durag": {
+        "references": [
+          56,
+          102,
+          163
+        ]
+      },
+      "head/crown": {
+        "references": [
+          66,
+          131,
+          134
+        ]
+      },
+      "head/spartan-helmet": {
+        "references": [
+          75,
+          183,
+          290
+        ]
+      },
+      "head/clown-nose": {
+        "references": [
+          83,
+          92,
+          97
+        ]
+      },
+      "head/red-headband": {
+        "references": [
+          89,
+          148,
+          234
+        ]
+      },
+      "head/robber": {
+        "references": [
+          150,
+          192,
+          231
+        ]
+      },
+      "head/neet": {
+        "references": [
+          157,
+          226,
+          488
+        ]
+      },
+      "head/silver-thorn": {
+        "references": [
+          186,
+          1615
+        ]
+      },
+      "head/3rd-eye": {
+        "references": [
+          196,
+          388,
+          1106
+        ]
+      },
+      "head/gold-thorn": {
+        "references": [
+          262,
+          358,
+          377
+        ]
+      },
+      "head/purple-horn": {
+        "references": [
+          284,
+          539
+        ]
+      },
+      "head/holy-seal": {
+        "references": [
+          352,
+          923,
+          1251
+        ]
+      },
+      "head/head-wrap": {
+        "references": [
+          400
+        ]
+      },
+      "head/void-horn": {
+        "references": [
+          648,
+          1730
+        ]
+      },
+      "head/silver-wreath": {
+        "references": [
+          715,
+          926,
+          1447
+        ]
+      },
+      "head/red-horn": {
+        "references": [
+          783,
+          981,
+          1180
+        ]
+      },
+      "head/demon-horn": {
+        "references": [
+          851,
+          1133,
+          1968
+        ]
+      },
+      "head/taped-banana": {
+        "references": [
+          881,
+          1486
+        ]
+      },
+      "head/blue-laser": {
+        "references": [
+          1280
+        ]
+      },
+      "head/diamond": {
+        "references": [
+          1342,
+          1517
+        ]
+      },
+      "head/red-bandana": {
+        "references": [
+          1382,
+          1700
+        ]
+      },
+      "head/poison-shroom": {
+        "references": [
+          1608
+        ]
+      },
+      "head/devil-horn": {
+        "references": [
+          1733
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+Candy Siege audio. Everything here is CC0 (public domain); credits are given as thanks, not as a licence condition.
+
+Sound effects: Kenney (kenney.nl): Interface Sounds, Impact Sounds, UI Audio, RPG Audio, Music Jingles, Casino Audio.
+Music (OpenGameArt.org):
+  level   "Halloween Hullabaloo" by starlightfrost
+  boss    "A Wonderful Nightmare" by spiderdave
+  menu    "Caper" by pro-sensory
+  ambient "Ghosts in the Machine" by ruskerdax
+Encoded to Ogg Vorbis and MP3; music loudness-normalised to -18 LUFS.

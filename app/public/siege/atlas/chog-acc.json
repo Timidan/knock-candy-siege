@@ -1,0 +1,319 @@
+{
+  "frames": {
+    "acc/knife/hand": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 43,
+        "h": 77
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 172,
+        "y": 217,
+        "w": 43,
+        "h": 77
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/green-candle/hand": {
+      "frame": {
+        "x": 49,
+        "y": 2,
+        "w": 45,
+        "h": 75
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 180,
+        "y": 220,
+        "w": 45,
+        "h": 75
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/red-candle/hand": {
+      "frame": {
+        "x": 98,
+        "y": 2,
+        "w": 45,
+        "h": 75
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 180,
+        "y": 220,
+        "w": 45,
+        "h": 75
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/fwog/hand": {
+      "frame": {
+        "x": 147,
+        "y": 2,
+        "w": 53,
+        "h": 65
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 171,
+        "y": 223,
+        "w": 53,
+        "h": 65
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/pepe/hand": {
+      "frame": {
+        "x": 204,
+        "y": 2,
+        "w": 53,
+        "h": 61
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 171,
+        "y": 222,
+        "w": 53,
+        "h": 61
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/sb/hand": {
+      "frame": {
+        "x": 261,
+        "y": 2,
+        "w": 47,
+        "h": 58
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 172,
+        "y": 235,
+        "w": 47,
+        "h": 58
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/coin/hand": {
+      "frame": {
+        "x": 312,
+        "y": 2,
+        "w": 40,
+        "h": 46
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 176,
+        "y": 234,
+        "w": 40,
+        "h": 46
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/heart/hand": {
+      "frame": {
+        "x": 356,
+        "y": 2,
+        "w": 43,
+        "h": 39
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 171,
+        "y": 235,
+        "w": 43,
+        "h": 39
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "acc/sb/decal": {
+      "frame": {
+        "x": 403,
+        "y": 2,
+        "w": 22,
+        "h": 23
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 185,
+        "y": 251,
+        "w": 22,
+        "h": 23
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "decal": {
+        "anchor": {
+          "x": 196.0,
+          "y": 262.5
+        },
+        "size": {
+          "w": 22,
+          "h": 23
+        }
+      }
+    },
+    "acc/cigar/face": {
+      "frame": {
+        "x": 429,
+        "y": 2,
+        "w": 70,
+        "h": 17
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 125,
+        "y": 195,
+        "w": 70,
+        "h": 17
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege Chog mouth and accessory masters",
+    "version": "1",
+    "image": "chog-acc.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 512,
+      "h": 128
+    },
+    "scale": "1",
+    "padding": 2,
+    "references": {
+      "Fwog": [
+        1,
+        106,
+        165
+      ],
+      "Coin": [
+        11,
+        32,
+        79
+      ],
+      "Cigar": [
+        45,
+        112,
+        270
+      ],
+      "Heart": [
+        74,
+        152,
+        281
+      ],
+      "Knife": [
+        84,
+        162,
+        241
+      ],
+      "Red Candle": [
+        91,
+        113,
+        239
+      ],
+      "Green Candle": [
+        118,
+        173,
+        432
+      ],
+      "SB": [
+        123,
+        141,
+        248
+      ],
+      "PEPE": [
+        279,
+        450,
+        611
+      ]
+    },
+    "decals": {
+      "acc/sb/hand": "acc/sb/decal"
+    },
+    "decalPlacement": "Draw after its parent; use frame.decal anchor/size. Mirror anchor x to 256-x, never glyph pixels.",
+    "preview": "art/siege/chogs/preview-mouth_acc.png",
+    "grip": {
+      "acc/fwog/hand": [
+        185,
+        272
+      ],
+      "acc/coin/hand": [
+        185,
+        272
+      ],
+      "acc/cigar/face": [
+        128,
+        204
+      ],
+      "acc/heart/hand": [
+        185,
+        272
+      ],
+      "acc/knife/hand": [
+        185,
+        272
+      ],
+      "acc/red-candle/hand": [
+        185,
+        272
+      ],
+      "acc/green-candle/hand": [
+        185,
+        272
+      ],
+      "acc/sb/hand": [
+        185,
+        272
+      ],
+      "acc/pepe/hand": [
+        185,
+        272
+      ]
+    },
+    "gripSpace": "Untrimmed 256x320 canvas pixels; trimmed grip = grip - spriteSourceSize.xy; left x = 256-x.",
+    "placement": "Hand props fit front-facing reference front hand (185,272); draw over palm, below thumb. Cigar grip is mouth (128,204).",
+    "notes": "SB uses the observed white takeaway cup silhouette; Cigar is relocated from portrait hand to requested mouth anchor."
+  }
+}

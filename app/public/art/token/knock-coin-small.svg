@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>$KNOCK coin</title>
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path d="M129 9C196 8 247 59 247 128Q246 239 128 248C57 248 9 199 9 130Q9 15 129 9Z" fill="#FFBE38" stroke="#141414" stroke-width="12"/>
+    <path d="M32 100C18 170 61 235 128 236C197 236 242 173 224 100L211 107C226 168 190 221 128 222C67 222 30 170 45 107Z" fill="#FF7A1A"/>
+    <path d="M77 61 108 58 106 111 153 59 192 62 135 123 192 190 150 193 105 139 104 194 73 191Z" fill="#200052"/>
+    <path d="M82 219Q129 238 178 217" fill="none" stroke="#F4EEDD" stroke-width="9"/>
+  </g>
+</svg>

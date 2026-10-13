@@ -1,0 +1,216 @@
+{
+  "frames": {
+    "legend/561/front": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 226,
+        "h": 170
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 69,
+        "w": 226,
+        "h": 170
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/900/front": {
+      "frame": {
+        "x": 232,
+        "y": 2,
+        "w": 211,
+        "h": 198
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 42,
+        "w": 211,
+        "h": 198
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/942/front": {
+      "frame": {
+        "x": 447,
+        "y": 2,
+        "w": 226,
+        "h": 170
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 69,
+        "w": 226,
+        "h": 170
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/1002/front": {
+      "frame": {
+        "x": 677,
+        "y": 2,
+        "w": 226,
+        "h": 215
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 49,
+        "w": 226,
+        "h": 215
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/1481/front": {
+      "frame": {
+        "x": 2,
+        "y": 221,
+        "w": 198,
+        "h": 212
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 29,
+        "y": 29,
+        "w": 198,
+        "h": 212
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/1514/front": {
+      "frame": {
+        "x": 204,
+        "y": 221,
+        "w": 222,
+        "h": 211
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 17,
+        "y": 29,
+        "w": 222,
+        "h": 211
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/1667/front": {
+      "frame": {
+        "x": 430,
+        "y": 221,
+        "w": 226,
+        "h": 213
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 26,
+        "w": 226,
+        "h": 213
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/1798/front": {
+      "frame": {
+        "x": 660,
+        "y": 221,
+        "w": 226,
+        "h": 180
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 59,
+        "w": 226,
+        "h": 180
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/1881/front": {
+      "frame": {
+        "x": 2,
+        "y": 438,
+        "w": 226,
+        "h": 170
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 69,
+        "w": 226,
+        "h": 170
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "legend/1884/front": {
+      "frame": {
+        "x": 232,
+        "y": 438,
+        "w": 226,
+        "h": 173
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 15,
+        "y": 66,
+        "w": 226,
+        "h": 173
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege legendary head masters",
+    "version": "1",
+    "image": "chog-legend.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 1024,
+      "h": 613
+    },
+    "scale": "1",
+    "padding": 2
+  }
+}

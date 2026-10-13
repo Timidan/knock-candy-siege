@@ -1,0 +1,30 @@
+{
+  "name": "knock",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "art": "mkdir -p public/art && for d in overlays scenery icons ui boss crews route themes badges token; do [ -d ../../art/$d ] && cp -r ../../art/$d public/art/; done; true",
+    "snapshot": "node scripts/snapshot.mjs && node scripts/snapshot.mjs images",
+    "relay": "node --env-file=../.env.relay scripts/relay.mjs"
+  },
+  "dependencies": {
+    "phaser": "3.90.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "viem": "^2.57.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "oxlint": "^1.81.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
+  }
+}

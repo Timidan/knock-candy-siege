@@ -1,0 +1,255 @@
+{
+  "frames": {
+    "blast/0": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 288,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "blast/1": {
+      "frame": {
+        "x": 294,
+        "y": 2,
+        "w": 288,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "blast/2": {
+      "frame": {
+        "x": 586,
+        "y": 2,
+        "w": 288,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "blast/3": {
+      "frame": {
+        "x": 2,
+        "y": 230,
+        "w": 288,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "blast/4": {
+      "frame": {
+        "x": 294,
+        "y": 230,
+        "w": 288,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "blast/5": {
+      "frame": {
+        "x": 586,
+        "y": 230,
+        "w": 288,
+        "h": 224
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 288,
+        "h": 224
+      },
+      "sourceSize": {
+        "w": 288,
+        "h": 224
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/0": {
+      "frame": {
+        "x": 2,
+        "y": 458,
+        "w": 224,
+        "h": 192
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 224,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 224,
+        "h": 192
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/1": {
+      "frame": {
+        "x": 230,
+        "y": 458,
+        "w": 224,
+        "h": 192
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 224,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 224,
+        "h": 192
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/2": {
+      "frame": {
+        "x": 458,
+        "y": 458,
+        "w": 224,
+        "h": 192
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 224,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 224,
+        "h": 192
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    },
+    "bomb/3": {
+      "frame": {
+        "x": 686,
+        "y": 458,
+        "w": 224,
+        "h": 192
+      },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": {
+        "x": 0,
+        "y": 0,
+        "w": 224,
+        "h": 192
+      },
+      "sourceSize": {
+        "w": 224,
+        "h": 192
+      },
+      "pivot": {
+        "x": 0.5,
+        "y": 0.5
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege batch 2B",
+    "version": "2.0",
+    "image": "ult-candy-bomb.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 912,
+      "h": 652
+    },
+    "scale": "1"
+  }
+}

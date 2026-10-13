@@ -1,0 +1,16 @@
+# The Knock relay: watches Knock on Monad and pays testnet KNOCK on Robinhood Chain Testnet.
+# No ports: it only makes outgoing connections. The named volume keeps the "already paid" record across redeploys.
+services:
+  relay:
+    build: .
+    restart: unless-stopped
+    environment:
+      KNOCK_RPC: ${KNOCK_RPC:-https://rpc.monad.xyz}
+      KNOCK_CONTRACT: ${KNOCK_CONTRACT:-}
+      RELAY_FROM_BLOCK: ${RELAY_FROM_BLOCK:-}
+      RELAY_KEY: ${RELAY_KEY}
+      RELAY_STATE: /state/relay-state.json
+    volumes:
+      - relay-state:/state
+volumes:
+  relay-state:

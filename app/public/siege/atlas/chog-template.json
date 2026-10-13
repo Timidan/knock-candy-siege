@@ -1,0 +1,642 @@
+{
+  "version": 1,
+  "canvas": {
+    "width": 256,
+    "height": 320,
+    "origin": "top-left",
+    "units": "pixels",
+    "facing": "right"
+  },
+  "conventions": {
+    "nearFar": "Near = viewer-left; far = viewer-right. Both eyes are equal-sized and level on this front-facing template. Anatomical names do not change when mirrored.",
+    "headroom": "Unhatted head starts at y=70 (headTop path vertex y=72). Tall hats/aura may use y=2..70; keep 2px clear at canvas edges.",
+    "points": "Point anchors are [x,y]. Ellipse/circle centres use {x,y}. Tilt is degrees clockwise in screen coordinates.",
+    "left": "Mirror geometry about x=128: xLeft=256-x. Raster pixels reverse with xPixelLeft=255-xPixel. Mirror decal centres only, never their glyph pixels.",
+    "registration": "Front-facing head with a centred cream patch, equal eyes and spikes crowning both sides. Face centre, nose, mouth, hat seat and neck share x=128. Re-fit traits to these anchors; old portrait asymmetry is not retained."
+  },
+  "anchors": {
+    "eyeNear": [
+      92,
+      170
+    ],
+    "eyeFar": [
+      164,
+      170
+    ],
+    "nose": [
+      128,
+      179
+    ],
+    "mouth": [
+      128,
+      204
+    ],
+    "cheekNear": [
+      63,
+      196
+    ],
+    "cheekFar": [
+      193,
+      196
+    ],
+    "browLine": [
+      [
+        74,
+        149
+      ],
+      [
+        182,
+        149
+      ]
+    ],
+    "headTop": [
+      128,
+      72
+    ],
+    "hatSeat": {
+      "centre": {
+        "x": 128,
+        "y": 114
+      },
+      "rx": 82,
+      "ry": 20,
+      "tilt": 0
+    },
+    "chin": [
+      128,
+      232
+    ],
+    "neck": [
+      128,
+      230
+    ],
+    "faceMask": [
+      [
+        52,
+        175
+      ],
+      [
+        57,
+        149
+      ],
+      [
+        69,
+        128
+      ],
+      [
+        83,
+        122
+      ],
+      [
+        98,
+        135
+      ],
+      [
+        115,
+        121
+      ],
+      [
+        128,
+        131
+      ],
+      [
+        141,
+        121
+      ],
+      [
+        158,
+        135
+      ],
+      [
+        173,
+        122
+      ],
+      [
+        187,
+        128
+      ],
+      [
+        201,
+        149
+      ],
+      [
+        204,
+        175
+      ],
+      [
+        201,
+        197
+      ],
+      [
+        188,
+        216
+      ],
+      [
+        163,
+        224
+      ],
+      [
+        128,
+        228
+      ],
+      [
+        93,
+        224
+      ],
+      [
+        68,
+        216
+      ],
+      [
+        55,
+        197
+      ]
+    ],
+    "faceWindow": {
+      "centre": {
+        "x": 128,
+        "y": 174
+      },
+      "r": 80
+    }
+  },
+  "layerStack": [
+    "aura",
+    "head-back",
+    "base/back",
+    "base/face",
+    "base/blush",
+    "base/nose",
+    "eyes",
+    "mouth",
+    "acc-face",
+    "head-front",
+    "decal"
+  ],
+  "frameNaming": {
+    "slugRule": "lowercase; replace each run of characters outside [a-z0-9] with '-'; trim '-'; empty result becomes 'none'",
+    "slugRegex": "[^a-z0-9]+",
+    "patterns": [
+      "eyes/<slug>",
+      "mouth/<slug>",
+      "head/<slug>/front",
+      "head/<slug>/back",
+      "head/<slug>/decal",
+      "acc/<slug>/face",
+      "acc/<slug>/hand",
+      "aura/<slug>",
+      "aura/<slug>/<0..3>"
+    ],
+    "optional": [
+      "head/<slug>/back",
+      "head/<slug>/decal"
+    ],
+    "values": {
+      "Aura": {
+        "": "none",
+        "Aqua Aura": "aqua-aura",
+        "Royal Blue Aura": "royal-blue-aura",
+        "Light Purple": "light-purple",
+        "Cool Aura": "cool-aura",
+        "Purple": "purple",
+        "Wind": "wind",
+        "Fire": "fire",
+        "Clean": "clean",
+        "Royal Aura": "royal-aura",
+        "Violet": "violet",
+        "Smoke": "smoke",
+        "Rose Aura": "rose-aura",
+        "Burning Aura": "burning-aura",
+        "Pink Mist": "pink-mist",
+        "Fiery Aura": "fiery-aura",
+        "Mint": "mint",
+        "Yellow Aura": "yellow-aura",
+        "Rose Scent": "rose-scent",
+        "Electric Shock": "electric-shock",
+        "White Aura": "white-aura",
+        "Green Aura": "green-aura",
+        "Royal Blue": "royal-blue"
+      },
+      "Eyes": {
+        "": "none",
+        "BTC Glass": "btc-glass",
+        "Modern VR": "modern-vr",
+        "Retro Glass": "retro-glass",
+        "Round Crying": "round-crying",
+        "Teary": "teary",
+        "Green laser": "green-laser",
+        "Smirk": "smirk",
+        "Closed Eye Crying": "closed-eye-crying",
+        "Flat": "flat",
+        "Side Eye": "side-eye",
+        "Round": "round",
+        "Clown Eye Mix": "clown-eye-mix",
+        "Sunset visor": "sunset-visor",
+        "Purple laser": "purple-laser",
+        "Worried": "worried",
+        "Happy": "happy",
+        "Anime Glass": "anime-glass",
+        "Round Eye": "round-eye",
+        "Round Tear": "round-tear",
+        "Angry": "angry",
+        "fire laser": "fire-laser",
+        "Dead": "dead",
+        "Base": "base",
+        "Chog Viper": "chog-viper",
+        "Thug": "thug",
+        "Vertical": "vertical",
+        "Clown Eye": "clown-eye",
+        "Heart": "heart",
+        "Normal Eye": "normal-eye",
+        "Tired": "tired",
+        "Frog": "frog",
+        "Gradient visor": "gradient-visor",
+        "Green Side Eye": "green-side-eye",
+        "3D Glass": "3d-glass",
+        "cyan laser": "cyan-laser",
+        "MOG": "mog",
+        "Retard": "retard",
+        "Plasma visor": "plasma-visor",
+        "Classic VR": "classic-vr",
+        "XD": "xd",
+        "Blue Flat": "blue-flat",
+        "Red Round Eye": "red-round-eye",
+        "Blue Retard": "blue-retard",
+        "Red Retard": "red-retard",
+        "Up": "up",
+        "Green Round Eye": "green-round-eye",
+        "Mixed Retard": "mixed-retard",
+        "Blue Round Eye": "blue-round-eye",
+        "Mixed Happy": "mixed-happy",
+        "Green Smirk": "green-smirk",
+        "Mixed Side Eye": "mixed-side-eye",
+        "Red Flat": "red-flat",
+        "Green Happy": "green-happy",
+        "Normal": "normal",
+        "Green Retard": "green-retard",
+        "Mixed Round Eye": "mixed-round-eye",
+        "Blue Happy": "blue-happy",
+        "Blue Smirk": "blue-smirk"
+      },
+      "Head": {
+        "": "none",
+        "MCGA": "mcga",
+        "Chog Cap": "chog-cap",
+        "Red Peace Cap": "red-peace-cap",
+        "Thunder Cap": "thunder-cap",
+        "Star Cap": "star-cap",
+        "TISM Cap": "tism-cap",
+        "Wizard Hat": "wizard-hat",
+        "Rainbow Wig": "rainbow-wig",
+        "Horny Cap": "horny-cap",
+        "Mon Cap": "mon-cap",
+        "Cloud Cap": "cloud-cap",
+        "Balls Cap": "balls-cap",
+        "MEGA Chog": "mega-chog",
+        "Plumber": "plumber",
+        "Dollar Cap": "dollar-cap",
+        "BTC Beanie": "btc-beanie",
+        "Japan Headband": "japan-headband",
+        "Bob Hair": "bob-hair",
+        "Boob Cap": "boob-cap",
+        "Orange Bucket Cap": "orange-bucket-cap",
+        "Blue Bucket Cap": "blue-bucket-cap",
+        "RETARD Cap": "retard-cap",
+        "Wizard Beanie": "wizard-beanie",
+        "WAGMI Cap": "wagmi-cap",
+        "MMGA Cap": "mmga-cap",
+        "Gray Bucket Cap": "gray-bucket-cap",
+        "Russian Hat": "russian-hat",
+        "Durag": "durag",
+        "BOOB Cap": "boob-cap",
+        "Buttcoin Cap": "buttcoin-cap",
+        "Crown": "crown",
+        "Spartan Helmet": "spartan-helmet",
+        "Choggie Beanie": "choggie-beanie",
+        "10k TPS Cap": "10k-tps-cap",
+        "Clown Nose": "clown-nose",
+        "Peace hat": "peace-hat",
+        "Red Headband": "red-headband",
+        "JEET Cap": "jeet-cap",
+        "BTC Cap": "btc-cap",
+        "Choggie Cap": "choggie-cap",
+        "RH Beanie": "rh-beanie",
+        "Robber": "robber",
+        "NEET": "neet",
+        "Mon Beanie": "mon-beanie",
+        "Peace Cap": "peace-cap",
+        "Silver Thorn": "silver-thorn",
+        "3rd Eye": "3rd-eye",
+        "Gold Thorn": "gold-thorn",
+        "Purple Horn": "purple-horn",
+        "Holy Seal": "holy-seal",
+        "Head Wrap": "head-wrap",
+        "ETH Cap": "eth-cap",
+        "MCGA Cap": "mcga-cap",
+        "Void Horn": "void-horn",
+        "Silver wreath": "silver-wreath",
+        "Red Horn": "red-horn",
+        "Demon Horn": "demon-horn",
+        "Taped Banana": "taped-banana",
+        "8 Ball Beanie": "8-ball-beanie",
+        "Blue Laser": "blue-laser",
+        "Diamond": "diamond",
+        "Red Bandana": "red-bandana",
+        "Poison Shroom": "poison-shroom",
+        "Jeet Cap": "jeet-cap",
+        "devil horn": "devil-horn",
+        "Mafia Hat": "mafia-hat"
+      },
+      "Mouth": {
+        "": "none",
+        "Flat": "flat",
+        "Smile": "smile",
+        "normal smile": "normal-smile",
+        "wo": "wo",
+        "Rainbow Puke": "rainbow-puke",
+        "Gold Tooth": "gold-tooth",
+        "Lip Bite": "lip-bite",
+        "BTC Coin": "btc-coin",
+        "Sad": "sad",
+        "Worried": "worried",
+        "Drooling": "drooling",
+        "Bubblegum": "bubblegum",
+        "Clown Mouth": "clown-mouth",
+        "Mon coin": "mon-coin",
+        "Grit": "grit"
+      },
+      "Accessory": {
+        "": "none",
+        "Fwog": "fwog",
+        "Coin": "coin",
+        "Cigar": "cigar",
+        "Heart": "heart",
+        "Knife": "knife",
+        "Red Candle": "red-candle",
+        "Green Candle": "green-candle",
+        "SB": "sb",
+        "PEPE": "pepe"
+      },
+      "Skin": {
+        "": "none",
+        "Pink": "pink",
+        "Origin": "origin",
+        "Red": "red",
+        "Black": "black",
+        "Yellow": "yellow",
+        "White": "white",
+        "Green": "green",
+        "Grey": "grey",
+        "Blue": "blue",
+        "Metal": "metal",
+        "Beige": "beige",
+        "Jade": "jade",
+        "Purple": "purple",
+        "Multi Colored": "multi-colored"
+      },
+      "Form": {
+        "": "none",
+        "Chog": "chog",
+        "Skull": "skull"
+      },
+      "Base": {
+        "": "none",
+        "Origin": "origin",
+        "Skull": "skull",
+        "Radioactive": "radioactive",
+        "1:1": "1-1"
+      },
+      "Tier": {
+        "": "none",
+        "Uncommon": "uncommon",
+        "Common": "common",
+        "Rare": "rare",
+        "Epic": "epic",
+        "Legendary": "legendary"
+      },
+      "Body": {
+        "": "none",
+        "Yellow 143 Jersey": "yellow-143-jersey",
+        "Mon Hoodie": "mon-hoodie",
+        "Red Chinese": "red-chinese",
+        "Wizard": "wizard",
+        "Black Trackset": "black-trackset",
+        "Red Tuxedo": "red-tuxedo",
+        "Orange Sleeveless": "orange-sleeveless",
+        "Blue Chinese": "blue-chinese",
+        "Red Trackset": "red-trackset",
+        "Guko": "guko",
+        "Kings Robe": "kings-robe",
+        "Cream Tuxedo": "cream-tuxedo",
+        "Black Shirt": "black-shirt",
+        "Inmate": "inmate",
+        "red tee": "red-tee",
+        "Grey Shirt": "grey-shirt",
+        "CWO": "cwo",
+        "Orange Hoodie": "orange-hoodie",
+        "Aqua Tuxedo": "aqua-tuxedo",
+        "White Yukata": "white-yukata",
+        "Hawaiian Polo": "hawaiian-polo",
+        "Chug Life": "chug-life",
+        "Dragon suit": "dragon-suit",
+        "Stripes": "stripes",
+        "White Pure Shirt": "white-pure-shirt",
+        "dark jacket": "dark-jacket",
+        "Red jacket": "red-jacket",
+        "dark vest": "dark-vest",
+        "Golden Armor": "golden-armor",
+        "Sci Fi": "sci-fi",
+        "Farmer Shirt": "farmer-shirt",
+        "Toad pink suit": "toad-pink-suit",
+        "Fire Shirt": "fire-shirt",
+        "Jesus": "jesus",
+        "Squid Game Guard": "squid-game-guard",
+        "Purple Shirt": "purple-shirt",
+        "Gangster suit": "gangster-suit",
+        "CEO Vest": "ceo-vest",
+        "Yellow Shirt": "yellow-shirt",
+        "Duck Float": "duck-float",
+        "Grey Homeless Shirt": "grey-homeless-shirt",
+        "Astro Suit": "astro-suit",
+        "Pink Tuxedo": "pink-tuxedo",
+        "Glitch Hoodie": "glitch-hoodie",
+        "White tuxedo": "white-tuxedo",
+        "BBC": "bbc",
+        "Red 143 Jersey": "red-143-jersey",
+        "White Sleeveless": "white-sleeveless",
+        "Blue tuxedo": "blue-tuxedo",
+        "Red Sleeveless": "red-sleeveless",
+        "Yellow Hoodie": "yellow-hoodie",
+        "MILF Lover": "milf-lover",
+        "Tank Top": "tank-top",
+        "Prisoner": "prisoner",
+        "White Shirt": "white-shirt",
+        "purple vest": "purple-vest",
+        "Tuxedo": "tuxedo",
+        "Black Vest": "black-vest",
+        "dark tee": "dark-tee",
+        "Shark Suit": "shark-suit",
+        "Banana suit": "banana-suit",
+        "Pink Shirt": "pink-shirt",
+        "Blue jacket": "blue-jacket",
+        "Army Vest": "army-vest",
+        "Brown Homeless Shirt": "brown-homeless-shirt",
+        "Yellow Yukata": "yellow-yukata",
+        "Six Seven": "six-seven",
+        "Mummy": "mummy",
+        "Gojo": "gojo",
+        "Squid Game": "squid-game",
+        "Blue Homeless Shirt": "blue-homeless-shirt",
+        "Virgin": "virgin",
+        "Electro Hoodie": "electro-hoodie",
+        "Cyan tuxedo": "cyan-tuxedo",
+        "Toad green Suit": "toad-green-suit",
+        "Red shirt": "red-shirt",
+        "Peach Hoodie": "peach-hoodie",
+        "Zero THOTS": "zero-thots",
+        "Stripe shirts": "stripe-shirts",
+        "Blue Holed Jacket": "blue-holed-jacket",
+        "Blue 143 Jersey": "blue-143-jersey",
+        "toad blue suit": "toad-blue-suit",
+        "Boner": "boner",
+        "pink vest": "pink-vest",
+        "Sky Hoodie": "sky-hoodie",
+        "Blue Sleeveless": "blue-sleeveless",
+        "Cyan Shirt": "cyan-shirt",
+        "blue tee": "blue-tee",
+        "white tee": "white-tee",
+        "Stripe Shirt": "stripe-shirt",
+        "White Tank": "white-tank",
+        "Wizard Cape": "wizard-cape",
+        "Purple Tank": "purple-tank",
+        "Jesus Robe": "jesus-robe",
+        "Orange Holed Jacket": "orange-holed-jacket",
+        "Blue Mafia": "blue-mafia"
+      }
+    },
+    "aliases": "Case/punctuation variants intentionally share a frame (e.g. JEET Cap and Jeet Cap). Export each slug once across all atlases."
+  },
+  "atlas": {
+    "format": "Phaser JSON Hash",
+    "glob": "chog-*.json",
+    "templateExcluded": "chog-template.json",
+    "maxWidth": 2048,
+    "maxHeight": 2048,
+    "padding": 2,
+    "rotated": false,
+    "trimmed": true,
+    "sourceSize": {
+      "w": 256,
+      "h": 320
+    },
+    "spriteSourceSize": "x/y = trim origin in the 256x320 canvas; w/h = trimmed pixel dimensions, equal to frame.w/h. It is NOT 256x320 after trimming.",
+    "placement": "Blit atlas frame at spriteSourceSize.x/y. No centring of trimmed images. Padding is outside frame rectangles.",
+    "metadata": "Per-frame optional tint: skin and clip: faceMask; required decal object on every */decal. meta.image names the PNG relative to its JSON.",
+    "example": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 40,
+        "h": 16
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 118,
+        "y": 102,
+        "w": 40,
+        "h": 16
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    }
+  },
+  "decals": {
+    "rule": "Every head/<slug>/decal supplies frame.decal.anchor and frame.decal.size. Anchor is the centre of its design box in head space; size encloses all nontransparent pixels, including antialiasing.",
+    "exampleFrame": "head/chog-cap/decal",
+    "exampleMetadata": {
+      "decal": {
+        "anchor": {
+          "x": 138,
+          "y": 110
+        },
+        "size": {
+          "w": 52,
+          "h": 24
+        }
+      }
+    },
+    "leftPlacement": "Keep pixels unchanged; translate the decal by (256 - 2*anchor.x, 0). The template example centre moves from (138,110) to (118,110).",
+    "authoring": "Separate text/logos from the cap front. Keep lettering level within its design box; do not bake mirrored text into head-front."
+  },
+  "tinting": {
+    "source": "../skins.json",
+    "method": "multiply RGB by tint RGB / 255; preserve alpha (Phaser setTint)",
+    "skinFrames": [
+      "base/back"
+    ],
+    "metadata": {
+      "tint": "skin"
+    },
+    "greyscale": {
+      "fill": "#eeeeee",
+      "shade": "#cdcdcd",
+      "highlight": "#fafafa",
+      "outline": "#181818"
+    },
+    "fullColor": "All other frames, including cream face, cheeks, nose, eyes, mouths, decal and body/sample.",
+    "staticSample": "Use tint for the still compositor; skin cycle/shine animation belongs to the runtime.",
+    "sourceWarning": "Preview swatches read current tint and face values from skins.json. This build never edits that palette."
+  },
+  "style": {
+    "outline": "#181323",
+    "primaryStroke": 4,
+    "silhouetteStroke": 4.5,
+    "detailStroke": [
+      2,
+      3
+    ],
+    "linecaps": "round",
+    "linejoins": "round",
+    "cream": "#f4eedd",
+    "faceShadow": "#e2c8ad",
+    "blush": "#e958a1",
+    "nose": "#d94d8c",
+    "referencePink": "#ef70b5",
+    "paperGrain": "Use the SVG paper filter in svg/base/face.svg (fixed seed 12, frequency .76, 3 octaves). No blur, glow or 3D bevel on physical inked layers.",
+    "eyes": "Both eye shapes are about 34x34, level at y=170 and symmetric about x=128. White highlights stay visible at 120px full-body height."
+  },
+  "bodySample": {
+    "frame": "body/sample",
+    "referenceOnly": true,
+    "includesHead": true,
+    "description": "Complete pink onesie Chog with cream hands/feet and placeholder face; excluded from the head compositor. Do not stack its baked head under trait layers.",
+    "neck": [
+      128,
+      230
+    ],
+    "groundY": 312,
+    "displayVisibleHeight": 120,
+    "displayScale": 0.5,
+    "rig": "Current hero rig R=30. Sample visible head+body is about 242 source pixels; scale .5 gives about 121px. This is proportion reference, not rig integration."
+  },
+  "compositor": {
+    "command": "python art/siege/chogs/compose.py 250 [--left] [--window] -o /tmp/c250.png",
+    "traits": "../traits.json: keys order defines each chogs[id] index; index 0 means none",
+    "missing": "Missing optional layers are skipped; missing eyes/mouth use their placeholders. CLI lists pending traits. Existing malformed/duplicate selected frames fail loudly.",
+    "animation": "Prefer aura/<slug> if present; otherwise render aura/<slug>/0. No animation player in this still-image tool.",
+    "clipping": "Opt in per frame with clip: faceMask. Do not clip whole laser, tear, gum or rainbow frames that intentionally extend outside the face.",
+    "window": "After composition and facing, crop the 160x160 faceWindow bounding box and apply an antialiased circular alpha mask. Left crops at mirrored centre.",
+    "hand": "acc/<slug>/hand is reserved for the body rig and is not placed on the head; reported if no face frame is present.",
+    "forms": "This wave supplies the ordinary Chog base only. Skull, Radioactive and legendary 1:1 base art are not supplied here."
+  },
+  "references": [
+    "art/siege/chogs/ref-fullbody.png",
+    "art/anchors.json",
+    "art/siege/README.md",
+    "art/siege/preview-rig-overview.png",
+    "knock/app/public/chogs-256/{id}.webp"
+  ]
+}

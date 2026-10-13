@@ -1,0 +1,9 @@
+# Cloudflare Pages cache rules. Portraits never change and Vite hashes its bundles, so both can be cached for a year.
+/chogs/*
+  Cache-Control: public, max-age=31536000, immutable
+/chogs-256/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/art/*
+  Cache-Control: public, max-age=86400

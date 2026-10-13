@@ -1,0 +1,2177 @@
+{
+  "frames": {
+    "aura/smoke/0": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 242,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 31,
+        "w": 242,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/smoke/2": {
+      "frame": {
+        "x": 2,
+        "y": 2,
+        "w": 242,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 28,
+        "w": 242,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/pink-mist/0": {
+      "frame": {
+        "x": 248,
+        "y": 2,
+        "w": 242,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 31,
+        "w": 242,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/pink-mist/2": {
+      "frame": {
+        "x": 248,
+        "y": 2,
+        "w": 242,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 28,
+        "w": 242,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/white-aura/0": {
+      "frame": {
+        "x": 494,
+        "y": 2,
+        "w": 242,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 31,
+        "w": 242,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/white-aura/2": {
+      "frame": {
+        "x": 494,
+        "y": 2,
+        "w": 242,
+        "h": 270
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 28,
+        "w": 242,
+        "h": 270
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/smoke/1": {
+      "frame": {
+        "x": 740,
+        "y": 2,
+        "w": 242,
+        "h": 268
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 32,
+        "w": 242,
+        "h": 268
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/smoke/3": {
+      "frame": {
+        "x": 740,
+        "y": 2,
+        "w": 242,
+        "h": 268
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 32,
+        "w": 242,
+        "h": 268
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/pink-mist/1": {
+      "frame": {
+        "x": 986,
+        "y": 2,
+        "w": 242,
+        "h": 268
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 32,
+        "w": 242,
+        "h": 268
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/pink-mist/3": {
+      "frame": {
+        "x": 986,
+        "y": 2,
+        "w": 242,
+        "h": 268
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 32,
+        "w": 242,
+        "h": 268
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/white-aura/1": {
+      "frame": {
+        "x": 1232,
+        "y": 2,
+        "w": 242,
+        "h": 268
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 7,
+        "y": 32,
+        "w": 242,
+        "h": 268
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/white-aura/3": {
+      "frame": {
+        "x": 1232,
+        "y": 2,
+        "w": 242,
+        "h": 268
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 32,
+        "w": 242,
+        "h": 268
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-scent/1": {
+      "frame": {
+        "x": 1478,
+        "y": 2,
+        "w": 240,
+        "h": 266
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 34,
+        "w": 240,
+        "h": 266
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-scent/3": {
+      "frame": {
+        "x": 1478,
+        "y": 2,
+        "w": 240,
+        "h": 266
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 34,
+        "w": 240,
+        "h": 266
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/clean/1": {
+      "frame": {
+        "x": 1722,
+        "y": 2,
+        "w": 240,
+        "h": 265
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 35,
+        "w": 240,
+        "h": 265
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/clean/3": {
+      "frame": {
+        "x": 1722,
+        "y": 2,
+        "w": 240,
+        "h": 265
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 35,
+        "w": 240,
+        "h": 265
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/clean/0": {
+      "frame": {
+        "x": 2,
+        "y": 276,
+        "w": 240,
+        "h": 264
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 37,
+        "w": 240,
+        "h": 264
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/clean/2": {
+      "frame": {
+        "x": 2,
+        "y": 276,
+        "w": 240,
+        "h": 264
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 34,
+        "w": 240,
+        "h": 264
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/light-purple/1": {
+      "frame": {
+        "x": 246,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/light-purple/3": {
+      "frame": {
+        "x": 246,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/cool-aura/1": {
+      "frame": {
+        "x": 490,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/cool-aura/3": {
+      "frame": {
+        "x": 490,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-aura/1": {
+      "frame": {
+        "x": 734,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-aura/3": {
+      "frame": {
+        "x": 734,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/violet/1": {
+      "frame": {
+        "x": 978,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/violet/3": {
+      "frame": {
+        "x": 978,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-scent/0": {
+      "frame": {
+        "x": 1222,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 38,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-scent/2": {
+      "frame": {
+        "x": 1222,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 35,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/electric-shock/1": {
+      "frame": {
+        "x": 1466,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/electric-shock/3": {
+      "frame": {
+        "x": 1466,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue/1": {
+      "frame": {
+        "x": 1710,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue/3": {
+      "frame": {
+        "x": 1710,
+        "y": 276,
+        "w": 240,
+        "h": 263
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 9,
+        "y": 37,
+        "w": 240,
+        "h": 263
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/light-purple/0": {
+      "frame": {
+        "x": 2,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 41,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/light-purple/2": {
+      "frame": {
+        "x": 2,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 38,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/cool-aura/0": {
+      "frame": {
+        "x": 246,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 41,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/cool-aura/2": {
+      "frame": {
+        "x": 246,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 38,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-aura/0": {
+      "frame": {
+        "x": 490,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 41,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-aura/2": {
+      "frame": {
+        "x": 490,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 38,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/violet/0": {
+      "frame": {
+        "x": 734,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 41,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/violet/2": {
+      "frame": {
+        "x": 734,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 38,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/electric-shock/0": {
+      "frame": {
+        "x": 978,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 41,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/electric-shock/2": {
+      "frame": {
+        "x": 978,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 38,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue/0": {
+      "frame": {
+        "x": 1222,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 41,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue/2": {
+      "frame": {
+        "x": 1222,
+        "y": 544,
+        "w": 240,
+        "h": 260
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 8,
+        "y": 38,
+        "w": 240,
+        "h": 260
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/aqua-aura/0": {
+      "frame": {
+        "x": 1466,
+        "y": 544,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/aqua-aura/1": {
+      "frame": {
+        "x": 1706,
+        "y": 544,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/aqua-aura/2": {
+      "frame": {
+        "x": 1466,
+        "y": 544,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/aqua-aura/3": {
+      "frame": {
+        "x": 1706,
+        "y": 544,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue-aura/0": {
+      "frame": {
+        "x": 2,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue-aura/1": {
+      "frame": {
+        "x": 242,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue-aura/2": {
+      "frame": {
+        "x": 2,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/royal-blue-aura/3": {
+      "frame": {
+        "x": 242,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/purple/0": {
+      "frame": {
+        "x": 482,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/purple/1": {
+      "frame": {
+        "x": 722,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/purple/2": {
+      "frame": {
+        "x": 482,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/purple/3": {
+      "frame": {
+        "x": 722,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fire/0": {
+      "frame": {
+        "x": 962,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fire/1": {
+      "frame": {
+        "x": 1202,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fire/2": {
+      "frame": {
+        "x": 962,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fire/3": {
+      "frame": {
+        "x": 1202,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-aura/0": {
+      "frame": {
+        "x": 1442,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-aura/1": {
+      "frame": {
+        "x": 1682,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-aura/2": {
+      "frame": {
+        "x": 1442,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/rose-aura/3": {
+      "frame": {
+        "x": 1682,
+        "y": 808,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/burning-aura/0": {
+      "frame": {
+        "x": 2,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/burning-aura/1": {
+      "frame": {
+        "x": 242,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/burning-aura/2": {
+      "frame": {
+        "x": 2,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/burning-aura/3": {
+      "frame": {
+        "x": 242,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fiery-aura/0": {
+      "frame": {
+        "x": 482,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fiery-aura/1": {
+      "frame": {
+        "x": 722,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fiery-aura/2": {
+      "frame": {
+        "x": 482,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/fiery-aura/3": {
+      "frame": {
+        "x": 722,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/mint/0": {
+      "frame": {
+        "x": 962,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/mint/1": {
+      "frame": {
+        "x": 1202,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/mint/2": {
+      "frame": {
+        "x": 962,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/mint/3": {
+      "frame": {
+        "x": 1202,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/yellow-aura/0": {
+      "frame": {
+        "x": 1442,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/yellow-aura/1": {
+      "frame": {
+        "x": 1682,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/yellow-aura/2": {
+      "frame": {
+        "x": 1442,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/yellow-aura/3": {
+      "frame": {
+        "x": 1682,
+        "y": 1068,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/green-aura/0": {
+      "frame": {
+        "x": 2,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/green-aura/1": {
+      "frame": {
+        "x": 242,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/green-aura/2": {
+      "frame": {
+        "x": 2,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/green-aura/3": {
+      "frame": {
+        "x": 242,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "form/radioactive/glow/0": {
+      "frame": {
+        "x": 482,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 45,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "form/radioactive/glow/1": {
+      "frame": {
+        "x": 722,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "form/radioactive/glow/2": {
+      "frame": {
+        "x": 482,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 42,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "form/radioactive/glow/3": {
+      "frame": {
+        "x": 722,
+        "y": 1328,
+        "w": 236,
+        "h": 256
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 44,
+        "w": 236,
+        "h": 256
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/wind/0": {
+      "frame": {
+        "x": 962,
+        "y": 1328,
+        "w": 236,
+        "h": 245
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 58,
+        "w": 236,
+        "h": 245
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/wind/1": {
+      "frame": {
+        "x": 1202,
+        "y": 1328,
+        "w": 236,
+        "h": 245
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 57,
+        "w": 236,
+        "h": 245
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/wind/2": {
+      "frame": {
+        "x": 962,
+        "y": 1328,
+        "w": 236,
+        "h": 245
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 10,
+        "y": 55,
+        "w": 236,
+        "h": 245
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "aura/wind/3": {
+      "frame": {
+        "x": 1202,
+        "y": 1328,
+        "w": 236,
+        "h": 245
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 11,
+        "y": 57,
+        "w": 236,
+        "h": 245
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "skin/multi/stripes": {
+      "frame": {
+        "x": 1442,
+        "y": 1328,
+        "w": 212,
+        "h": 212
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 22,
+        "y": 79,
+        "w": 212,
+        "h": 212
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "tint": "skin"
+    },
+    "form/skull/face": {
+      "frame": {
+        "x": 1658,
+        "y": 1328,
+        "w": 164,
+        "h": 120
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 46,
+        "y": 113,
+        "w": 164,
+        "h": 120
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      },
+      "tint": "skin"
+    },
+    "skin/metal/shine": {
+      "frame": {
+        "x": 1826,
+        "y": 1328,
+        "w": 140,
+        "h": 97
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 62,
+        "y": 123,
+        "w": 140,
+        "h": 97
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    },
+    "skin/jade/shine": {
+      "frame": {
+        "x": 2,
+        "y": 1588,
+        "w": 142,
+        "h": 91
+      },
+      "rotated": false,
+      "trimmed": true,
+      "spriteSourceSize": {
+        "x": 57,
+        "y": 127,
+        "w": 142,
+        "h": 91
+      },
+      "sourceSize": {
+        "w": 256,
+        "h": 320
+      }
+    }
+  },
+  "meta": {
+    "app": "Candy Siege Chog aura drawing masters",
+    "version": "1",
+    "image": "chog-aura.png",
+    "format": "RGBA8888",
+    "scale": "1",
+    "padding": 2,
+    "animation": {
+      "frames": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "frameRate": 6,
+      "repeat": -1,
+      "note": "Four distinct registered frames; two bent cels drift through a four-step loop. Identical trimmed cels share texture rectangles."
+    },
+    "aura": {
+      "slot": "aura",
+      "blend": "normal",
+      "placement": "Behind head and body, in 256x320 registered space."
+    },
+    "specialForms": {
+      "skull": {
+        "whenAny": [
+          {
+            "Form": "Skull"
+          },
+          {
+            "Base": "Skull"
+          }
+        ],
+        "frame": "form/skull/face",
+        "replaces": [
+          "base/face"
+        ],
+        "omit": [
+          "base/nose",
+          "mouth/placeholder"
+        ],
+        "keep": [
+          "base/back",
+          "base/blush",
+          "eyes"
+        ],
+        "tint": "skin",
+        "note": "Multiply neutral bone pixels by skins[Skin].tint, including red and yellow skeletons whose ordinary face swatch is cream. Sockets accept eye layers at the template anchors. Keep authored mouth traits above the teeth; omit only the default mouth. Fur stays on base/back."
+      },
+      "radioactive": {
+        "when": {
+          "Base": "Radioactive"
+        },
+        "frames": [
+          "form/radioactive/glow/0",
+          "form/radioactive/glow/1",
+          "form/radioactive/glow/2",
+          "form/radioactive/glow/3"
+        ],
+        "after": "aura",
+        "before": "head-back",
+        "replaces": [],
+        "blend": "normal",
+        "note": "Green toxic halo and drips behind head/body; retain the NFT aura and all base layers. No global green tint."
+      }
+    },
+    "skinOverlays": {
+      "metal": {
+        "when": {
+          "Skin": "Metal"
+        },
+        "frame": "skin/metal/shine",
+        "after": "base/face",
+        "before": "base/blush",
+        "clip": "selected face alpha",
+        "tint": null,
+        "blend": "normal"
+      },
+      "jade": {
+        "when": {
+          "Skin": "Jade"
+        },
+        "frame": "skin/jade/shine",
+        "after": "base/face",
+        "before": "base/blush",
+        "clip": "selected face alpha",
+        "tint": null,
+        "blend": "normal"
+      },
+      "multi": {
+        "when": {
+          "Skin": "Multi Colored"
+        },
+        "frame": "skin/multi/stripes",
+        "after": "base/back",
+        "before": "base/face",
+        "tint": "skin",
+        "clip": "fur and onesie alpha; exclude face/hands/feet",
+        "blend": "normal",
+        "note": "Multiply bands by skins[Skin].tint, or the current skins[Skin].cycle colour. The cream face remains unchanged. Body bands register to the template onesie; mask to the actual costume."
+      }
+    },
+    "references": {
+      "Aura": {
+        "Aqua Aura": [
+          933,
+          1276,
+          1401
+        ],
+        "Royal Blue Aura": [
+          315,
+          368,
+          407
+        ],
+        "Light Purple": [
+          170,
+          222,
+          267
+        ],
+        "Cool Aura": [
+          80,
+          275,
+          337
+        ],
+        "Purple": [
+          124,
+          215,
+          360
+        ],
+        "Wind": [
+          1430,
+          1642,
+          1702
+        ],
+        "Fire": [
+          58,
+          228,
+          466
+        ],
+        "Clean": [
+          327,
+          1232,
+          1381
+        ],
+        "Royal Aura": [
+          39,
+          671,
+          878
+        ],
+        "Violet": [
+          37,
+          328,
+          392
+        ],
+        "Smoke": [
+          70,
+          459,
+          760
+        ],
+        "Rose Aura": [
+          90,
+          111,
+          121
+        ],
+        "Burning Aura": [
+          364,
+          450,
+          523
+        ],
+        "Pink Mist": [
+          61,
+          896,
+          1764
+        ],
+        "Fiery Aura": [
+          68,
+          394,
+          480
+        ],
+        "Mint": [
+          625,
+          651,
+          745
+        ],
+        "Yellow Aura": [
+          133,
+          550,
+          1127
+        ],
+        "Rose Scent": [
+          206,
+          400,
+          881
+        ],
+        "Electric Shock": [
+          255,
+          1832
+        ],
+        "White Aura": [
+          347
+        ],
+        "Green Aura": [
+          833,
+          377,
+          767
+        ],
+        "Royal Blue": [
+          663,
+          1508,
+          1587
+        ]
+      },
+      "special": {
+        "Skull": [
+          111,
+          291,
+          315
+        ],
+        "Radioactive": [
+          70,
+          1642,
+          1695
+        ],
+        "Metal": [
+          291,
+          262,
+          926
+        ],
+        "Jade": [
+          1313,
+          365,
+          629
+        ],
+        "Multi Colored": [
+          1695,
+          648,
+          783
+        ]
+      }
+    },
+    "limitations": [
+      "White Aura exists only on #347; preview repeats that holder left-facing.",
+      "Radioactive is green as requested; original portraits also show pink and rainbow emission.",
+      "Multi stripes are a tintable interpretation of the original rainbow glow, not a baked rainbow face.",
+      "Preview uses shared compose.py with aura/0, special forms and skin overlays; other agents own the remaining traits."
+    ],
+    "size": {
+      "w": 2048,
+      "h": 1681
+    }
+  }
+}

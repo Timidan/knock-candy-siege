@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="1000" viewBox="0 0 1000 1000">
+<title>Witch Hat — Left Chog</title>
+<desc>Original Knock art. Independently drawn left placement, in 1000px portrait coordinates.</desc>
+<defs>
+ <filter id="paper" x="0" y="0" width="1000" height="1000" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+  <feTurbulence type="fractalNoise" baseFrequency=".022" numOctaves="2" seed="9" result="wobble"/>
+  <feDisplacementMap in="SourceGraphic" in2="wobble" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/>
+  <feTurbulence type="fractalNoise" baseFrequency=".68" numOctaves="3" seed="17" stitchTiles="stitch" result="noise"/>
+  <feColorMatrix in="noise" type="matrix" values=".2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  .2126 .7152 .0722 0 0  0 0 0 0 1" result="gray"/>
+  <feComposite in="gray" in2="ink" operator="arithmetic" k1="0" k2=".44" k3="1" k4="-.22" result="grain"/>
+  <feComposite in="grain" in2="ink" operator="in"/>
+ </filter>
+</defs>
+<g filter="url(#paper)" stroke="#141414" stroke-width="18" stroke-linecap="round" stroke-linejoin="round">
+<path fill="#200052" d="M-40 361 C-45 230 -30 104 -35 -45 L793 -48 C825 88 876 172 916 326 C641 268 376 404 31 361Z"/>
+<path fill="#59419F" stroke="none" d="M-12 -30 C-6 135 39 241 31 356 L152 369 C98 211 120 69 162 -30Z"/>
+<path fill="#836EF9" stroke="none" d="M692 -32 Q735 118 782 194 L871 269 Q813 73 778 -31Z"/>
+<path fill="#836EF9" d="M101 256 Q251 187 353 143 Q427 108 431 39 Q391 64 353 52 Q410 5 471 31 Q540 61 559 139 Q721 145 852 236 L880 277 Q662 191 462 211 Q257 237 101 287Z"/>
+<path fill="#59419F" stroke="none" d="M391 73q43-3 72-22 45 28 57 88-93-12-205 47 89-58 76-113Z"/>
+<path d="M247 224 Q410 160 529 166 Q649 164 760 217" fill="none" stroke="#836EF9" stroke-width="15"/>
+<path fill="#FF7A1A" d="M60 262 C321 305 593 148 846 209 L894 312 C605 257 325 425 39 359Z"/>
+<path d="M128 300 Q223 318 284 307 M517 247 Q584 230 637 235" stroke="#FFC25F" stroke-width="8" fill="none"/>
+<path fill="#FFCD62" stroke-width="15" d="M664 200 L783 211 L793 312 L668 304Z"/>
+<path fill="#200052" stroke-width="10" d="M697 232 L753 238 L758 280 L700 275Z"/>
+<path d="M755 260 L726 258" stroke-width="10"/>
+<path fill="#200052" d="M-34 353 C169 423 387 302 618 273 C817 245 931 318 1037 357 L1042 451 C950 440 852 363 730 388 C468 443 184 532 -36 460Z"/>
+<path fill="#836EF9" stroke="none" d="M-22 388 C207 460 446 299 672 300 C856 291 933 373 1017 392 L1022 424 C889 370 839 337 740 347 C501 356 217 497 -22 428Z"/>
+<path d="M154 463 C356 461 608 351 753 363" fill="none" stroke="#59419F" stroke-width="9"/>
+<path d="M301 52 L287 102 M276 70 L314 83" stroke="#836EF9" stroke-width="9"/>
+</g>
+</svg>

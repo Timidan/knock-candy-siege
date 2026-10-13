@@ -1,0 +1,79 @@
+{
+  "note": "The 10 one-of-one Chogs. Each is a hero kit (for its holder) and a boss (in Siege). costume names a rig costume in atlas/rig.json; attack is a rig attack style; numbers live in the engine.",
+  "legends": {
+    "561": {
+      "name": "Ember", "costume": "legend-561", "attack": "throw",
+      "weapon": {"name": "Fireball", "effect": "an arcing fireball that sets enemies alight"},
+      "special": {"name": "Flare Up", "effect": "a ring of fire bursts around the hero, burning everything near"},
+      "ultimate": {"name": "Wildfire", "effect": "sets a long stretch of the road ablaze for 6 seconds"},
+      "boss": {"move": "Wildfire", "effect": "leaves burning footprints that set guards alight; immune to burning"}
+    },
+    "900": {
+      "name": "Hellfire Skull", "costume": "legend-900", "attack": "swing",
+      "weapon": {"name": "Chain of Flames", "effect": "a fiery chain sweep that hits everything around the hero"},
+      "special": {"name": "Bone Shield", "effect": "spinning bones block every hit for 4 seconds"},
+      "ultimate": {"name": "Hell Ride", "effect": "charges down the road in a blaze, burning all it passes"},
+      "boss": {"move": "Hell Ride", "effect": "dashes ahead, scattering guards; revives once"}
+    },
+    "942": {
+      "name": "The Scream", "costume": "legend-942", "attack": "fan",
+      "weapon": {"name": "Echo", "effect": "sound rings that pierce through a line of enemies"},
+      "special": {"name": "Existential Dread", "effect": "a wide cone of fear: enemies walk back"},
+      "ultimate": {"name": "The Scream", "effect": "the whole screen warps: every enemy flees for 3 seconds"},
+      "boss": {"move": "The Scream", "effect": "the screen warps and towers miss half their shots for 4 seconds"}
+    },
+    "1002": {
+      "name": "Brainz", "costume": "legend-1002", "attack": "throw",
+      "weapon": {"name": "Brain Toss", "effect": "a squishy brain that slows what it hits"},
+      "special": {"name": "Shamble", "effect": "two zombie Chogs rise and fight for you"},
+      "ultimate": {"name": "Rise Again", "effect": "the last five fallen enemies rise and fight on your side"},
+      "boss": {"move": "Rise Again", "effect": "raises fallen enemies to walk the road again"}
+    },
+    "1481": {
+      "name": "Pepe", "costume": "legend-1481", "attack": "slap",
+      "weapon": {"name": "Tongue Lash", "effect": "a long tongue that pulls an enemy back"},
+      "special": {"name": "Feels Bad", "effect": "a sad aura: enemies near the hero slow to a crawl"},
+      "ultimate": {"name": "Rare Pepe", "effect": "golden frogs rain down, each one stunning where it lands"},
+      "boss": {"move": "Frog Leap", "effect": "leaps far down the road, shaking off slows"}
+    },
+    "1514": {
+      "name": "Manga", "costume": "legend-1514", "attack": "swing",
+      "weapon": {"name": "Ink Slash", "effect": "a brush-stroke slash with long reach"},
+      "special": {"name": "Speed Lines", "effect": "blinks to a spot, slashing everything on the way"},
+      "ultimate": {"name": "Final Panel", "effect": "the screen turns into a manga panel: time stops, then one huge slash"},
+      "boss": {"move": "Final Panel", "effect": "time stops for your towers for 3 seconds"}
+    },
+    "1667": {
+      "name": "Seraph", "costume": "legend-1667", "attack": "cast",
+      "weapon": {"name": "Holy Bolt", "effect": "a bolt of light that ignores armour"},
+      "special": {"name": "Halo", "effect": "heals the hero and every guard nearby"},
+      "ultimate": {"name": "Judgement", "effect": "pillars of light strike all along the road"},
+      "boss": {"move": "Sanctuary", "effect": "shields every enemy near it for 5 seconds"}
+    },
+    "1798": {
+      "name": "Gladius", "costume": "legend-1798", "attack": "throw",
+      "weapon": {"name": "Spear", "effect": "a thrown spear that pierces a line of enemies"},
+      "special": {"name": "Shield Wall", "effect": "a wall of shields blocks the road for 4 seconds"},
+      "ultimate": {"name": "Phalanx", "effect": "a volley of spears rains on the busiest stretch of road"},
+      "boss": {"move": "Testudo", "effect": "raises its shield: blocks the next five hits"}
+    },
+    "1881": {
+      "name": "Midas", "costume": "legend-1881", "attack": "flick",
+      "weapon": {"name": "Gold Flick", "effect": "flicks gold coins that bounce between enemies"},
+      "special": {"name": "Golden Touch", "effect": "turns an enemy to gold: frozen for 3 seconds, then drops triple candy"},
+      "ultimate": {"name": "Midas Rain", "effect": "a shower of gold: damage everywhere and candy for every hit"},
+      "boss": {"move": "Golden Touch", "effect": "turns two towers to gold, silencing them for 5 seconds"}
+    },
+    "1884": {
+      "name": "Lil' Devil", "costume": "legend-1884", "attack": "cast",
+      "weapon": {"name": "Trident", "effect": "three bolts of hellfire in a spread"},
+      "special": {"name": "Imp Swarm", "effect": "three imps dive at the toughest enemies"},
+      "ultimate": {"name": "Deal With the Devil", "effect": "double damage for 8 seconds; it costs one candy jar"},
+      "boss": {"move": "Pact", "effect": "steals three jars at once and calls a swarm of imps"}
+    }
+  },
+  "greatPumpkin": {
+    "name": "The Great Pumpkin",
+    "phases": ["rolls down the road, flattening guards", "at half health splits into three pumpkins", "near the porch calls a final wave of trick-or-treaters"]
+  }
+}

@@ -1,0 +1,155 @@
+{
+ "formats": [
+  "ogg",
+  "mp3"
+ ],
+ "cues": {
+  "throw": [
+   "sfx/throw-1",
+   "sfx/throw-2",
+   "sfx/throw-3",
+   "sfx/throw-4",
+   "sfx/throw-5",
+   "sfx/throw-6"
+  ],
+  "splat": [
+   "sfx/splat-1",
+   "sfx/splat-2",
+   "sfx/splat-3",
+   "sfx/splat-4",
+   "sfx/splat-5"
+  ],
+  "hit": [
+   "sfx/hit-1",
+   "sfx/hit-2",
+   "sfx/hit-3",
+   "sfx/hit-4",
+   "sfx/hit-5"
+  ],
+  "armor": [
+   "sfx/armor-1",
+   "sfx/armor-2",
+   "sfx/armor-3"
+  ],
+  "coin": [
+   "sfx/coin-1",
+   "sfx/coin-2",
+   "sfx/coin-3",
+   "sfx/coin-4",
+   "sfx/coin-5",
+   "sfx/coin-6"
+  ],
+  "candy-cascade": [
+   "sfx/candy-cascade-1",
+   "sfx/candy-cascade-2",
+   "sfx/candy-cascade-3",
+   "sfx/candy-cascade-4"
+  ],
+  "build": [
+   "sfx/build-1",
+   "sfx/build-2",
+   "sfx/build-3"
+  ],
+  "upgrade": [
+   "sfx/upgrade-1",
+   "sfx/upgrade-2",
+   "sfx/upgrade-3"
+  ],
+  "sell": [
+   "sfx/sell-1",
+   "sfx/sell-2",
+   "sfx/sell-3"
+  ],
+  "wave": [
+   "sfx/wave-1"
+  ],
+  "jar-stolen": [
+   "sfx/jar-stolen-1",
+   "sfx/jar-stolen-2",
+   "sfx/jar-stolen-3",
+   "sfx/jar-stolen-4"
+  ],
+  "trap": [
+   "sfx/trap-1",
+   "sfx/trap-2",
+   "sfx/trap-3"
+  ],
+  "boo": [
+   "sfx/boo-1",
+   "sfx/boo-2",
+   "sfx/boo-3"
+  ],
+  "laser": [
+   "sfx/laser-1",
+   "sfx/laser-2",
+   "sfx/laser-3"
+  ],
+  "guard-attack": [
+   "sfx/guard-attack-1",
+   "sfx/guard-attack-2",
+   "sfx/guard-attack-3",
+   "sfx/guard-attack-4"
+  ],
+  "guard-hit": [
+   "sfx/guard-hit-1",
+   "sfx/guard-hit-2",
+   "sfx/guard-hit-3"
+  ],
+  "hero-step": [
+   "sfx/hero-step-1",
+   "sfx/hero-step-2",
+   "sfx/hero-step-3",
+   "sfx/hero-step-4"
+  ],
+  "emote": [
+   "sfx/emote-1",
+   "sfx/emote-2",
+   "sfx/emote-3",
+   "sfx/emote-4"
+  ],
+  "ui-click": [
+   "sfx/ui-click-1",
+   "sfx/ui-click-2",
+   "sfx/ui-click-3"
+  ],
+  "ui-open": [
+   "sfx/ui-open-1",
+   "sfx/ui-open-2"
+  ],
+  "ui-close": [
+   "sfx/ui-close-1",
+   "sfx/ui-close-2"
+  ],
+  "ui-confirm": [
+   "sfx/ui-confirm-1",
+   "sfx/ui-confirm-2"
+  ],
+  "ui-error": [
+   "sfx/ui-error-1",
+   "sfx/ui-error-2"
+  ],
+  "ui-toggle": [
+   "sfx/ui-toggle-1",
+   "sfx/ui-toggle-2"
+  ],
+  "victory": [
+   "sfx/victory-1",
+   "sfx/victory-2"
+  ],
+  "defeat": [
+   "sfx/defeat-1",
+   "sfx/defeat-2"
+  ]
+ },
+ "music": {
+  "level": "music/level",
+  "boss": "music/boss",
+  "menu": "music/menu",
+  "ambient": "music/ambient"
+ },
+ "license": "CC0 (Kenney audio packs; OpenGameArt tracks by starlightfrost, spiderdave, pro-sensory, ruskerdax)",
+ "audition": [
+  "victory",
+  "defeat"
+ ]
+}

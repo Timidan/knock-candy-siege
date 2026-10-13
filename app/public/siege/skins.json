@@ -1,0 +1,70 @@
+{
+ "Pink": {
+  "tint": "#f06ca8",
+  "face": "#f4eedd"
+ },
+ "Origin": {
+  "tint": "#5a36b0",
+  "face": "#f4eedd"
+ },
+ "Red": {
+  "tint": "#e0302c",
+  "face": "#f4eedd"
+ },
+ "Black": {
+  "tint": "#2e2428",
+  "face": "#5a3420"
+ },
+ "Yellow": {
+  "tint": "#f0d818",
+  "face": "#f4eedd"
+ },
+ "White": {
+  "tint": "#f2f0ea",
+  "face": "#f2f0ea"
+ },
+ "Green": {
+  "tint": "#8fd14f",
+  "face": "#9fd86a"
+ },
+ "Grey": {
+  "tint": "#9a98a0",
+  "face": "#a8a6ae"
+ },
+ "Blue": {
+  "tint": "#5ea8dc",
+  "face": "#74b6e2"
+ },
+ "Metal": {
+  "tint": "#8d95a8",
+  "face": "#9aa2b4",
+  "shine": true
+ },
+ "Beige": {
+  "tint": "#efe2c4",
+  "face": "#efe2c4"
+ },
+ "Jade": {
+  "tint": "#6fb68f",
+  "face": "#80c29e"
+ },
+ "Purple": {
+  "tint": "#9a7fe0",
+  "face": "#a690e6"
+ },
+ "Multi Colored": {
+  "tint": "#f06ca8",
+  "face": "#f4eedd",
+  "cycle": [
+   "#f06ca8",
+   "#f0d818",
+   "#8fd14f",
+   "#5ea8dc",
+   "#9a7fe0"
+  ]
+ },
+ "": {
+  "tint": "#f0c040",
+  "face": "#f6dc8c"
+ }
+}
