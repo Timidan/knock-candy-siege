@@ -1,5 +1,7 @@
 # Candy Siege: Knock's tower-defence mode
 
+> **This is the design doc from 12 Oct, kept for history.** It was written when Siege was a mode beside the street game. Since 13 Oct the street game is dropped, so the parts that depend on it were not built: crew passives, street bonuses, and earning $KNOCK in the street. Some other details also changed. For what actually shipped, read the [README](../README.md) and the [player guide](HOLDERS.md).
+
 Working title. A single-player tower defence in Chog Town, played in the browser by anyone, with or without a Chog. It sits beside the live multiplayer street, which launches on Monad mainnet as planned. Siege needs no contract change to Knock.
 
 **The bar:** it plays and feels like a polished commercial tower defence (Kingdom Rush is the reference). That means smooth 60 fps on a mid-range phone, abundant animation and feedback, real sound, clear onboarding. Nothing sloppy ships: a feature that isn't polished is cut, not shipped rough.

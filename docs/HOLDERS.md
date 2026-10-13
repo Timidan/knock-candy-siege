@@ -1,359 +1,369 @@
-# Knock: the holder guide
+# Knock: Candy Siege player guide
 
-## What Knock is
+It's Halloween night in Chog Town. Waves of trick-or-treaters march down the road to raid the 20 candy jars on your porch. You build towers on the pads beside the road, drop traps on it, cast spells, and send your own Chog into the fight as the hero.
 
-Every Chog Genesis is a house in Chog Town: 21 neighbourhoods by background colour, 63 streets. Holders play as their Chog. Anyone can walk the street and watch.
+Play at https://knock.timidan.xyz, on a phone held sideways or in a desktop browser. You don't need a wallet or a Chog to play.
 
-You can knock for a treat, leave a trick, raid a bowl, help clean a friend's house, or fight the Great Pumpkin. At home, you can fill your bowl, craft items, set a trap and wear a costume.
+## The basics
 
-Candy is the game item you spend on bowls and crafting. $CHOG is a separate token on Monad. $KNOCK is a separate testnet reward with no real value.
+- **Jars are your lives.** You start each level with 20. An enemy that reaches the porch steals one or more. At 0 jars you lose.
+- **Candy is your money.** You start with 250. You earn it from each enemy you stop, from a bonus for each wave you clear, and from calling waves early. You spend it on towers, upgrades, traps and supplies during the level.
+- **Stars:** survive every wave to win. 18 to 20 jars left earns 3 stars, 10 to 17 earns 2, and 1 to 9 earns 1.
+- **Waves:** the first wave starts when you call it. After that, each wave calls itself when its countdown ends. You can call it early for extra candy.
+- **Where to start:** all six levels, Endless and the Daily are open from the start, but Rosie Row is marked "Start here". Your first Rosie Row is a 7-step tutorial, and you can skip it. To replay it, tap **Play with the tutorial again** in the hero picker.
 
-## Your first night
+## Controls
 
-1. **Connect** the wallet that holds your Chog, on Monad, and pick your Chog. Keep a little MON there for gas.
-2. **Optional:** tap **Play without pop-ups** to turn on a play key, so the night's actions don't each need a wallet pop-up. See [Play keys](#play-without-pop-ups-play-keys).
-3. **Open Tonight** and tap **Go** next to a route house. Walk up, pick a trick, aim and let it fly. Your first knock of the night brings your ration: **5 candy and 3 eggs**.
-4. **Finish the route:** knock at all 3 route houses for **10 bonus candy** (and 500 testnet $KNOCK).
-5. **Hit the Great Pumpkin.** When it falls, everyone who hit it claims candy.
-6. **Join a crew.** It's permanent, and from then on your actions score for your crew.
-7. **Open My house:** fill your bowl so knockers get treats, and craft a pumpkin trap to catch raiders.
+### Touch
 
-The rest of this guide explains every rule in detail.
-
-## Getting started
-
-- Open Knock in a browser with a wallet, or in your wallet's browser. Choose **Connect wallet**. Use the wallet that holds your Chog Genesis and switch to Monad when asked. Keep some MON there for gas.
-- Pick your Chog from the wallet list, or enter its number in **Chog #** and choose **Play**. Numbers run from **1 to 1,969**. Typing a number does not give you control of someone else's Chog. If the list cannot load, you can still type your number; the app checks its owner.
-- **How to play** opens a practice tutorial. It also opens on your first visit in that browser. Practice needs no wallet and sends no transactions. You can skip it and reopen it from Home.
-- Choose **Explore** to walk without playing. Use **Find** on Home, or **Play / Find** on the street, to go to a house by number.
-
-In the **3D street**, walk with WASD, the arrow keys or the touch joystick. **My house** opens your bag and house controls. **Tonight** shows the route, Great Pumpkin and crews.
-
-**Simple view** shows the houses as a scrollable street. Open a house to knock with a button, clean a mark or read its inbox. Open your own house for its controls. There is no aiming step in this view. The current Simple view has no raid, boss, crew-joining or Tonight controls; use the 3D street for those. Knocks made in Simple view still count towards the contract's route and crew rules.
-
-Lite mode turns on automatically for touch devices and devices that report low memory. It reduces visual effects without changing the game rules. You can also request it with `?lite` in the page URL. If the street is slow on your phone, try Simple view.
-
-## What it costs
-
-Each game action is **one Monad transaction**, paid in **MON gas**. Filling a bowl with $CHOG or paying to clean your own mark may need an extra approval transaction first. That approval also costs gas.
-
-A missed aimed throw sends nothing. It uses no gas, knock or item. Browsing, walking, choosing a Chog and practising also send nothing.
-
-| Action | Cost besides gas |
+| To do this | Do this |
 |---|---|
-| Knock | 1 regular knock, or the matching revenge knock. You must hold a trick item; it is spent only on a trick or bounce. |
-| Raid | 1 regular knock. If caught, lose up to 2 candy. No trick item needed. |
-| Hit the Great Pumpkin | 1 regular knock and 1 trick item. |
-| Clean another owner's house | 1 regular knock. No $CHOG or item. |
-| Clean your own mark | The contract's `cleanFee` in $CHOG. No knock. |
-| Fill the bowl | The candy and optional $CHOG you choose to add. No knock. |
-| Craft | The candy cost below. No knock. |
-| Set a trap | 1 pumpkin trap item. No knock. |
-| Wear or remove a costume, empty the bowl, join a crew, claim boss loot | No knock or item spent. |
+| Build a tower | Tap an empty pad. A ring of four towers opens. Tap one to see its range, role and cost, then tap it again to build. Tap the centre (**MORE →**) for the special towers. |
+| Upgrade, sell or retarget | Tap a built tower. **UPGRADE** (or **RANK**) improves it. **SELL** returns 70% of the candy you spent on it. The bottom button cycles the target: first, last, strong or close. |
+| Specialise | Tap a level-3 classic tower and choose one of its two specialisations. Tap once to read it, and tap again to buy it. |
+| Move your hero | Tap the hero portrait (bottom left), then tap the ground. You can also tap the hero on the map. |
+| Emote | Tap the LOL bubble above the portrait, or hold your hero. The wheel has 8 emotes, your Chog's signature in the centre, and more pages for dances and emotes you own. |
+| Use your hero's special | Tap the button next to the portrait. It shows a cooldown. |
+| Use your ultimate | Tap the button above the special when it reads **READY**. It fills as your Chog fights. |
+| Cast a spell | Tap **Candy Rain** or **Boo!**, then tap where it should land. |
+| Place a trap | Drag a trap (bottom right) onto the road. You can also select it and tap the road. Candy is only spent when the trap lands on the road. |
+| Use supplies | Tap **SUPPLIES** (above the traps), then drag an item to the road, or select it and tap a target. |
+| Call the next wave | Tap the button at the road's entrance once to preview the wave, then tap it again to call it. Before wave 1 it says **GO**. During a countdown it shows **EARLY** and the candy you'll get for calling it now. |
+| Use a map prop | Tap the prop on the map, such as the street lamp, the bell or the bonfire. Its label shows what it does and its cooldown. |
+| Read a perk | Tap a perk badge (top left, under the jars and candy). |
+| Inspect an enemy | Tap it. You see its Chog number and its modifiers. |
+| Change speed | Tap the speed button (top right) to cycle 1×, 2× and 3×. |
+| Pause | Tap pause (top right). Switching to another browser tab also pauses the game. |
+| Pick a talent | When your hero levels up, a talent card pauses the game. Tap one of the two cards. After 10 seconds it picks the left one for you. |
 
-$CHOG is only needed if you choose to add it to a bowl or pay to clean your own mark. A candy-only bowl is allowed. You do not need $CHOG to start playing.
+### Keyboard
 
-An action can fail if you have no knocks left, lack an item or token balance, use the wrong wallet or network, or act on a house whose state has changed. You cannot knock, raid or friend-clean another Chog owned by your own wallet. A mined transaction that fails can still cost gas, but its game changes are undone. Check the confirmed result; an animation alone is not confirmation.
-
-## Your night
-
-A night starts at **00:00 UTC**. It follows the chain's time, not your local midnight.
-
-Your regular knocks are shared by knocks, raids, boss hits and friend cleans:
-
-| Costume you are wearing and still hold | Most nights | Costume Night |
-|---|---:|---:|
-| None | 3 | 3 |
-| Ghost sheet | 3 | 4 |
-| Witch hat | 4 | 5 |
-
-The limit uses your current costume. Changing clothes does not reset knocks already used. Unused knocks do not carry over.
-
-**Your daily ration** is **5 candy and 3 eggs**. It arrives inside your first successful knock, raid, boss hit or friend clean of that night, before the action spends items. This lets you start with an egg even if your bag was empty. A failed action does not leave you with a ration. Connecting, crafting, filling a bowl, claiming loot or joining a crew does not collect it. Missed nights do not build up rations.
-
-**Your revenge knock** lets you knock back without using a regular knock. You get it when a trick marks your house, a trap bounces your trick back, or someone raids your bowl—even if the raider is caught. **Knock back #…** takes you to the target.
-
-You hold only one revenge target at a time; a new mark or raid replaces it. It works only for a normal knock at that target. A successful knock uses up the revenge, though a bounce can give you a new one. You still need a trick item and gas. The result can be a treat, trick or bounce. It cannot pay for a raid, boss hit or friend clean. Midnight, a mark fading and cleaning do not clear unused revenge.
-
-The themes repeat in this order:
-
-| Night | Effect |
+| Key | Action |
 |---|---|
-| Quiet | The usual rules. |
-| Blood Moon | Crew points double. |
-| Candy Rain | The daily ration doubles to 10 candy and 6 eggs. Other candy rewards do not double. |
-| Costume Night | Wear a ghost sheet or witch hat that your Chog still holds for 1 extra regular knock. |
+| Space | Pause |
+| Esc | Cancel what you selected, or pause |
+| 1 / 2 | Select Candy Rain / Boo! |
+| Q | Hero special |
+| R | Ultimate |
+| Z / X | Pick the left / right talent |
+| E | Emote wheel |
+| N | Call the next wave |
 
-The theme comes from the UTC day count, not from when you first play. Read Tonight for the current theme.
+The mouse works like touch. Key hints show on devices with a mouse or trackpad, or once you press a key.
 
-## Knocking
+## Your hero
 
-Walk up to a house owned by someone else. If it has candy, choose **Treat**; the app selects a trick you hold. Otherwise choose **Egg**, **Toilet paper** or **Mustache**. You can also select those tricks with the keyboard number keys.
+- **Your hero is a Chog.** Its weapon, special, ultimate and perks come from its real traits (see [Traits and perks](#traits-and-perks)).
+- **It attacks on its own.** Tap the portrait, then the ground, to move it where it's needed.
+- **It levels up during a level:**
+  - every enemy that falls gives it experience;
+  - each level adds 30 health and 12% damage;
+  - it stops at hero level 5.
+- **Starting level:** Rare, Epic and Legendary Chogs start 1, 2 or 3 levels higher. Your own Chog (Home advantage) adds one more.
+- **Talents:** at levels 2, 3, 4 and 5 you choose between two cards.
+  - One improves what your traits gave you: the weapon at level 2, the special at 3, the passive or headgear at 4, and the ultimate at 5.
+  - The other is a general upgrade: Strong Arm, Quick Thinking, Staying Power or Sweet Energy.
+  - A hero that starts above level 1 gets those earlier picks one after another at the start.
+- **If your hero faints,** it's back in 12 seconds. The Lucky Frog trinket revives it once at 60% health. A Skull-form Chog rises again after 1.5 seconds, once per level.
 
-In the 3D street, move the aim onto the house and release to throw. On touch, drag from the action button and release. **Cancel** or Escape cancels the aim. A hit or bullseye asks for the transaction. Bullseyes and the style streak are cosmetic; they do not increase rewards or damage.
+## Towers
 
-The contract checks the house when the transaction runs. It uses this order:
+Each pad holds one tower. The four classic towers have three levels. The cost shown is to build, then to reach level 2, then level 3.
 
-| Outcome | Exact rule | What happens |
+| Tower | Costs | What it does |
 |---|---|---|
-| **Treat** | The bowl has at least 1 candy, even if a trap is set. | Take 1 candy. Also take the full $CHOG per-treat amount if it is above zero and the bowl can cover it. Otherwise take no $CHOG. Keep your trick item. The trap stays set. |
-| **Bounce** | The bowl has no candy, a trap is set, and you are not wearing a ghost sheet you still hold. | Your trick marks your own house. Your trick item and their trap are used up. You get revenge on that house. |
-| **Trick** | The bowl has no candy and the bounce rule does not apply. | Spend your trick item and mark their house. They get revenge on you. If your ghost sheet bypassed a trap, the trap stays set. |
+| Egg Stand | 65 / 75 / 120 | Quick single shots. Pumpkin Heads take only 20% from eggs. |
+| TP Launcher | 100 / 105 / 155 | Arcing splash that wraps and slows a crowd. |
+| Haunted Lantern | 200 / 110 / 160 | Magic bolts that ignore armour. Reveals every hidden enemy in its range. |
+| Pumpkin Patch | 90 / 100 / 145 | Sends 2, then 3, guards to hold the road. Flyers pass over them. |
 
-**Haunted houses.** A house whose owner has never played has no bowl and no trap, so it would always take a plain trick. Instead it answers the door itself: 40% of the time it's a treat (+1 candy, and you keep your trick), 20% a bounce (your trick lands on you), and 40% a trick. The roll comes from the chain, so you can't know it before you knock. Once the owner plays, the house behaves normally.
+At level 3, a classic tower can take one of two specialisations for 180 candy. After that, it has two more ranks, at 150 and 210 candy. Each rank adds 30% damage and a little range.
 
-A mark is an egg splat, toilet paper or a mustache on the house's Chog portrait. It lasts **24 hours from the latest mark**, unless cleaned sooner. A new mark replaces the old one and restarts that time. It does not take the Chog away or stop it playing.
-
-## Raids and traps
-
-At a bowl with candy, **Raid** tries to take more than a treat. It always costs a regular knock. Revenge cannot cover it, and you need no trick item. If the bowl has no candy when the transaction runs, the raid fails.
-
-| Result | Exact rule | What happens |
+| Tower | Specialisation | Effect |
 |---|---|---|
-| **LOOTED** | No trap, or you wear a ghost sheet you still hold. | Take the smaller of **3 candy** and the bowl's candy balance. Separately, take the smaller of **3 × $CHOG per treat** and the bowl's $CHOG balance. A bypassed trap stays set. |
-| **CAUGHT** | A trap is set and you lack a worn, held ghost sheet. | Take nothing. Up to **2 candy** from your bag goes into their bowl. The trap is used up. No $CHOG is taken from you and no mark is made. |
+| Egg Stand | Rotten Egg | Poison that stacks up to five times. |
+| Egg Stand | Golden Yolk | A 35% chance to hit for triple damage. |
+| TP Launcher | Mummy Wrap | The splash stuns the crowd. |
+| TP Launcher | TP Tornado | A vortex pulls marchers back toward its centre. |
+| Haunted Lantern | Will-o'-Wisp | Magic jumps to three nearby enemies. |
+| Haunted Lantern | Moon Beam | A piercing line hits every enemy in its path. |
+| Pumpkin Patch | Jack Knights | Knights with double health and stronger attacks. |
+| Pumpkin Patch | Vine Snare | Guards root their targets. |
 
-The $CHOG calculation is separate from the candy calculation. A bowl with only **1 candy** can still lose up to **3 treat payouts** of $CHOG to a raid. If caught, candy from a ration just collected can be taken too.
+### Special towers
 
-Either result gives the house a revenge knock on the raider. A normal treat does not trigger a trap; a raid can trigger one while the bowl is full.
+These are on the second page of the build ring (**MORE →**). They have three levels and no specialisations.
 
-## Your house
+| Tower | Build cost | What it does | How to unlock |
+|---|---|---|---|
+| Witch's Cauldron | 145 | Potions that splash, slow and poison ground crowds. Can't hit flyers. | Earn 3 stars on Lemon Lane |
+| Candy Corn Catapult | 190 | Very long range and a huge ground splash, but a slow reload. Can't hit flyers. | Win Mint Mews |
+| Ghost Lighthouse | 160 | A sweeping beam that reveals and frightens. Low damage. | Win Mon Manor |
+| Haunted Organ | 175 | Sound waves shove nearby enemies back. Aqua (slippery) enemies resist. | Win Radioactive Ridge |
+| Bat Roost | 135 | Three bats hunt flyers. Can't attack ground enemies. | Own it from the shop (1,000 $KNOCK). It isn't on sale yet. |
 
-Open **My house** on the street, or open your own house in Simple view.
+## Traps, spells and supplies
 
-### Fill or empty the bowl
+**Traps** go on the road. You can have up to 12 down at once. Flyers aren't affected by them.
 
-Enter **Candy**, **$CHOG** and **per treat**, then choose **Fill the bowl**. Candy comes from your Chog's bag. $CHOG comes from your connected owner wallet. The bowl is held by the game contract, separately from both wallets.
+| Trap | Cost | Effect |
+|---|---|---|
+| Pumpkin Trap | 30 | One burst stuns a crowd for 2.5 seconds, then the trap is gone. |
+| Candy Bowl | 25 | Enemies that reach it stop to eat. It lasts 7 seconds from the first bite. Enemies with visor eyes ignore it. |
+| Bubblegum | 25 | A sticky patch that slows enemies walking through it. It lasts 10 seconds from the first step. |
 
-Each fill adds to the bowl's balances and replaces its $CHOG per-treat setting. You can leave $CHOG and per treat at zero for a candy-only bowl. $CHOG alone cannot make an empty candy bowl give treats.
+**Spells** are free and have cooldowns.
 
-Each treat takes **1 candy**. It pays the chosen $CHOG amount only if the bowl holds enough for the full amount. A low $CHOG balance does not stop candy treats. See Raids for the larger raid payout.
+| Spell | Cooldown | Effect |
+|---|---|---|
+| Candy Rain | 22 s | 125 magic damage in an area. |
+| Boo! | 26 s | Enemies in the area run back for 2 seconds. |
 
-**Empty the bowl** returns its remaining candy to your Chog's own wallet and its remaining $CHOG to the **current Chog owner's wallet**. It also clears the per-treat setting. Only the current owner can fill or empty it. Empty your bowl before selling if you want its remaining $CHOG back; after a sale, the buyer can empty it.
+**Supplies** cost candy and have their own cooldowns. Open them with the **SUPPLIES** button.
 
-### Set a trap
+| Supply | Cost | Effect |
+|---|---|---|
+| Pumpkin Bomb | 65 | Thrown for 160 splash damage. |
+| Holy Water | 45 | Reveals ghosts for 5 seconds. It deals 180 damage to ghosts and 20 to anything else. |
+| Garlic Cloud | 55 | Poisons and slows ground enemies for 6 seconds. |
+| Giant Candy Cane | 55 | Blocks the road for 8 seconds. Flyers pass over it. |
+| Scarecrow | 50 | A decoy with 240 health that lures ground enemies for up to 12 seconds. Bosses and visor eyes ignore it. |
 
-**Set the trap** spends **1 pumpkin trap** from the bag. You can have only **1 trap** set at a time. It stays until a bounce or caught raid uses it up. Wearing a ghost sheet bypasses it without removing it.
+## Enemies and how to beat them
 
-### Wear a costume
+Every enemy wears a costume with a real Chog's face, and that Chog's traits can add modifiers (see [Enemy modifiers](#enemy-modifiers)). The first time you meet a new kind, a card introduces it.
 
-You can wear **one costume at a time**. The ghost sheet bypasses traps on knocks and raids. The witch hat raises your regular knock limit from **3 to 4**, with the Costume Night bonus shown above.
+| Enemy | Health | Jars it steals | What it does | How to beat it |
+|---|---|---|---|---|
+| Trick-or-Treater | 92 | 1 | Walks the road. | Anything works. Watch its modifiers. |
+| Ghost Sheet | 95 | 1 | Fast and invisible until something reveals it. | Haunted Lantern, the Target Lock special, Holy Water or a Ghost Lighthouse. |
+| Pumpkin Head | 245 | 1 | Armoured: eggs deal only 20% damage. | Magic (Lantern) or TP. |
+| Bat Wings | 78 | 1 | Fast and flying. Guards and traps can't stop it. | Towers that shoot (Egg, TP, Lantern) or the Bat Roost. |
+| Witch | 310 | 2 | Heals nearby marchers, then blinks ahead. | Focus her down, or stun her while she casts. |
+| Mummy | 360 | 2 | Splits into two quick Mini Mummies (72 health each). | Save splash for the split. |
+| Candy Goblin | 135 | 3 | Very fast, and steals three jars. | Slow, root or block him: guards, Vine Snare, Bubblegum, the Candy Cane. |
+| Skeleton Crew | 88 each | 1 each | Arrives five at a time. | Splash and chains. |
 
-Crafting a costume does not put it on. Choose **Wear ghost sheet** or **Wear witch hat**. Wearing it does not consume it. Its effect works only while your Chog's own wallet still holds that costume. **Take it off** removes the effect without destroying the item.
+**The three rules to remember:**
 
-### Craft in the cauldron
+- **Lanterns reveal ghosts.** A ghost stays hidden, and most towers can't target it, until a Haunted Lantern has it in range. Target Lock, Holy Water, the Ghost Lighthouse, the Purify ultimate and Rare Row's bonfire also reveal it.
+- **Magic or TP beats armour.**
+  - Pumpkin Heads only resist eggs, so TP and other splash hit them at full strength.
+  - Enemies with Metal skin, or near a Crown-wearing friend, take 65% from anything that isn't magic.
+  - Magic (Lantern, Candy Rain, the Cauldron, Holy Water) ignores all armour.
+- **Flyers skip traps.** Bats fly over guards, traps, the Candy Cane and the Scarecrow. Egg Stands, TP Launchers, Lanterns, your hero, spells, thrown supplies and the Bat Roost can hit them; the Cauldron and the Catapult can't. The Twister ultimate pulls flyers down.
 
-Each button crafts **1 item** from candy in your bag:
+### Bosses
 
-| Item | Candy cost | Use |
-|---|---:|---|
-| Toilet paper | 2 | A trick or boss hit. |
-| Mustache paint | 3 | A trick or boss hit. |
-| Pumpkin trap | 5 | Set a trap. |
-| Ghost sheet | 15 | Wear it to bypass traps. |
-| Witch hat | 15 | Wear it for more regular knocks. |
+The 10 legendary 1:1 Chogs are bosses. Each one walks the road at 1.8× size in a costume that continues its portrait. It uses its move on a timer and gets faster and angrier at half health. If it reaches the porch it steals 6 jars; Lil' Devil steals 8.
 
-Eggs come from the ration; there is no egg-crafting button or contract recipe. Candy already in your bowl cannot be spent on crafting until you empty it back into the bag.
+| Boss | Chog | Move |
+|---|---|---|
+| Ember | #561 | Wildfire: burning footprints that set guards alight. Immune to burning. |
+| Hellfire Skull | #900 | Hell Ride: dashes ahead, scattering guards. Revives once. |
+| The Scream | #942 | The Scream: the screen warps and towers miss half their shots for 4 seconds. |
+| Brainz | #1002 | Rise Again: raises fallen enemies to walk the road again. |
+| Pepe | #1481 | Frog Leap: leaps far down the road, shaking off slows. |
+| Manga | #1514 | Final Panel: time stops for your towers for 3 seconds. |
+| Seraph | #1667 | Sanctuary: shields every enemy near it for 5 seconds. |
+| Gladius | #1798 | Testudo: blocks the next five hits. |
+| Midas | #1881 | Golden Touch: turns two towers to gold, silencing them for 5 seconds. |
+| Lil' Devil | #1884 | Pact: steals three jars at once and calls a swarm of imps. Beating him returns the jars. |
 
-### Clean a mark
+**The Great Pumpkin** is the final boss of Rare Row:
 
-You can wait for it to fade, pay to clean it, or ask a friend:
+- it rolls down the road, flattening guards;
+- it splits into three pumpkins at half health;
+- near the porch, it calls one last wave of trick-or-treaters;
+- if it reaches the porch, it steals 10 jars.
 
-| Choice | Cost and rule |
+Magic and splash work best against it.
+
+**Witching Hour** waves end Mint Mews, Mon Manor, Radioactive Ridge and Rare Row, and come every tenth wave in Endless. Arrows warn you at the screen edges. Three seconds later, ghosts and bats pour in from those edges as well as along the roads.
+
+## The six neighbourhoods
+
+| Level | Waves | Twist | Tap this prop | Bosses |
+|---|---|---|---|---|
+| 1 Rosie Row | 6 | One road; the tutorial | **Drop lamp:** knocks a street lamp onto the road for 170 damage and a 3-second stun. Once per level. | none |
+| 2 Lemon Lane | 7 | Two roads | **Sugar rush** at the candy shop: 50 candy makes towers attack 60% faster for 10 seconds. | Pepe |
+| 3 Mint Mews | 7 | A canal; bats fly straight over the water | **Raise bridge:** new arrivals take the long way round. | Midas |
+| 4 Mon Manor | 8 | Portals: walking into one comes out of its twin further along. Flyers pass over. | **Ring the bell:** every enemy, flyers too, is stunned for 2 seconds. | The Scream |
+| 5 Radioactive Ridge | 8 | Toxic pools make ground enemies 30% faster. Three glowing pads give a tower 20% more range and damage. | **Open the grate:** enemies on it drop in and climb out upstream 5 seconds later. | Brainz |
+| 6 Rare Row | 9 | Darkness: only light shows enemies (lanterns, your Chog and the bonfire). | **Light the bonfire:** everything is lit and revealed for 20 seconds. | Ember, Lil' Devil, Gladius, then the Great Pumpkin |
+
+Hellfire Skull, Manga and Seraph appear in Endless.
+
+## Traits and perks
+
+### Your hero's kit
+
+Every trait value of every Chog maps to part of a kit, so all 1,969 Chogs have a full one. The six main slots make 1,766 different kits across the collection. The hero picker lists your Chog's kit before you play. At the start of each level, the **CHOG #… · TRAITS ACTIVE** card shows the perks it carries into the fight.
+
+| Trait | Kit slot | Families |
+|---|---|---|
+| Body (97 outfits) | Weapon | Pitch Deck, Scepter Bolt, Ball & Chain, Fastball, Slingshot, Mascot Slam, Egg Lob, Junk Toss, Pellet Blaster, Paper Fan Gust, Ray Gun, Anime Beam, Tickle Slap (no outfit). Fire shirts burn, electric hoodies chain-zap, and each mascot suit (duck, shark, banana, dragon, toad, mummy) adds a twist. |
+| Eyes | Special | Laser Sweep (fire burns, green poisons, cyan freezes, purple pierces), Target Lock, Deal With It, Tear Flood, Charm, Play Dead, Stare Down, Confetti Bomb, Pep Talk |
+| Aura | Ultimate | Candy Corn Meteor, Tidal Wave, Twister, Vanishing Act, Arcane Storm, Bloom, Love Bomb, Purify, Thunder Chain, Candy Bomb. A Chog with no aura gets one from its background colour. |
+| Mouth | Passive | Money Mouth (+15% candy from kills), Sticky, Rainbow Trail, Sweet Tooth, Honk, Tough, Pity, Cheerful |
+| Head | Headgear | Royal Command, Spellcraft, Hellfire, Armored, Degen Luck, Focus, Bucket Shield, Chill, Prankster (traps 20% cheaper), Oddity, Bareheaded |
+| Accessory | Trinket | Lucky Frog (revive), Lucky Coin (+50 starting candy), Snack Bag (a jar back each wave), Smoke Puff, Pump, Dump, Heart, Shiv, or none |
+| Skin | Quirk | Metal (armoured), Jade (lucky drops), Multi Colored (a random buff each wave), rare tones (a small status resistance) |
+| Form, Base, Tier | Quirks | Skull: undead (revives once, not frightened). Radioactive: attacks poison. Rare, Epic and Legendary: +1, +2 and +3 starting hero levels. |
+
+The 10 legendary 1:1 Chogs keep their trait perks but get a hand-made weapon, special and ultimate named for the Chog. Every Chog also has a **signature emote** from its mouth or eyes, such as Rainbow Barf, Bling or Laser Blink. It plays on the Chog's own portrait.
+
+### Enemy modifiers
+
+An enemy's real traits can give it one or more of these. Tap an enemy to see which it has.
+
+| Trait | Modifier |
 |---|---|
-| **Scrub it off** on your own house | The current owner pays `cleanFee` in $CHOG from their wallet, plus gas. No knock used. The app shows the fee before you pay. **[DECIDE: the fee at deploy; 10 $CHOG on the test chain]** |
-| **Clean it up** at a friend's house | The helper spends 1 regular knock and gas. No $CHOG or item. The Chogs must have different owners. |
+| Aura: Burning, Fiery or Fire | Immune to slows |
+| Aura: Aqua | Can't be knocked back |
+| Aura: Smoke | Dodges 20% of attacks |
+| Aura: Wind | 20% faster |
+| Eyes: any laser | Zaps a tower for a 1-second stun |
+| Eyes: Gradient visor, Anime Glass | Ignores candy lures |
+| Head: Crown | Armours nearby friends |
+| Head: Wizard Hat | Blinks forward |
+| Mouth: Gold Tooth, BTC Coin, Mon coin | Drops double candy |
+| Mouth: Bubblegum | Gum slows guards |
+| Mouth: Drooling | Steals two jars |
+| Accessory: Knife | Shreds guards |
+| Accessory: Fwog, PEPE | Survives one lethal hit |
+| Accessory: Green or Red Candle | Pumps and dumps its speed |
+| Form: Skull | Revives once |
+| Base: Radioactive | Poison aura that hurts guards and your hero |
+| Skin: Metal | Armoured |
+| Tier: Rare, Epic | 50% or 100% more health and candy |
 
-There must still be an active mark when the transaction runs. A friend clean can collect the helper's ration and score crew points. It does not stamp a route stop. Cleaning does not remove revenge.
+## Holders
 
-## Tonight
+### Wallets
 
-Expand **Tonight** on the 3D street to see the route and crew scores. **Go** takes you to the Great Pumpkin or a route house.
+The hero picker and the shop offer two wallets:
 
-### The route
+- **Use guest wallet:** the page makes a testnet-only key and keeps it in this browser. Open **Details** to see the address, or to back up the key. It's lost if you clear the browser's data without a backup. Never send real funds to it.
+- **Use connected wallet:** your browser wallet. For Home advantage and the $CHOG perk, use the wallet that holds your Chog and $CHOG on Monad.
 
-Each Chog has **3 distinct houses** to visit that night. The route skips houses owned by your wallet. Knock or raid every stop, in any order, for **10 bonus candy**, paid straight to your Chog's own wallet. You can earn this bonus once per night.
+### Home advantage
 
-Treats, tricks, bounces, looted raids and caught raids all stamp a stop if the transaction succeeds. Revenge knocks count too. Walking there, cleaning it or hitting the boss at that house does not count. Route progress resets for the new night; unfinished stops do not carry over.
+If the chosen wallet owns the Chog you pick, the hero picker shows **HOME ADVANTAGE**. Your Chog starts one hero level higher and wears a gold frame. The game checks ownership with a read on Monad; nothing is signed. **My Chog** cycles through the Chogs your wallet holds.
 
-### The Great Pumpkin
+### The $CHOG holder perk
 
-There is a shared Great Pumpkin each night, at the house shown in Tonight. At that door, **Pumpkin** selects the boss and **House #…** selects the house. These are separate actions; hitting the boss does not raid or mark that house.
+If the wallet holds any $CHOG on Monad, a **Your $CHOG perks** card appears before the level:
 
-Its health is **2 × the previous night's active Chogs**, with a **minimum of 10** and a **maximum of 60**. An active Chog is one that made a successful knock, raid, boss hit or friend clean that night. Merely connecting or managing a bowl does not count.
+- +25 starting candy;
+- +10% candy from kills this level.
 
-Each boss hit spends **1 regular knock and 1 trick item**:
+Tap **Defend the porch →** to start. The game only reads your balance. If it can't check the balance (after 6 seconds), it says "Couldn't check your $CHOG perks." Choose **Retry**, or **Continue** to play without the perks.
 
-| Trick | Damage |
-|---|---:|
-| Egg | 1 |
-| Toilet paper | 2 |
-| Mustache paint | 3 |
+### Try as a holder
 
-Everyone's damage adds up. The boss falls when total damage reaches or passes its health. A hit after defeat fails. A final hit counts its full damage, even if the boss had less health left. Revenge cannot pay for a hit.
+No Chog? Tap **Try as a holder** in the hero picker. It uses your guest wallet, making one if needed, and asks the sandbox for a holder kit:
 
-If your Chog dealt damage and that night's boss fell, choose **Claim loot**. Your candy is **the smaller of (5 + 2 × your Chog's total damage that night) and 25**. It is paid to your Chog's own wallet. You can claim once for each defeated night you helped with. Claiming costs gas but no knock, and does not collect a ration.
+- **What you get:** a random real Chog, 1,000 $CHOG and 1 MON, all on a copy of Monad mainnet that only this game uses. Your hero is then that Chog, with Home advantage and the $CHOG perk.
+- **The sandbox banner:** the screen says "Sandbox: a demo copy of Monad, nothing is real". The shop and starter grant still use Robinhood testnet.
+- **Limits:** one Chog per guest wallet until the sandbox resets, every night at 00:05 UTC. Each network gets five tries an hour.
+- **If the sandbox is down,** you see "The holder demo is taking a break." You can still pick any hero and play.
 
-Tonight offers unclaimed loot from **today and yesterday**. If both are available, expand Tonight to see the other claim. If you helped yesterday and the boss fell, you can claim yesterday's loot even after midnight. The contract has no expiry on older eligible claims, but the current app does not list nights before yesterday. No loot is claimable for a boss that survived its night.
+## The shop and the starter grant
 
-### Crews
+The shop sells cosmetics and convenience for $KNOCK, never raw power. $KNOCK is a testnet token on Robinhood Chain Testnet with no real value. **Playing never pays out $KNOCK**, because scores from a browser can be faked.
 
-Choose **Ghosts**, **Witches**, **Pumpkins** or **Bats**. Only the Chog's owner can join. Joining is permanent for that Chog: no leaving or switching, even after a sale. Crew choice does not equip a costume. Actions before joining earn no crew points.
+| Item | Price ($KNOCK) | What you get |
+|---|---|---|
+| Dances: Floss, Dab, Moonwalk, Robot, Chicken, Breakdance, Disco, Worm | 150 each | A move for your emote wheel and your victory dance |
+| Crew costumes: Ghosts, Witches, Pumpkins, Bats | 400 each | An outfit for any Chog; your weapon and kit stay the same |
+| Golden towers | 600 | Gold versions of the four classic towers. Turn them on in Settings. |
+| Crypto emote pack | 300 | GM, LFG, WAGMI, REKT, HODL, MOON, GN and NGMI |
+| A sweeter start | 200 | +50 starting candy on every level, for good |
+| Bat Roost | 1,000 (planned) | Unlocks the Bat Roost tower. Listed, but not for sale until its on-chain price is set. |
 
-| Action by your Chog | Usual points | Blood Moon points |
-|---|---:|---:|
-| Receive a treat | 1 | 2 |
-| Land a trick | 2 | 4 |
-| Loot a raid | 2 | 4 |
-| Clean another owner's house | 1 | 2 |
-| Boss hit | Damage dealt | 2 × damage dealt |
-| Bounce or caught raid | 0 | 0 |
+- **How buying works:** you sign one permit for the exact price, then send one purchase transaction. A guest wallet does both inside the page. Items are recorded on-chain, so they follow your wallet to any device.
+- **Gas:** you need a little test ETH on Robinhood Chain Testnet. The shop links to the faucet.
+- **The starter grant:** every wallet can claim **300 $KNOCK and 0.0005 test ETH** once. Tap **Claim 300 $KNOCK** in the shop; the title screen also links to it. The claim joins a queue and is paid on Robinhood testnet. The shop checks every 5 seconds and links to the payment once it's made. Each network can make three new claims per UTC day.
+- **The shop link:** it also links to $KNOCK's page on vibe/vibe, a testnet token launchpad.
 
-Giving a treat, completing a route, claiming loot and paying to clean your own mark add no points. Blood Moon doubles points, not the boss damage itself.
+## Daily and Endless
 
-The crew with **strictly the most points** wins the night. A tie for the lead means no winner. Each Chog that joined the winning crew before the new night began gets **3 extra candy** when it collects that new night's ration. It need not have scored personally. The bonus is added after any Candy Rain doubling, so it stays **3**, and it does not build up if you miss the collection night. Joining last night's winner this morning does not earn its bonus.
+- **Daily #N:**
+  - a new challenge every UTC day, the same for everyone;
+  - the date picks one of the six maps, the starting seed and the night:
+    - **Quiet night:** no change;
+    - **Blood Moon:** enemies are 25% faster;
+    - **Candy Rain:** all candy is doubled;
+    - **Costume Night:** ground enemy types are shuffled (bats stay bats);
+  - your best score for each day is saved, for the last 30 days.
+- **Endless, on Town Square:**
+  - the waves never stop, and enemy health rises about 8% each wave;
+  - a new road opens every 10 waves, up to four;
+  - every tenth wave is a Witching Hour with a boss, rotating through all 10 legends and the Great Pumpkin;
+  - all six map props work here, on longer cooldowns;
+  - your score is 400 per wave cleared plus 100 per enemy stopped;
+  - your best wave and best score are saved.
 
-## Your Chog's own wallet
+## Scores and saves
 
-ERC-6551 means the NFT has its own wallet address. Think of it as a bag attached to the Chog, separate from the wallet you use to connect. Knock puts candy, items and $CHOG won from treats or raids there. The game can give that address items even before the wallet has been deployed for general use.
+- **Your score on a story level or the Daily:**
+  - 100 per enemy stopped;
+  - 250 per jar saved;
+  - 1,000 per star;
+  - 300 per early wave call;
+  - on a win, 10 points for each full second under 300 seconds, up to 3,000. Time counts simulated play, not pauses or tutorial waiting.
+- **What's saved:** best stars and scores, the tutorial, your costume and victory dance, and your settings. They live in this browser only.
+- **No leaderboard:** scores aren't verified, and they never earn $KNOCK.
+- **After a story win,** the result screen offers **Next night →** to go straight to the next level with the same hero.
+- **Share your night:** makes a 1080×1350 picture of your Chog, your stars and your score to share or download.
 
-Anything left in that wallet goes with the Chog to its buyer. Its game state also stays with it, including its bowl, crew, knocks already used and boss claims. Buying or selling does not reset the game.
+## Settings
 
-**Empty your bowl before you sell.** That returns the bowl's $CHOG to you. It returns candy to the Chog's own wallet, so that candy still goes with the Chog. It does not withdraw items or $CHOG already in the Chog's own wallet. The current app has no general withdrawal control for that wallet.
-
-**My house** shows the address of your Chog's own wallet, with a link to view it on Monadscan, and its $CHOG balance. The address is fixed for each Chog, so you can bookmark it.
-
-## Badges
-
-These badges appear from your Chog's lifetime game counters. You do not need to claim them, and they do not add powers or rewards.
-
-| Badge | What earns it |
+| Setting | What it does |
 |---|---|
-| Egg-stained | Your house has been tricked at least 5 times, with any trick item. |
-| Prankster | Your Chog has landed at least 5 tricks on other houses. |
-| Sweetest house | Your bowl has given at least 5 treats. |
-| Raid master | Your Chog has looted at least 5 raids. |
-
-Bounces do not count as landed or received tricks. Caught raids do not count as looted raids. Raids do not count as treats given. The badges follow the Chog when it changes owner.
-
-## $KNOCK
-
-**$KNOCK is testnet only and has no real value.** It is not the candy used for crafting and does not pay MON gas.
-
-A relay watches Knock on Monad and pays $KNOCK through vibe/vibe on **Robinhood Chain Testnet**. The amounts in the relay source, also shown by the app, are:
-
-| Confirmed achievement | $KNOCK reward |
-|---|---:|
-| Receive a treat | 100 |
-| Loot a raid | 50 |
-| Complete a route | 500 |
-| Claim boss loot | 300 |
-
-A visit can earn its own reward and complete a route, earning both. A trick, bounce, caught raid, clean or boss hit by itself has no $KNOCK payment. The boss reward follows the loot claim, not the hit or the defeat alone.
-
-The relay pays the **Chog owner's address**, not the Chog's own wallet or a play key. It looks up the owner when it processes the payment. If you sell before that lookup, payment can go to the buyer. $KNOCK already paid to your personal wallet stays there.
-
-**Earned means pending until paid.** The $KNOCK chip shows the balance read from the testnet, not the pending total. If it says Unavailable, the app could not read that balance. Open the chip for the token link and reward details.
-
-The Monad contract does not pay $KNOCK itself. A delayed, stopped or unfunded relay can leave rewards pending. A fresh relay starts from current events, so activity from before it began tracking is not automatically paid. There is no guaranteed arrival time.
-
-## Play without pop-ups (play keys)
-
-Normally every action is a wallet pop-up. A play key lets one Chog play a whole night without them.
-
-1. While playing your Chog on the street, tap **Play without pop-ups**.
-2. Choose how much MON to give the key for gas: **0.1, 0.25 or 0.5 MON**. The sheet shows roughly how many actions that covers at today's gas price.
-3. Tap **Start**. It takes two wallet steps: approve the key for this Chog for **24 hours**, then send it the MON.
-
-While the key is on, a chip shows the time left and the key's MON. Knocks, raids, Great Pumpkin hits, loot claims, crafting, traps, costumes and friend cleans then go through without a pop-up. Filling or emptying your bowl, joining a crew and paying to clean your own mark still use your wallet. Gas, knock limits and item costs still apply.
-
-**Top up** sends the key more MON. **End** turns the key off and sends its leftover MON back to your wallet, minus a tiny gas fee. A balance too small to cover that fee stays on the key.
-
-**What a play key can't do:** move your Chog, touch your $CHOG or your bowl, join a crew, or approve another key. Rewards are never paid to it. It can only spend your Chog's candy and items through the actions above. Selling the Chog switches its key off.
-
-**Good to know:**
-- The key lives only in this browser. Clearing your browser data loses the key and any MON left on it, so end the session first.
-- One key serves all your Chogs in this browser and shares its gas money between them. Ending one Chog's session takes back all of that MON, so your other Chogs' keys may need a top-up.
-- End the session before you sell. If you later bought the same Chog back while its 24 hours were still running, the old key would work again.
-
-## Try it without a Chog (the sandbox)
-
-**[sandbox.knock-ej6.pages.dev](https://sandbox.knock-ej6.pages.dev)** is a copy of Monad where anyone can play as any Chog, with no wallet. Tap **Random Chog** or type a number. Nothing there is real: it pays no $KNOCK, and it resets every night at 00:05 UTC. It's for trying the game, and for judges.
-
-## Staying safe
-
-- The only official sources are **[chog.xyz](https://chog.xyz)** and **[@ChogNFT](https://x.com/ChogNFT)**. **@Chog_Ecosystem and chog.pics are impersonators.** Do not follow their wallet links.
-- Never enter or share your wallet's seed phrase or private key. Knock does not ask for them.
-- Check the Knock contract before approving or sending an action: **[CHECK: mainnet address after deploy]**.
-- A $CHOG approval allows the Knock contract to spend that token from your connected wallet. For a bowl fill, the app requests exactly the **$CHOG amount being added**. For a self-clean, it requests exactly **`cleanFee`**. It skips approval if the existing allowance already covers the amount. It does not request an unlimited allowance or reduce an older, larger one.
-- Approval and the game action are separate transactions. If approval succeeds but the action is cancelled or fails, the allowance remains. Check the spender and amount in your wallet.
-- Ordinary knocks, raids, boss actions, crafting, traps, costumes and friend cleans need no $CHOG allowance or permission to transfer your Chog. A normal connection request is not an NFT transfer approval.
+| Music, Effects | Volume of each |
+| Lite mode | Turns off ambience and uses fewer effects. For older phones. |
+| Screen shake | On by default. Reduced-motion preferences always turn it off. |
+| Vibration | Off by default. A short buzz when a jar is stolen, a boss falls or the last star lands. Only where the browser supports it (Android Chrome, not iPhone). |
+| Full screen on Play | On phones, enters full screen and asks for landscape. On iPhone, shows the "Add to Home Screen" steps once. |
+| Golden towers | Available after buying them in the shop |
+| Share anonymous play stats | On by default. Counts your runs on the public [stats page](https://knock.timidan.xyz/stats). It uses a random id per browser, and stores no wallet or IP address. |
 
 ## FAQ
 
-**Do I need $CHOG?**  
-No. You need MON for gas. The ration supplies candy and eggs when you first knock, raid, hit the boss or friend-clean that night. $CHOG is optional for bowls and is the fee for paying to clean your own mark.
+**Do I need a Chog, a wallet or crypto to play?**
+No. Pick any Chog by number or tap **Random**. Wallets only matter for Home advantage, the $CHOG perk and the shop.
 
-**Can I play several Chogs?**  
-Yes. Choose each Chog you own in turn. Each has its own bag, bowl, ration, knock count, route, revenge, crew and boss claim. You cannot knock, raid or friend-clean between Chogs held by the same wallet.
+**Can I play a Chog I don't own?**
+Yes. Every Chog is playable as a guest hero with its real traits. Owning it adds Home advantage.
 
-**What happens if I sell?**  
-The buyer gets control of the Chog's own wallet and its game state. Empty your bowl first to recover its remaining $CHOG. This does not empty the Chog's own wallet. Unpaid $KNOCK can go to whoever owns the Chog when the relay looks up its owner.
+**Why can't Random give me some Chogs?**
+312 Chogs have crude text on their cap or shirt. Random, the default hero and the holder demo skip them. You can still play them by typing their number.
 
-**What if I miss a night?**  
-You can play on a later night. Unused knocks, missed rations, unfinished routes and missed crew bonuses do not build up. Candy and items already held remain until spent or moved. A mark fades after 24 hours unless replaced sooner. If you helped defeat yesterday's boss, Tonight still offers its unclaimed loot; older claims remain valid in the contract but are not listed in the app.
+**Is anything real money?**
+No. $KNOCK and the test ETH are on a testnet and have no value. The holder demo's Chog, $CHOG and MON exist only on the sandbox copy of Monad. On real Monad, the game only reads your Chogs and $CHOG balance.
 
-**Can people without a Chog play?**  
-They can explore, watch the street, open houses and try the tutorial, and they can play any Chog in the sandbox (above). In the real game, playing as a Chog needs the wallet that owns it, or a play key that its owner approved.
+**Why doesn't winning pay $KNOCK?**
+Scores are computed in your browser, so they could be faked. $KNOCK only comes from the one-time starter grant, or from vibe/vibe.
 
-**Where do the cleaning fees go?**  
-The fee goes to a pot in the game contract that only the contract owner can withdraw. `withdrawPot()` sends the whole recorded pot to that owner. **[DECIDE: what the pot pays for]** There is no prize promised here and no prize payout rule in the contract.
+**Where did my progress go?**
+Progress is saved in this browser. A private window, another browser or cleared site data starts fresh. Shop items are on-chain and come back when you choose the same wallet.
 
-**Where can I see my history?**  
-Open a house in Simple view for its inbox, labelled **Last 10 visits**. It lists visits to that house, not every action that Chog has taken. **Street gossip** in Simple view shows the latest **50 visits** across the street; the 3D street shows the latest **4**. These include knocks, raids and friend cleans. Bowl changes, crafting, paid self-cleans and boss actions are not in these visit lists. For a confirmed transaction you just sent, use **View on Monadscan** when shown.
+**The game is slow on my phone.**
+Turn on **Lite mode** in Settings. The game also lowers its own quality when the frame rate drops, and raises it again when it recovers.
 
-After a treat, trick or looted raid, **Share** opens a draft post with a link to the house. You choose whether to post it.
+**The ghosts are invisible and my towers aren't shooting.**
+That's the ghost rule: build a Haunted Lantern near the road, or use Target Lock or Holy Water.
 
-<!--
-Number audit for the lead. Paths are relative to the repository root.
-Repeated occurrences, written-out numbers and formula operands share the entries below.
+**My eggs do almost nothing to pumpkins.**
+Pumpkin Heads take only 20% from eggs. Use the Lantern (magic) or TP.
 
-GAME RULES — contracts/src/Knock.sol is authoritative:
-- Chog numbers 1–1,969: CHOG_COUNT = 1969; routeOf() and bossHouse() use modulo CHOG_COUNT + 1. App input limits agree (App.tsx id(), wallet.tsx via ownedChogs(), Game.tsx and Simple.tsx).
-- 1 regular knock per knock, raid, boss hit or friend clean: _useKnock() increments once; knock() calls _useVisitKnock(), raid()/hitBoss()/friend clean() call _useKnock(). A matching revenge knock consumes 0 regular knocks: _useVisitKnock().
-- No knock for stockBowl(), emptyBowl(), craft(), setTrap(), wear(), joinCrew(), paid self-clean(), claimBoss(): none calls _useKnock(). No item spent by wear(), emptyBowl(), joinCrew(), claimBoss().
-- One night/day; 00:00 UTC; no saved prior rations or regular knocks: block.timestamp / 1 days in _rollDay(); it resets knocksUsed to 0 and mints only today's ration.
-- 3 usual knocks, 4 with witch hat: DAILY_KNOCKS = 3; WITCH_KNOCKS = 4; _useKnock(), _wearing(). Costume Night adds 1 only with a held, worn costume: COSTUME_EXTRA_KNOCKS = 1. Derived limits: no costume 3; ghost 3 or 4; witch 4 or 5.
-- 5 candy and 3 eggs per ration: DAILY_CANDY = 5, DAILY_EGGS = 3; _rollDay(). The four ration-triggering actions are knock(), raid(), hitBoss(), friend clean().
-- Four themes, in Quiet/Blood Moon/Candy Rain/Costume Night order: THEME_COUNT = 4; nightTheme(day) = day % THEME_COUNT; default theme 0, BLOOD_MOON = 1, CANDY_RAIN = 2, COSTUME_NIGHT = 3. Theme names come from Tonight.tsx.
-- Double/2 times crew points and Candy Rain ration: THEME_MULTIPLIER = 2; _score() and _rollDay(). Derived Candy Rain ration: 10 candy, 6 eggs. Other rewards are not multiplied there.
-- One pending revenge target, not a stack: House.revengeOn/revengeReady; _mark(), raid(), _useVisitKnock(). No midnight/clean/mark-expiry revocation code.
-- 1 required trick item even for a treat; 1 item consumed on bounce/trick/boss hit: knock() balance check and _burn(..., 1), hitBoss() _burn(..., 1). Item range is EGG through MUSTACHE. Treat does not burn it.
-- At least 1 candy for a treat; 1 candy moved on treat; per-treat payout above 0 and covered in full: knock(). A candy-only bowl/per-treat setting of 0 is accepted by stockBowl()/knock().
-- Marks last 1 day = 24 hours from the latest mark: MARK_DURATION = 1 days; _mark() sets block.timestamp + MARK_DURATION. clean() and app displays use markUntil > current time.
-- Raids need nonzero bowl candy; LOOTED takes min(3, bowlCandy) and separately min(3 * chogPerTreat, bowlChog): RAID_TREATS = 3; raid(). The 1-candy/3-payout example follows that independent calculation.
-- CAUGHT loses min(2, visitor candy balance): CAUGHT_CANDY = 2; raid(), after _rollDay(). No mark or $CHOG loss in the CAUGHT branch.
-- 1 active trap, 1 pumpkin item to set it: House.trap is bool; setTrap() requires no active trap and burns PUMPKIN amount 1.
-- One worn costume: House.costume is a single value; wear() permits none (0), GHOST or WITCH; _wearing() requires nonzero inventory. wear() does not burn it.
-- Craft costs 2/3/5/15/15 candy per toilet paper/mustache/pumpkin/ghost/witch: craft() price expression; supported items TOILET_PAPER through WITCH. App crafts 1 item per click: MyHouse.tsx CRAFTS and send('craft', [..., 1n]).
-- Paid self-clean fee: constructor(token, fee) stores cleanFee; no universal numeric fee in source. clean() adds exactly cleanFee to cleaningPot. withdrawPot() transfers the whole pot to msg.sender under onlyOwner.
-- 3 route stops, 10 bonus candy, once per Chog per night: ROUTE_STOPS = 3; ROUTE_COMPLETE = 7 (three completion bits); ROUTE_BONUS_CANDY = 10; routeOf(), _progressRoute(). Only knock()/raid() progress it, for every successful outcome.
-- Boss health 2 * previous day's activeChogs, minimum 10 and maximum 60: BOSS_HP_PER_CHOG = 2, BOSS_MIN_HP = 10, BOSS_MAX_HP = 60; bossHp(). activeChogs increments once per Chog per day in _rollDay().
-- Boss damage 1/2/3 for egg/toilet paper/mustache: hitBoss() computes item - EGG + 1; adds full damage, then tests defeat.
-- Boss loot min(5 + 2 * damageBy, 25), once per Chog per defeated day with damage: BOSS_BASE_LOOT = 5, BOSS_LOOT_PER_DAMAGE = 2, BOSS_MAX_LOOT = 25; claimBoss(), claimed mapping.
-- Four crews, join one permanently: CREW_COUNT = 4; joinCrew() accepts 1–4 only if crewOf[id] is 0. Ghosts/Witches/Pumpkins/Bats names: Tonight.tsx CREWS.
-- Points 1 treat / 2 trick / 2 raid / 1 friend clean / boss damage; Blood Moon 2/4/4/2/2*damage: TREAT_POINTS = 1, TRICK_POINTS = 2, RAID_POINTS = 2, CLEAN_POINTS = 1, hitBoss(), _score(). Bounce/caught and other unscored actions give 0.
-- Winner bonus 3 candy, only next day's eligible ration, not doubled: CREW_BONUS_CANDY = 3; _rollDay() adds it after the ration multiplier, checks crewSince[id] < today and _crewWon(..., today - 1). _crewWon() rejects a tied lead.
-- ERC-6551 is the wallet standard's name, not a game quantity: IERC6551Registry and tba(); registry.account(accountProxy, bytes32(0), block.chainid, address(chog), id). SPEC.md describes receiving items before deployment.
-- Delegate revocation uses zero address and expiry 0: setDelegate(); onlyPlayer() requires matching key, current timestamp below expiry and ownerAtGrant equal to current owner. Only one Delegate is stored per Chog. No fixed lifetime or gas refund is implemented in Knock.sol.
-- Last 10 house visits / last 50 street visits: Visit[10], Visit[50], visits(), street(), _record(). These include normal knocks, raids and friend cleans only.
+**Bats ignore my guards and traps.**
+They fly. Shooting towers, your hero, spells and the Bat Roost hit them.
 
-APP / RELAY / BRIEF NUMBERS — not additional Knock.sol rules:
-- 3D is the view name, not a contract number: App.tsx view switch; Game.tsx Canvas. Miss sends 0 transactions and uses 0 knocks/items: Game.tsx release() returns before act()/confirm(). No bullseye reward multiplier is sent to Knock.sol.
-- One transaction per game action, with an optional additional approval: chain.ts send()/write()/approveChog(); MyHouse.tsx fill and self-clean handlers. Gas charges follow Monad, not a fixed amount in Knock.sol.
-- Today and yesterday (day and day - 1) are the app's two possible loot dates: chain.ts readNight().claims; Tonight.tsx claim controls. claimBoss() itself sets no expiry.
-- Badge thresholds, all at least 5: ui.tsx houseBadges() checks timesTricked, tricksLanded, treatsGiven and raidsLanded. Contract knock()/raid() update those counters; badges and thresholds are app rules.
-- $KNOCK defaults 100 per treat, 50 per successful raid, 500 per route, 300 per boss loot claim: scripts/relay.mjs REWARDS and rewardFor(); environment overrides are possible. Candy.tsx and Game.tsx display these defaults. Knock.sol does not mint or promise $KNOCK.
-- One Chog per grant, 24 hours by default in the play-key draft: setDelegate() stores a grant by Chog id; app/src/session.ts startSession() defaults hours to 24, and hud/Session.tsx uses that default. This source was added concurrently; its flow remains draft pending verification. The contract takes the owner's chosen expiry and enforces no fixed lifetime.
-- Latest 4 visits in the 3D street: Game.tsx feed.slice(0, 4); Simple.tsx displays the full readStreet() result and readVisits() result.
--->
+**What does tapping an enemy show?**
+Its kind, its real Chog number and its trait modifiers.
+
+**Is there co-op?**
+Not yet. Two-player co-op is being built.
