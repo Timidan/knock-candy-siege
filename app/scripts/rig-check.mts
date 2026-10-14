@@ -60,7 +60,7 @@ console.log(`PASS: ${checked} sampled poses, maximum error ${max.toFixed(8)}; 12
 console.log(`Largest hero atlas set: Chog #${largestHero.id}, ${(largestHero.bytes / 1048576).toFixed(2)} MB RGBA (before shared textures and HUD).`)
 
 // The world shares one reproducible gameplay stream, independent of visual effects.
-const { seededRandom } = await import('../src/siege/data/config.ts')
+const { seededRandom, ENDLESS_HEALTH } = await import('../src/siege/data/config.ts')
 const first = seededRandom(20261012), replay = seededRandom(20261012), other = seededRandom(20261013)
 const rolls = Array.from({ length: 16 }, () => first())
 assert.deepEqual(rolls, Array.from({ length: 16 }, () => replay()))
@@ -85,9 +85,9 @@ assert.deepEqual(LEVELS.slice(3, 6).map(level => level.waves.length), [8, 8, 9])
 for (const level of LEVELS.slice(2, 6)) assert.ok(level.waves.at(-1)!.witching && level.waves.at(-1)!.groups.some(g => g.edge), level.name)
 assert.deepEqual([2, 3, 4, 5].map(level => LEVELS[level - 1].waves.at(-1)!.boss?.id), [1481, 1881, 942, 1002])
 assert.deepEqual(LEVELS[5].waves.flatMap(w => w.boss ? [w.boss.id] : []), [561, 1884, 1798, 'pumpkin'])
-// Endless: +8% health per wave, a road opens every ten waves, every tenth wave is a Witching Hour with the next boss.
+// Endless: starts at ENDLESS_HEALTH, +8% health per wave, a road opens every ten waves, every tenth wave is a Witching Hour with the next boss.
 assert.deepEqual([1, 9, 10, 19, 20, 29, 30, 99].map(endlessRoads), [1, 1, 2, 2, 3, 3, 4, 4])
-assert.ok(Math.abs(endlessHealth(10) - 1.08 ** 10) < 1e-12)
+assert.ok(Math.abs(endlessHealth(10) - ENDLESS_HEALTH * 1.08 ** 10) < 1e-12)
 assert.deepEqual([10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120].map(endlessBoss), [...BOSS_ROTATION, BOSS_ROTATION[0]])
 assert.deepEqual(new Set(BOSS_ROTATION).size, 11)
 for (let n = 1; n <= 40; n++) { const wave = endlessWave(n); assert.equal(!!wave.witching, n % 10 === 0); assert.ok(wave.groups.every(g => g.edge || (g.path ?? 0) < endlessRoads(n))); assert.deepEqual(wave, endlessWave(n)); assert.deepEqual(endlessWave(n, 7), endlessWave(n, 7)) }
