@@ -1,8 +1,8 @@
 # Porch Party co-op
 
-Two players defend one story level with their own Chogs, shared candy, towers, traps, spells and jars. The game integration is implemented locally. The relay is deployed at `https://knock-coop.timidan-knock.workers.dev`; Pages has not been deployed with this change.
+Two players defend one story level with their own Chogs, shared candy, towers, traps, spells and jars. The relay is deployed at `https://knock-coop.timidan-knock.workers.dev`, and the game integration is live at https://knock.timidan.xyz.
 
-Before Pages deployment, the owner of `app/public/_headers` must add both `https://knock-coop.timidan-knock.workers.dev` and `wss://knock-coop.timidan-knock.workers.dev` to `connect-src`. That file is outside this task's ownership.
+`app/public/_headers` lists both `https://knock-coop.timidan-knock.workers.dev` and `wss://knock-coop.timidan-knock.workers.dev` in `connect-src`.
 
 ## Runtime
 
@@ -13,7 +13,7 @@ Before Pages deployment, the owner of `app/public/_headers` must add both `https
 - `clock.ts`: elapsed-time 45 Hz clock, independent of render RAF, bounded to three steps per wakeup; waiting does not accumulate catch-up debt.
 - `prepare.ts`, `session.ts`, `snapshot.ts`: both hero/boss assets before readiness; scene attachment and lifecycle; explicit gameplay-state projection and final checkpoint gating.
 
-A talent choice pauses combat while network turns continue. Choices run before each deadline; after 450 unanswered turns, choice 0 is selected. Disconnect/desync ends the room. Results appear only after a matching final checkpoint; sockets stay alive until the result is dismissed so one player's final acknowledgement cannot disconnect the other prematurely.
+A talent choice pauses combat while network turns continue. Choices run before each deadline; after 450 unanswered turns, choice 0 is selected. Starting talents (a Chog that starts above hero level 1) resolve to choice 0 at once on both peers, so neither player waits. Disconnect/desync ends the room. A win's camera close-up starts at once, but the Chogs' victory dances wait for a matching final checkpoint, because rig state is hashed. Results appear only after a matching final checkpoint; sockets stay alive until the result is dismissed so one player's final acknowledgement cannot disconnect the other prematurely.
 
 The relay identifies room slots, not wallet owners. The client uses the existing ownership checks. This is cooperative play, not authoritative anti-cheat, a wallet attestation service or a competitive leaderboard. Co-op results are not submitted as single-player scores. No reconnect, room reuse, Daily or Endless co-op is implemented.
 

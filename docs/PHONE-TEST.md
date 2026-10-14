@@ -8,7 +8,8 @@ Scan the QR code to open the game: ![QR code for https://knock.timidan.xyz](knoc
 
 - **Use this address for the test:** **https://knock.timidan.xyz/?siegeStats**. It shows a live line at the top of the game: FPS, the quality tier (Q0 is full quality, Q3 the lowest), the number of enemies, and more.
 - **iPhone:** turn silent mode off. Web Audio follows the silent switch, so you may hear nothing with it on.
-- **Starter-grant limit:** the Candy Bank allows three new claims per network per UTC day. Testing on 13 Oct used up the home network's three until **14 Oct 00:00 UTC** (01:00 local time, UTC+1). Before then, claim over mobile data, not home Wi-Fi.
+- **Starter-grant limit:** the Candy Bank allows three new claims per network per UTC day, and 150 across everyone. If the home network has used its three today, claim over mobile data, not home Wi-Fi, or wait until 00:00 UTC (01:00 local time, UTC+1).
+- **Relay funds:** the relay had 0.00849 test ETH at 03:43 UTC on 14 Oct. At 0.0005 ETH per grant, that pays about 16 more grants. Top it up before a long test.
 - **Live stats:** your test runs count on the public `/stats` page. To keep them out, turn off **Share anonymous play stats** in Settings. Leave it on for one phone if you want to check that `/stats` updates (see step 10).
 - **Fresh start:** for a clean guest wallet and save, use a private tab or clear the site's data. "Try as a holder" gives each guest wallet only one Chog until the nightly reset.
 
@@ -22,7 +23,8 @@ Tick each box, or write down what you saw. Rough timings are in brackets.
 |---|---|---|---|
 | Tap **Hold the porch →**: a full tap, press and release | The menu music starts within a second or two | ☐ | ☐ |
 | Start a level | The music crossfades to the level theme. Building, hits and coins have sound. | ☐ | ☐ |
-| A boss enters (Lemon Lane's last wave, or any boss) | The boss theme plays | ☐ | ☐ |
+| Listen through the phone speaker during a wave, and tap a few menu buttons | Tower shots, hits, enemy deaths and your own actions are clearly audible over the music. Each menu button makes a short sound. | ☐ | ☐ |
+| A boss enters (Lemon Lane's last wave, or any boss; Lemon Lane unlocks when you win Rosie Row in step 5) | The boss theme plays | ☐ | ☐ |
 | Pause, then **Level select** | The menu music comes back | ☐ | ☐ |
 | Switch to another app, then come back | The game is paused and the sound returns | ☐ | ☐ |
 | Android only: look at the notification shade | Note whether a media notification appears for the music | n/a | ☐ |
@@ -63,7 +65,7 @@ Rosie Row is the quickest. Use **SKIP** on the tutorial card, set the speed to 3
 |---|---|---|---|
 | Level start | The **CHOG #… · TRAITS ACTIVE** card pops up, holds, then shrinks into the portrait | ☐ | ☐ |
 | Build, upgrade, drag a trap, cast Candy Rain, move the hero | Each responds on the first touch. Drags place where your finger lifts. | ☐ | ☐ |
-| Win | The stars slam in one by one, each with a sound, and the score counts up. With 3 stars, candy confetti falls. | ☐ | ☐ |
+| Win | The stars slam in one by one, each with a sound, and the score counts up. With 3 stars, candy confetti falls. A first win shows "Night 02 unlocked!". | ☐ | ☐ |
 | The result buttons | **Next night →**, **Play again** and **Level select** fit on screen | ☐ | ☐ |
 
 ### 6. Sharing the share card (30 s)
@@ -75,7 +77,7 @@ Rosie Row is the quickest. Use **SKIP** on the tutorial card, set the speed to 3
 
 ### 7. Frame rate during Witching Hour (3 min)
 
-The last wave of Mint Mews (wave 7) is a Witching Hour with the boss Midas. Play Mint Mews at 3× and call waves early.
+The last wave of Mint Mews (wave 7) is a Witching Hour with the boss Midas. Play Mint Mews at 3× and call waves early. Mint Mews unlocks when you win Lemon Lane, so on a fresh save, win Lemon Lane after step 5. Allow extra time for that.
 
 | Check | What should happen | iOS | Android |
 |---|---|---|---|
@@ -106,8 +108,9 @@ Read the limit note at the top first.
 | Tap **Claim 300 $KNOCK** | "Starter grant queued". The shop checks every 5 seconds. | ☐ | ☐ |
 | Wait | It changes to "✓ Starter grant paid" with a "View grant transaction ↗" link, and the balance shows 300 $KNOCK | ☐ | ☐ |
 
-- **If it stays queued for more than a few minutes:** the relay isn't paying yet. This is a known open item; note it.
+- **If it stays queued for more than a few minutes:** the relay checks for claims every 10 seconds, so it is probably paused. It pauses when it runs low on test ETH or $KNOCK, and after 60 grants in an hour or 200 in 24 hours. Note the time and the wallet address.
 - **If it says the Candy Bank "has reached its limit":** that's the per-network quota.
+- **If it says "Today's starter grants are gone":** the 150 claims for the UTC day are used up.
 - **Each wallet can claim only once, ever.**
 - **Optional:** once it's paid, buy **A sweeter start** (200 $KNOCK). This checks the permit, the purchase and on-chain ownership end to end on testnet.
 

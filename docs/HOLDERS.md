@@ -7,10 +7,10 @@ Play at https://knock.timidan.xyz, on a phone held sideways or in a desktop brow
 ## The basics
 
 - **Jars are your lives.** You start each level with 20. An enemy that reaches the porch steals one or more. At 0 jars you lose.
-- **Candy is your money.** You start with 250. You earn it from each enemy you stop, from a bonus for each wave you clear, and from calling waves early. You spend it on towers, upgrades, traps and supplies during the level.
+- **Candy is your money.** You start with 250. You earn it from each enemy you stop, from a bonus for each wave you clear, and from calling waves early. You spend it on towers, upgrades, traps and supplies during the level. If you tap something you can't afford, the game says how much more candy you need.
 - **Stars:** survive every wave to win. 18 to 20 jars left earns 3 stars, 10 to 17 earns 2, and 1 to 9 earns 1.
-- **Waves:** the first wave starts when you call it. After that, each wave calls itself when its countdown ends. You can call it early for extra candy.
-- **Where to start:** all six levels, Endless and the Daily are open from the start, but Rosie Row is marked "Start here". Your first Rosie Row is a 7-step tutorial, and you can skip it. To replay it, tap **Play with the tutorial again** in the hero picker.
+- **Waves:** the first wave starts when you call it. After that, each wave calls itself when its countdown ends. You can call it early for extra candy: half a candy for each second left on the countdown, rounded up.
+- **Where to start:** Rosie Row, marked "Start here", is always open. Each later level unlocks when you win the one before, and a Rosie Row win also unlocks Endless and the Daily. A locked level shows a padlock and the level to beat, and the win that unlocks a level says so, for example "Night 02 unlocked!". Levels you have already played stay unlocked. Your first Rosie Row is a 7-step tutorial, and you can skip it. To replay it, tap **Play with the tutorial again** in the hero picker.
 
 ## Controls
 
@@ -49,7 +49,7 @@ Play at https://knock.timidan.xyz, on a phone held sideways or in a desktop brow
 | E | Emote wheel |
 | N | Call the next wave |
 
-The mouse works like touch. Key hints show on devices with a mouse or trackpad, or once you press a key.
+The mouse works like touch. Key hints show on devices with a mouse or trackpad, or once you press a key. With a mouse, hover over a hero power, spell, perk badge, trap or supply to see a one-line tip with its cost or cooldown.
 
 ## Your hero
 
@@ -100,9 +100,11 @@ These are on the second page of the build ring (**MORE →**). They have three l
 | Candy Corn Catapult | 190 | Very long range and a huge ground splash, but a slow reload. Can't hit flyers. | Win Mint Mews |
 | Ghost Lighthouse | 160 | A sweeping beam that reveals and frightens. Low damage. | Win Mon Manor |
 | Haunted Organ | 175 | Sound waves shove nearby enemies back. Aqua (slippery) enemies resist. | Win Radioactive Ridge |
-| Bat Roost | 135 | Three bats hunt flyers. Can't attack ground enemies. | Buy it in the shop (400 $KNOCK). It goes on sale with the next release. |
+| Bat Roost | 135 | Three bats hunt flyers. Can't attack ground enemies. | Buy it in the shop (400 $KNOCK). |
 
 ## Traps, spells and supplies
+
+The number on each trap and supply button is its price in candy, paid each time you use one. It turns red when you can't afford it.
 
 **Traps** go on the road. You can have up to 12 down at once. Flyers aren't affected by them.
 
@@ -116,8 +118,8 @@ These are on the second page of the build ring (**MORE →**). They have three l
 
 | Spell | Cooldown | Effect |
 |---|---|---|
-| Candy Rain | 22 s | 125 magic damage in an area. |
-| Boo! | 26 s | Enemies in the area run back for 2 seconds. |
+| Candy Rain | 70 s | 95 magic damage in an area. |
+| Boo! | 80 s | Enemies in the area run back for 2 seconds. |
 
 **Supplies** cost candy and have their own cooldowns. Open them with the **SUPPLIES** button.
 
@@ -187,7 +189,7 @@ Magic and splash work best against it.
 |---|---|---|---|---|
 | 1 Rosie Row | 6 | One road; the tutorial | **Drop lamp:** knocks a street lamp onto the road for 170 damage and a 3-second stun. Once per level. | none |
 | 2 Lemon Lane | 7 | Two roads | **Sugar rush** at the candy shop: 50 candy makes towers attack 60% faster for 10 seconds. | Pepe |
-| 3 Mint Mews | 7 | A canal; bats fly straight over the water | **Raise bridge:** new arrivals take the long way round. | Midas |
+| 3 Mint Mews | 7 | A canal; bats fly straight over the water | **Raise bridge:** for 10 seconds, new arrivals take the long way round. You can raise it again 50 seconds after the last raise. | Midas |
 | 4 Mon Manor | 8 | Portals: walking into one comes out of its twin further along. Flyers pass over. | **Ring the bell:** every enemy, flyers too, is stunned for 2 seconds. | The Scream |
 | 5 Radioactive Ridge | 8 | Toxic pools make ground enemies 30% faster. Three glowing pads give a tower 20% more range and damage. | **Open the grate:** enemies on it drop in and climb out upstream 5 seconds later. | Brainz |
 | 6 Rare Row | 9 | Darkness: only light shows enemies (lanterns, your Chog and the bonfire). | **Light the bonfire:** everything is lit and revealed for 20 seconds. | Ember, Lil' Devil, Gladius, then the Great Pumpkin |
@@ -280,7 +282,7 @@ The shop sells cosmetics and convenience for $KNOCK, never raw power. $KNOCK is 
 | Golden towers | 600 | Gold versions of the four classic towers. Turn them on in Settings. |
 | Crypto emote pack | 300 | GM, LFG, WAGMI, REKT, HODL, MOON, GN and NGMI |
 | A sweeter start | 200 | +50 starting candy on every level, for good |
-| Bat Roost | 400 | Unlocks the Bat Roost tower. It goes on sale with the next release; until then the shop shows "Not for sale". |
+| Bat Roost | 400 | Unlocks the Bat Roost tower. |
 
 - **How buying works:** you sign one permit for the exact price, then send one purchase transaction. A guest wallet does both inside the page. Items are recorded on-chain, so they follow your wallet to any device.
 - **Gas:** you need a little test ETH on Robinhood Chain Testnet. The shop links to the faucet.
@@ -292,16 +294,16 @@ The shop sells cosmetics and convenience for $KNOCK, never raw power. $KNOCK is 
 Two players, two Chogs, one porch: you defend a story level together.
 
 - **Bring a Chog you hold.** Each player needs a Chog that their chosen wallet owns. No Chog? Tap **Try as a holder** first; the demo Chog counts.
-- **Start a room:** pick any of the six story levels and choose your Chog, then tap **Porch Party · play together**. Tap **Copy invite** and send the link. The level is yours to pick; the Daily and Endless have no co-op.
-- **Join a room:** open the invite link, choose your own Chog (or tap **Try as a holder**), then tap **Join Porch Party →**. Use your own device, another browser or a private window: tabs in the same browser share one guest wallet.
+- **Start a room:** pick any story level you have unlocked and choose your Chog, then tap **Porch Party · play together**. Tap **Copy invite** and send the link. The level is yours to pick; the Daily and Endless have no co-op.
+- **Join a room:** open the invite link, choose your own Chog (or tap **Try as a holder**), then tap **Join Porch Party →**. You don't need that level unlocked yourself. Use your own device, another browser or a private window: tabs in the same browser share one guest wallet.
 - **When it starts:** as soon as both Chogs have loaded. There's no tutorial. A room that hasn't started closes after 10 minutes.
 - **Shared:** candy, towers, traps, spells, supplies and the 20 jars. Either player can build on any pad and upgrade or sell any tower, from the same candy.
 - **Yours:** your hero, its special and ultimate, your talents and your emotes. Your partner's Chog, hero level and health show at the top right.
 - **Perks:** each player owns their Chog, so each Chog gets Home advantage. If either player holds $CHOG, the team gets the $CHOG candy perks once.
-- **Talents:** when either hero levels up, combat pauses for both of you, and the other player sees "Partner is choosing…". After about 10 seconds the left card is picked.
+- **Talents:** when either hero levels up, combat pauses for both of you, and the other player sees "Partner is choosing…". After about 10 seconds the left card is picked. A Chog that starts above hero level 1 takes the left card for each of its starting talents at once.
 - **No pause and one speed:** the game runs at 1× and keeps going when you switch tabs. The pause button reads **LEAVE** and asks before you go, while the game keeps running. Leaving ends the room for both of you. The shop stays closed until the room ends.
 - **If the connection drops or the two games disagree,** play stops with "Partner disconnected" or "Out of sync: restart together". There's no reconnect, so start a new room.
-- **The result** shows both Chogs and a team score. A Porch Party doesn't change your saved stars or best scores, has no share card, and isn't counted on the stats page.
+- **The result:** a win ends with both Chogs dancing in a close-up. The result shows both Chogs and a team score. A Porch Party doesn't change your saved stars or best scores, doesn't unlock levels, has no share card, and isn't counted on the stats page.
 
 ## Daily and Endless
 
@@ -317,7 +319,7 @@ Two players, two Chogs, one porch: you defend a story level together.
   - the waves never stop, and enemy health rises about 8% each wave;
   - a new road opens every 10 waves, up to four;
   - every tenth wave is a Witching Hour with a boss, rotating through all 10 legends and the Great Pumpkin;
-  - all six map props work here, on longer cooldowns;
+  - all six map props work here, on longer cooldowns, except the bridge, which keeps its 50-second cycle;
   - your score is 400 per wave cleared plus 100 per enemy stopped;
   - your best wave and best score are saved.
 
