@@ -11,7 +11,7 @@ import { ShapePool, circle, plate, curbedMap } from './renderShapes'
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
-import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
+import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
 import { LEVELS, TUTORIAL } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
@@ -134,7 +134,7 @@ export class SiegeScene extends Phaser.Scene {
     const base = this.level.endless ? endlessWave(i + 1, this.seed) : this.level.waves[i], shuffle = this.shuffle
     return this.plans[i] = shuffle ? { ...base, groups: base.groups.map(group => ({ ...group, type: shuffle[group.type] ?? group.type })) } : base
   }
-  healthScale(wave: number) { return this.level.endless ? endlessHealth(wave) : 1 }
+  healthScale(wave: number) { return this.level.endless ? endlessHealth(wave) : (NIGHT_HEALTH[this.level.id - 1] ?? 1) * (1 + WAVE_HEALTH * wave) }
   routeFor(e: Enemy): Route { return e.route ?? (e.path >= this.routes.length ? e.path === this.routes.length + this.flyRoutes.length ? this.detour! : this.flyRoutes[e.path - this.routes.length] : this.routes[e.path]) }
   roadFor(kind: EnemyKind, path: number) { const sw = this.options.assets.geometry.switch; return this.bridgeUp && !ENEMIES[kind].flying && path === sw?.path ? this.routes.length + this.flyRoutes.length : this.entrancePath(kind, path) }
   enemies: Enemy[] = []

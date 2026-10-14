@@ -1,11 +1,11 @@
-import { seededRandom } from './config.ts'
+import { seededRandom, ENDLESS_HEALTH } from './config.ts'
 import type { EnemyKind } from './config.ts'
 import type { BossId, Wave, WaveGroup } from './level1.ts'
 
 // Endless mode (Town Square): waves never stop, health climbs about 8% per wave, a road opens every ten waves,
 // and every tenth wave is a Witching Hour with a boss.
 export const HEALTH_PER_WAVE = 1.08
-export const endlessHealth = (wave: number) => HEALTH_PER_WAVE ** wave
+export const endlessHealth = (wave: number) => ENDLESS_HEALTH * HEALTH_PER_WAVE ** wave
 export const BOSS_ROTATION: BossId[] = [1481, 1881, 942, 1002, 561, 1884, 1798, 900, 1514, 1667, 'pumpkin']
 export const endlessRoads = (wave: number) => Math.min(4, Math.floor(wave / 10) + 1)
 export const endlessBoss = (wave: number): BossId => BOSS_ROTATION[(wave / 10 - 1) % BOSS_ROTATION.length]

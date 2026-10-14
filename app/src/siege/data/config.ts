@@ -98,6 +98,13 @@ export const TARGETING: Targeting[] = ['first', 'last', 'strong', 'close']
 export const LIMITS = { enemies: 96, towers: 12, projectiles: 128, effects: 96, numbers: 40, traps: 12 }
 export const starsFor = (jars: number) => jars >= 18 ? 3 : jars >= 10 ? 2 : jars > 0 ? 1 : 0
 export const STARTING_CANDY = 250
+// Difficulty, in one place. Story nights (and the Daily, which plays them) multiply enemy health by the night,
+// plus a share per wave; bosses take BOSS_HEALTH on top. Endless starts from ENDLESS_HEALTH and keeps its per-wave climb.
+// The nights' maps differ a lot (Ridge's boosted pads, Manor's portals), so each night has its own measured value.
+export const NIGHT_HEALTH = [1.25, 1.85, 1.1, 1.05, 2.3, 1.2]
+export const WAVE_HEALTH = .04
+export const BOSS_HEALTH = 1.5
+export const ENDLESS_HEALTH = 1.25
 export const EARLY_CALL_CANDY_PER_SECOND = .5
 
 export const SPECIALISATIONS = {

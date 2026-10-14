@@ -4,6 +4,7 @@ import type { Enemy } from './world'
 import { distanceSq } from './world'
 import type { BossId, BossSpawn } from './data/level1'
 import { bossConfig } from './data/bosses'
+import { BOSS_HEALTH } from './data/config'
 import { resolveKit } from './data/kits'
 import { Rig } from './hero/Rig'
 import { reducedMotion } from './data/save'
@@ -91,7 +92,7 @@ export function spawnBoss(s: SiegeScene, spec: BossSpawn, wave: number): boolean
   const e = s.enemies.find(o => !o.active)
   if (!e) return false
   if (spec.id === 'pumpkin' && s.bossSheet && !s.textures.exists('boss')) { s.art.addAtlas(s.bossSheet!); s.bossOwned.add('boss') }
-  setup(s, e, spec, wave, (spec.hp ?? bossConfig(spec.id).hp) * s.healthScale(wave), START)
+  setup(s, e, spec, wave, (spec.hp ?? bossConfig(spec.id).hp) * s.healthScale(wave) * BOSS_HEALTH, START)
   s.hud.bossBar(e)
   // The first meeting of each boss gets a card; the cinematic starts when play resumes.
   const fresh = !s.discovered.has(`boss/${spec.id}`)

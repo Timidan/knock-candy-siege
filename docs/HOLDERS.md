@@ -135,6 +135,8 @@ Traps and supplies don't cost candy. You get 5 of each per level (in Porch Party
 
 Every enemy wears a costume with a real Chog's face, and that Chog's traits can add modifiers (see [Enemy modifiers](#enemy-modifiers)). The first time you meet a new kind, a card introduces it.
 
+Health below is the base value. Each night multiplies it: ×1.25 on Rosie Row, ×1.85 on Lemon Lane, ×1.1 on Mint Mews, ×1.05 on Mon Manor, ×2.3 on Radioactive Ridge and ×1.2 on Rare Row (each map's layout already makes some nights harder). Each wave adds another 4%, and bosses have 1.5× on top of that.
+
 | Enemy | Health | Jars it steals | What it does | How to beat it |
 |---|---|---|---|---|
 | Trick-or-Treater | 92 | 1 | Walks the road. | Anything works. Watch its modifiers. |
@@ -316,7 +318,7 @@ Two players, two Chogs, one porch: you defend a story level together.
     - **Costume Night:** ground enemy types are shuffled (bats stay bats);
   - your best score for each day is saved, for the last 30 days.
 - **Endless, on Town Square:**
-  - the waves never stop, and enemy health rises about 8% each wave;
+  - the waves never stop: enemy health starts at ×1.25 and rises about 8% each wave;
   - a new road opens every 10 waves, up to four;
   - every tenth wave is a Witching Hour with a boss, rotating through all 10 legends and the Great Pumpkin;
   - all six map props work here, on longer cooldowns, except the bridge, which keeps its 50-second cycle;
