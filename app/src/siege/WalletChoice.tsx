@@ -1,5 +1,7 @@
 import { useId, useState } from 'react'
 import { Sticker } from '../ui'
+import { injectedWallet } from '../chain'
+import { walletLinks } from '../walletLinks'
 import { guestBackup, type SiegeWallet } from './guestWallet'
 
 // The wallet shows as a short status pill. The full address and the key backup are one tap away, behind Details.
@@ -12,6 +14,11 @@ export function WalletChoice({ wallet, disabled = false }: { wallet: SiegeWallet
       <Sticker disabled={disabled || wallet.connecting} aria-pressed={wallet.choice === 'guest' && !!wallet.account} sound="ui-select" onClick={() => { setKey(''); setWarning(false); wallet.useGuest() }}>Use guest wallet</Sticker>
       <Sticker disabled={disabled || wallet.connecting} aria-pressed={wallet.choice === 'connected' && !!wallet.account} sound="ui-select" onClick={() => { setKey(''); setWarning(false); void wallet.useConnected() }}>{wallet.connecting ? 'Connecting…' : 'Use connected wallet'}</Sticker>
     </div>
+    {/* Phones and tablets have no wallet extension, so offer to reopen this page, invite and all, in a wallet app's browser. */}
+    {!injectedWallet() && (matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 1) && <div role="group" aria-label="Open Knock in a wallet app" className="row" style={{ justifyContent: 'center' }}>
+      <p style={{ flexBasis: '100%', maxWidth: 'none', textAlign: 'center' }}>No wallet in this browser? Open Knock in your wallet app:</p>
+      {walletLinks(location.href).map(app => <a key={app.name} className="sticker" href={app.href} rel="noreferrer">{app.name}</a>)}
+    </div>}
     {wallet.account && <>
       <span style={pill}>{wallet.guest ? '🎮 Guest pass · testnet' : '🟣 Connected'}</span>
       <button className="siege-text-button" aria-expanded={details} aria-controls={id} onClick={() => { setDetails(!details); setWarning(false); setKey('') }}>{details ? 'Hide details' : 'Details'}</button>
