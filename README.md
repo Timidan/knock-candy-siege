@@ -1,161 +1,250 @@
+<div align="center">
+
+<img src="app/public/art/ui/logo.svg" alt="Knock" width="330">
+
 # Knock: Candy Siege
 
-Knock: Candy Siege is a Halloween tower-defence game that runs in a phone or desktop browser, made for Chogathon 2026. You defend a porch of 20 candy jars with a Chog Genesis NFT as your hero, against waves of trick-or-treaters who are also real Chogs, and each Chog's on-chain traits decide how it fights.
+**A Halloween tower defence where all 1,969 Chog Genesis NFTs are playable heroes, and every trick-or-treater at your door is a real Chog.**<br>
+Each Chog's real traits decide how it fights, on both sides of the porch. Made for Chogathon 2026.
 
-- **Play now:** https://knock.timidan.xyz. It's free and needs no wallet. Hold your phone sideways.
-- **Trailer:** TRAILER_URL
-- **Live stats:** https://knock.timidan.xyz/stats
+[Play](https://knock.timidan.xyz) · [Live stats](https://knock.timidan.xyz/stats) · [How Chogs run the game](#take-the-chogs-out-and-there-is-no-game) · [Run it locally](#run-it-locally)
 
-## The 30-second judge path
+![Phaser 3.90](https://img.shields.io/badge/Phaser-3.90-8a4baf)
+![React 19](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-6-3178c6?logo=typescript&logoColor=white)
+![Monad: reads only](https://img.shields.io/badge/Monad-reads%20only-836ef9)
+![Robinhood Chain testnet: shop](https://img.shields.io/badge/Robinhood%20Chain%20testnet-shop-ccff00)
 
-1. Open https://knock.timidan.xyz and tap **Hold the porch →**.
-2. Pick **Rosie Row** (marked "Start here").
-3. Choose a hero on "Who's on porch duty?":
-   - type any Chog number from 1 to 1,969, or tap **Random**;
-   - or tap **Try as a holder**. You get a real Chog and 1,000 $CHOG on a sandbox copy of Monad, held by a testnet guest wallet that the page makes for you. No extension or sign-up.
-4. Tap **Let's make mischief →**. Your first Rosie Row is a 7-step tutorial; **SKIP** is on the tutorial card.
-5. At the start of the level, the **CHOG #… · TRAITS ACTIVE** card lists the perks that come from your Chog's real traits.
+</div>
 
-### Co-op quick test: Porch Party
+<a href="https://knock.timidan.xyz">
+<picture>
+  <img src="docs/readme/hero.webp" alt="Knock: Candy Siege. Chogs #131, #312 and #1730 in their hero costumes on a haunted street. Every Chog is a hero. Hold the porch.">
+</picture>
+</a>
 
-Each player must bring a Chog their wallet owns, so this test uses the holder demo twice.
+> [!IMPORTANT]
+> Knock is free in the browser and needs no wallet or sign-up. On a phone, hold it sideways. The shop's token, $KNOCK, is on Robinhood Chain testnet and has no value. Nothing in the game pays out.
 
-1. **Browser A:** do steps 1 and 2, then tap **Try as a holder**. When your Chog appears, tap **Porch Party · play together**, then **Copy invite**.
-2. **Browser B:** use a second browser, a private window or a phone, so it gets its own guest wallet. Open the invite link, tap **Try as a holder**, then **Join Porch Party →**.
-3. The level starts once both Chogs have loaded, with no tutorial. Each player moves their own hero and uses its own special, ultimate and talents. Candy, towers, traps, spells and jars are shared. Your partner's Chog, level and health show at the top right.
+## Take the Chogs out and there is no game
 
-The two holder demos use two of the sandbox's five tries per network per hour. A room that hasn't started closes after 10 minutes.
+The Chog Genesis collection is the game's rule book. A Chog's traits decide its weapon, its powers and its perks when it defends your porch, and its modifiers when it knocks on your door. The ten 1:1 legends are the bosses. Take the collection away and there are no heroes and no bosses, and the enemies lose their faces and their tricks.
 
-## Why the NFT is essential
+<img src="docs/readme/chogs.webp" alt="A grid of 50 Chog Genesis portraits, including the ten 1:1 legends">
+<sub>50 of the 1,969 heroes, including all ten 1:1 legends.</sub>
 
-Take the Chogs out and nothing is left to play: the collection's trait data is the game's rule table. It decides the heroes, the enemies, their modifiers and the bosses.
+### Every trait is a rule
 
-- **All 1,969 Chogs are playable.** Type any token number from 1 to 1,969. **Random**, the default hero and the holder demo skip the 312 Chogs whose cap or shirt carries crude text. Those 312 are still playable by number. Enemies still come from all 1,969, but they wear costumes instead of their shirts, an enemy with one of the eight crude caps wears it without the print, and the new-enemy card skips crude-text portraits.
-- **Each Chog's real traits become its kit.** Every trait value maps to something, and all 1,969 Chogs get a full kit:
+Pick any Chog from 1 to 1,969, and the game turns its traits into a full kit:
 
-  | Trait | Becomes | Families |
-  |---|---|---|
-  | Body | the weapon (basic attack) | 13, from Pitch Deck (suits) to Anime Beam |
-  | Eyes | the special ability | 9; laser colours change the effect |
-  | Aura | the ultimate | 10; Chogs with no aura get one from their background colour |
-  | Mouth | the passive perk | 8 |
-  | Head | the headgear perk | 11 |
-  | Accessory | the trinket | 9, including none |
-  | Skin, Form, Base, Tier | quirks | Metal is armoured; Skull revives once; Radioactive poisons; Rare, Epic and Legendary start 1, 2 or 3 hero levels higher |
-
-  The six main slots give **1,766 different kits** across the collection. The 10 legendary 1:1 Chogs get hand-made kits. Each Chog also has a signature emote from its mouth or eyes (18 kinds), played on its own portrait.
-- **Talents follow the traits.** At hero levels 2 to 5 you pick one of two cards. One improves what your traits gave you: the weapon at level 2, the special at 3, the passive or headgear at 4 and the ultimate at 5. The other is a general upgrade.
-- **TRAITS ACTIVE at level start.** A card titled "CHOG #<id> · TRAITS ACTIVE" shows the passive, headgear, trinket and skin perks with what each does. It then shrinks into the hero portrait. The perk badges stay at the top left; tap one to read it again.
-- **Enemies are real Chogs.** Each trick-or-treater wears a costume with a randomly chosen real Chog's face, and that Chog's traits become modifiers. Laser eyes stun a tower for 1 second, a Crown armours nearby friends, a Gold Tooth drops double candy, a Skull form revives once, and Rare or Epic Chogs have 50% or 100% more health and candy. There are 18 modifiers. Tap an enemy to see its Chog number and its modifiers.
-- **The 10 legendary 1:1s are bosses,** each with its own move. The Great Pumpkin is the final boss.
-- **Home advantage.** Connect the wallet that holds a Chog. The game checks `ownerOf` on Monad, and your own Chog starts one hero level higher and wears a gold frame.
-- **The $CHOG holder perk.** If the connected wallet holds any $CHOG on Monad, you start each level with 25 more candy and earn 10% more candy from kills. The game only reads the balance; nothing is spent.
-- **Porch Party co-op needs a Chog you hold.** Before a player opens or joins a room, the game checks `ownerOf` for their Chog; a holder-demo Chog counts. Both Chogs then fight on one porch, each with its own kit and Home advantage.
-- **"Try as a holder" for judges.** One tap in the hero picker gives the browser's guest wallet a random real Chog, 1,000 $CHOG and 1 MON on a fork of Monad mainnet. You then play with Home advantage and the $CHOG perk. The screen says "Sandbox: a demo copy of Monad, nothing is real", and the sandbox resets every night at 00:05 UTC.
-
-## Features
-
-- **Six story levels:** Rosie Row, Lemon Lane, Mint Mews, Mon Manor, Radioactive Ridge and Rare Row. Rosie Row is always open. Each later level unlocks when you win the one before with at least 2 stars (10 of 20 jars left), and a 2-star Rosie Row win also unlocks Endless and the daily challenge. A locked level shows a padlock and what it needs. Later nights are harder: enemy health rises by night and by wave, and bosses have extra health. Levels you have already played stay unlocked. Each map has its own twist (two roads, a canal bridge, portals, toxic pools, darkness) and a prop you tap, such as a street lamp to knock over or a manor bell to ring.
-- **Endless mode** on Town Square: a new road every 10 waves, and a boss every 10th wave.
-- **A daily challenge** seeded by the UTC date. It picks one of the six maps and a night: Quiet night, Blood Moon (faster enemies), Candy Rain (double candy) or Costume Night (enemy types shuffled).
-- **Porch Party co-op:** two players, two Chogs, one porch, on any story level the host has unlocked. Candy, towers, traps, spells and jars are shared, and each player controls their own hero, special, ultimate, talents and emotes. One player opens a room from the hero picker and sends the invite link. A win ends with both Chogs dancing in a close-up, and the result shows both Chogs and a team score. See the [player guide](docs/HOLDERS.md#porch-party-co-op).
-- **Towers:** four families (Egg Stand, TP Launcher, Haunted Lantern, Pumpkin Patch), each with three levels, two specialisations and two more ranks. Four special towers unlock with stars. A fifth, the Bat Roost, costs 400 $KNOCK in the shop.
-- **Enemies:** eight types plus the mummy's two minis. Ghosts are hidden, pumpkins resist eggs, bats fly, goblins steal three jars, witches heal, mummies split and skeletons come in fives. In Witching Hour waves, ghosts and bats pour in from the screen edges.
-- **Your hero:** move it, let it auto-attack, and use its special and ultimate. It levels up during a level, and you pick talents. Emotes: 8 for everyone plus your Chog's signature.
-- **Also:** two spells (Candy Rain, Boo!), three traps and five supplies (5 uses of each per level), 1×/2×/3× speed, and a field guide.
-- **Teaching:** a tutorial with a pointing glove, a card for each new enemy, one-time rule callouts ("ARMOURED", "FLYING"), a preview of the next wave's path, and a porch alarm when a jar is stolen. Trap and supply buttons count down their uses, a bar on the house shows the jars left, and tapping something you can't afford says how much more candy you need. With a mouse, hovering a hero power, spell, perk badge, trap or supply shows a one-line tip with its uses, cost or cooldown.
-- **Feedback:** hit flashes, BLOCK!, CRIT!, MISS and TINK pops, candy flying to the counter, a red −N under the counter when you spend, a letterboxed boss entrance, and a star-slam result screen.
-- **Sound:** menu, level and boss music. Every game action and menu press has its own sound, and each game sound has a layer above 500 Hz so that phone speakers play it. Sounds pan with their position on the screen. Audio starts on the first tap.
-- **Sharing:** a 1080×1350 share card with your Chog, stars, score and one accolade: **BOSS SLAYER** and the boss's name after a win in which a boss fell, **PERFECT DEFENSE** for a win with all 20 jars, or else the number of Chogs stopped. The public stats page has a community goal of 100,000 monsters stopped, and its **Share image** button draws a 1200×630 card of the goal and the top three Chogs.
-- **The Candy Vault,** the $KNOCK shop (testnet): dances, crew costumes, golden towers, a crypto emote pack and +50 starting candy. Cosmetics and convenience only. If the starter grant is paid while the vault is open, candies fountain into your balance.
-- **Menus:** the title centres tonight's Chog under the logo, with one big **Hold the porch →**. Sticker buttons press down on a lip. Level cards are night tablets with a map preview and a green PLAY, and the hero picker previews dances as a row of chips.
-- **Readable roads:** every route has a dark curb, and build pads are carved stones whose purple glyph pulses while a build ring is open.
-- **Settings:** music and effects volume, Lite mode, screen shake, vibration (Android), full screen on Play, golden towers and a stats opt-out. Reduced-motion preferences are respected.
-
-## How it's built
-
-- **Stack:** Vite, TypeScript, **React 19** for menus, the shop and overlays, **Phaser 3.90** for the game world and the in-game HUD, and viem for chain reads and testnet purchases. Gameplay runs in the browser, and no server runs the game. In co-op, a relay only orders the two players' inputs and compares state hashes. Scores and progress are saved in the browser.
-- **A deterministic simulation.** The game advances in fixed 1/45-second steps, and one seeded random stream drives all gameplay. Visual randomness uses a separate stream, so effects never change the outcome. Every gameplay input goes through one `command()` entry point. A 1,800-tick seeded replay stayed byte-identical across the combat, teaching, polish, taste, world, HUD and sound passes and the co-op integration. Only the 14 Oct balance pass changed it, on purpose. Porch Party is built on this.
-- **Lockstep co-op.** In Porch Party, both browsers run the whole simulation from one shared seed, and only inputs and state hashes cross the network.
-  - Each command is scheduled for a future tick and sent through a Cloudflare Durable Object, one per room. On every tick, both browsers apply player 0's commands, then player 1's. There is no prediction, rollback or reconnect: if an input is late, both games wait.
-  - The input delay is fixed for the whole match. In the lobby, eight round-trip probes set it to `ceil((2 × max RTT + 30 ms) × 45 / 1000)` ticks, between 6 and 45 (133 ms to 1 s), and both players use the larger value.
-  - A clock in a Web Worker drives the 45 Hz steps apart from rendering, so the shared game keeps time while a tab is hidden.
-  - Every 90 ticks (2 seconds), each browser hashes the gameplay state and the relay compares the two. A mismatch stops the match with "Out of sync: restart together", and the result appears only after the final hashes agree.
-  - A talent card pauses combat for both players while network ticks continue, and the card picks the left talent after 450 ticks (10 seconds). A Chog that starts above hero level 1 takes the left card for each starting talent at once, so neither player waits at the start.
-  - **Measured** on one laptop with two browsers and 50 ms added each way: a full Rosie Row win took 213 s of wall time for 206 s of game time, with 103 matching checkpoints. A 40-second pacing run lost under 0.5% of its time to waiting. The relay is in `coop/`; its README covers the checks.
-- **Content is data.** Towers, enemies, waves, traps and spells are typed config in `app/src/siege/data/`. Maps are JSON exported from the art pipeline. `kits.json`, `traits.json` and `legends.json` map the collection to the rules.
-- **Art:**
-  - The hero is a puppet rig: a costume body with the real Chog portrait as its head, so one rig animates all 1,969 faces.
-  - Enemies are frame-animated costumes with the portrait in a face window.
-  - Python scripts in `art/` build the texture atlases offline from SVG sources (see [art/README.md](art/README.md)). The built atlases are in `app/public/siege/atlas/`.
-- **Performance:** pooled sprites and capped effects. A quality governor drops ambience, then half the effects, then render resolution when the frame rate falls below 55 fps. It steps back up after 10 seconds above 58 fps. The Lite mode setting turns off ambience and halves the effects.
-  - **Slow connections:** a download fails only when it stalls for 15 seconds or runs past 180 seconds. Finished files are kept for the session, so **Retry** fetches only what failed.
-  - **Measured:** about 60 fps (56.5 to 60.0 fps across the 13 Oct runs, 95th-percentile frame 16.8 ms) with 60 enemies and 12 towers firing. That was in Chrome on an Intel Iris Xe laptop GPU, at a phone-sized 844×390 viewport and DPR 3.
-  - **Co-op, measured:** with 100 ms of added round trip, the foreground display held 60 fps (95th-percentile frame 16.7 ms) with 60 enemies and 11 towers firing, while the partner's game kept simulating, networking and hashing. Two displays sharing one laptop GPU managed 49 fps each.
-  - **Not yet measured:** a physical phone, and co-op between two separate devices.
-
-## On-chain pieces
-
-The shop and $KNOCK are on **Robinhood Chain Testnet**. $KNOCK is a testnet token with no real value, and **nothing in the game pays out**. Playing never earns $KNOCK, because a score from a browser can be faked. On Monad the game only reads; it never writes.
-
-| Piece | Chain | Address | What the game does with it |
+| Trait | Becomes | Families | For example |
 |---|---|---|---|
-| Chog Genesis (ERC-721) | Monad mainnet (143) | `0xc96d31F8626c6D03Fae5dCD3d61e3FB9F4a73763` | Reads `ownerOf` for Home advantage and **My Chog**. Traits and portraits come from a snapshot of the collection. |
-| $CHOG (ERC-20) | Monad mainnet (143) | `0x350035555E10d9AfAF1566AaebfCeD5BA6C27777` | Reads `balanceOf` for the holder perk. |
-| $KNOCK, "Knock candy" (ERC-20 with EIP-2612 `permit`) | Robinhood Chain Testnet (46630) | `0x2Ae41145A6acB58d4457c49df27ab6BFEF618492` | Spent in the shop. The shop links to its page on vibe/vibe, a testnet token launchpad. |
-| KnockShop | Robinhood Chain Testnet (46630) | `0xdfE49a06DEB6040Ecd6855AE07411cA2B336688C` | Sells items for $KNOCK. Ownership is on-chain (`owned(address, item)`), so it follows the wallet. |
+| **Body** | the weapon (basic attack) | 13 | Wizard gives **Scepter Bolt**, a magic bolt that ignores armour. Stripes gives **Ball & Chain**, melee area damage. |
+| **Eyes** | the special | 9 | Teary gives **Tear Flood**, a wave of tears that slows enemies and pushes them back. Laser eyes give **Laser Sweep**: fire burns, green poisons, cyan freezes and purple pierces. |
+| **Aura** | the ultimate | 10 | Electric Shock gives **Thunder Chain**, lightning that chains through 12 enemies. The 985 Chogs with no aura get one from their background colour: Sky Blue gives **Twister**. |
+| **Mouth** | a passive | 8 | Gold Tooth gives **Money Mouth**, +15% candy from kills. Drooling gives **Sweet Tooth**: the hero heals by collecting dropped candy. |
+| **Head** | a headgear perk | 11 | Crown gives **Royal Command**: towers near the hero do 15% more damage. Wizard Hat gives **Spellcraft**, 20% shorter spell cooldowns. |
+| **Accessory** | a trinket | 8, or none | Fwog gives **Lucky Frog**: the hero revives once per level. Coin gives **Lucky Coin**, +50 starting candy. |
+| **Skin, Form, Base, Tier** | quirks | | Metal skin is armoured. A Skull form revives once. A Radioactive base poisons. Rare, Epic and Legendary Chogs start 1, 2 or 3 hero levels higher. |
 
-- **Buying:** one `permit` signature for the exact price, then one `buyFor` transaction. If the shop already has enough allowance, only the transaction is needed.
-- **Only the buyer can buy:** `buyFor` only accepts a purchase sent by the buyer, so nobody else can spend a buyer's permit or leftover allowance.
-- **The first shop:** this shop replaced the first one, `0xc52dfedAf158031fd7b5fAe0A2F1CFB6c1aC89b6`, which lacked that check. Items bought there still count, because the app reads ownership from both. The live app buys only from the new shop.
-- **The Candy Bank starter grant:** 300 $KNOCK and 0.0005 test ETH for gas, once per wallet. The claim is queued by a Cloudflare Worker, and an outbound relay pays it on Robinhood testnet.
-- **Wallets:** a guest wallet (a key made and kept in the browser, for testnet only) can claim the grant and buy items without an extension. A browser wallet works too. On a phone or tablet without a wallet, links reopen the game inside MetaMask, Phantom, Coinbase Wallet or Trust Wallet.
+The six main slots give **1,766 different kits** across the collection, and Skin, Form, Base and Tier add their quirks on top. The ten legends get hand-made weapons, specials and ultimates.
 
-## Services
+**One Chog, read by the game.** Chog #175, the hero in the screenshots on this page, has a Stripes body, Normal Eye, no aura on a Sky Blue background, a Drooling mouth and a Crown. That gives it Ball & Chain, Pep Talk, Twister, Sweet Tooth and Royal Command.
 
-| Service | Where | What it does |
+<img src="docs/readme/kit.webp" alt="The hero picker for Chog #175: its portrait, its costumed rig, and its kit: Ball & Chain, Pep Talk, Twister and Sweet Tooth">
+
+- **Talents follow the traits.** At hero levels 2 to 5 you pick one of two cards. One upgrades a move your traits gave you: the weapon at level 2, the special at 3, the passive or headgear at 4 and the ultimate at 5. The other is a general upgrade.
+- **TRAITS ACTIVE.** At the start of each level, a "CHOG #… · TRAITS ACTIVE" card shows the perks your Chog brought. The perk badges then stay at the top left; tap one to read it again.
+
+### Every enemy is a real Chog
+
+Each trick-or-treater wears a costume with a real Chog's face, drawn at random from all 1,969. That Chog's traits become its modifiers, 18 in all. For example:
+
+- laser eyes zap a tower for a 1-second stun;
+- a Crown armours nearby friends;
+- a Gold Tooth, BTC Coin or Mon coin mouth drops double candy;
+- a Drooling mouth steals two jars;
+- a Skull form revives once;
+- Rare and Epic Chogs have 50% or 100% more health and candy.
+
+Tap any enemy to see its Chog number and its modifiers. If Chog #175 knocks on your door, its Crown armours the enemies around it, and it steals two jars.
+
+<img src="docs/readme/enemy-tap.webp" alt="Rosie Row mid-wave. A tapped enemy's toast reads: Trick-or-Treater #1513, laser: zaps a tower for a 1s stun">
+
+<details>
+<summary><b>All 18 enemy modifiers</b> (<code>app/src/siege/data/traits.ts</code>)</summary>
+
+| Trait | Modifier |
+|---|---|
+| Aura: Burning, Fiery or Fire | Immune to slows |
+| Aura: Aqua | Can't be knocked back |
+| Aura: Smoke | Dodges 20% of attacks |
+| Aura: Wind | 20% faster |
+| Eyes: any laser | Zaps a tower for a 1-second stun |
+| Eyes: Gradient visor or Anime Glass | Ignores candy lures |
+| Head: Crown | Armours nearby friends |
+| Head: Wizard Hat | Blinks forward |
+| Mouth: Gold Tooth, BTC Coin or Mon coin | Drops double candy |
+| Mouth: Bubblegum | Gum slows guards |
+| Mouth: Drooling | Steals two jars |
+| Accessory: Knife | Shreds guards |
+| Accessory: Fwog or PEPE | Survives one lethal hit |
+| Accessory: Green or Red Candle | Pumps and dumps its speed |
+| Form: Skull | Revives once |
+| Base: Radioactive | A poison aura hurts guards and the hero |
+| Skin: Metal | Physical armour |
+| Tier: Rare or Epic | +50% (Rare) or +100% (Epic) health and candy |
+
+</details>
+
+### The ten legends are the bosses
+
+The ten 1:1 Chogs come to the door as bosses, each with its own move. The Great Pumpkin closes the last night.
+
+| Legend | Boss move |
+|---|---|
+| Ember (#561) | **Wildfire:** leaves burning footprints that set guards alight; immune to burning |
+| Hellfire Skull (#900) | **Hell Ride:** dashes ahead, scattering guards; revives once |
+| The Scream (#942) | **The Scream:** the screen warps, and towers miss half their shots for 4 seconds |
+| Brainz (#1002) | **Rise Again:** raises fallen enemies to walk the road again |
+| Pepe (#1481) | **Frog Leap:** leaps far down the road, shaking off slows |
+| Manga (#1514) | **Final Panel:** time stops for your towers for 3 seconds |
+| Seraph (#1667) | **Sanctuary:** shields every enemy near it for 5 seconds |
+| Gladius (#1798) | **Testudo:** raises its shield and blocks the next five hits |
+| Midas (#1881) | **Golden Touch:** turns two towers to gold, silencing them for 5 seconds |
+| Lil' Devil (#1884) | **Pact:** steals three jars at once and calls a swarm of imps |
+
+Play a legend as your hero, and it brings its own hand-made weapon, special and ultimate.
+
+<img src="docs/readme/midas.webp" alt="A legend at the door: Midas. Golden Touch turns two towers to gold, silencing them for 5 seconds.">
+
+### One rig, 1,969 faces
+
+The hero is a puppet rig: a costume body with the Chog's real portrait as its head. One rig animates all 1,969 portraits. Apart from the ten legends' hand-made costumes, no Chog needs art of its own. Enemies are frame-animated costumes with the portrait in a face window.
+
+Each Chog also has a signature emote that comes from its own mouth or eyes, 18 kinds in all, played on its own face. A Gold Tooth sparkles, crying eyes spray tears, and laser eyes flash beams.
+
+### Owning a Chog matters
+
+- **Home advantage.** Connect the wallet that holds your Chog. The game reads `ownerOf` on Monad, and your own Chog starts one hero level higher and wears a gold frame.
+- **The $CHOG perk.** Any $CHOG balance on Monad gives +25 starting candy and 10% more candy from kills. The game only reads the balance; nothing is spent.
+- **Porch Party co-op needs a Chog you hold.** The game checks `ownerOf` before you open or join a room.
+- **No Chog? Try as a holder.** One tap in the hero picker gives your browser's guest wallet a real Chog, 1,000 $CHOG and 1 MON on a sandbox copy of Monad. You then play with Home advantage and the $CHOG perk. The screen labels the sandbox, and it resets every night at 00:05 UTC.
+
+<img src="docs/readme/chog-perks.webp" alt="Your $CHOG perks for Chog #175: $CHOG holder, +25 starting candy; a sweeter night, +10% candy from kills; and Home advantage">
+
+### By the numbers
+
+| 1,969 | 1,766 | 18 | 10 |
+|:-:|:-:|:-:|:-:|
+| playable heroes, and the faces the enemies wear | different kits from the six main traits | enemy modifiers from traits | legend bosses |
+
+<sub>**Random** and the default hero skip the 312 Chogs whose cap or shirt carries crude text. You can still play any of them by typing its number.</sub>
+
+### See it in 30 seconds
+
+1. Open [knock.timidan.xyz](https://knock.timidan.xyz), tap **Hold the porch →**, then **Rosie Row**.
+2. On "Who's on porch duty?", type any Chog number from 1 to 1,969, or tap **Random**. The panel lists the kit its traits give it. To play as a holder, tap **Try as a holder**.
+3. Tap **Let's make mischief →**. Your first Rosie Row is a short tutorial; **SKIP** is on its card.
+4. Read the **TRAITS ACTIVE** card, then tap any enemy to see which Chog it is.
+
+## How it plays
+
+Enemies walk the road to your house and steal candy jars. You start each night with 20. A bar on the house shows how many are left, and when the last jar goes, the porch falls.
+
+- **Towers.** Build on stone pads. There are four families: Egg Stand, TP Launcher, Haunted Lantern and Pumpkin Patch. Each has three levels, two specialisations and two more ranks. Four special towers unlock as you win, and a fifth, the Bat Roost, is in the shop.
+- **Your hero.** Move it, and it attacks on its own. Fire its special and its ultimate, and pick a talent at each hero level.
+- **Traps, supplies and spells.** Three traps and five supplies, with 5 uses of each per level, and two spells: Candy Rain and Boo!
+- **Waves.** Ghosts hide, pumpkins resist eggs, bats fly, goblins steal three jars, witches heal, mummies split and skeletons come in fives. Witching Hour waves pour ghosts and bats in from the screen edges. Legends and the Great Pumpkin arrive as bosses. Call a wave early for bonus candy.
+- **Stars.** 3 stars for 18 to 20 jars left, 2 for 10 to 17, and 1 for 1 to 9. A win with 2 stars or more unlocks the next night.
+- **Six nights, Endless and the Daily.** The nights are Rosie Row, Lemon Lane, Mint Mews, Mon Manor, Radioactive Ridge and Rare Row. Each map has its own twist (two roads, a canal bridge, portals, toxic pools, darkness) and a prop you tap, and later nights are harder. A 2-star win on Rosie Row also opens Endless, on Town Square, which adds a road every 10 waves and a boss every 10th wave. It opens the Daily too: the UTC date picks a map and a night (Quiet night, Blood Moon, Candy Rain or Costume Night).
+- **It teaches itself.** A 7-step tutorial with a pointing glove, a card for each new enemy, one-time rule callouts (ARMOURED, HIDDEN, FLYING), a preview of the next wave's path, and a porch alarm when a jar is stolen.
+
+<details>
+<summary><b>Everything else</b></summary>
+
+- **Speed:** 1×, 2× or 3×, and a field guide.
+- **Emotes:** 8 for everyone, plus your Chog's signature.
+- **Feedback:** hit flashes; BLOCK!, CRIT!, MISS and TINK pops; candy flying to the counter; a letterboxed boss entrance; and a star-slam result screen.
+- **Sound:** menu, level and boss music. Every game action and menu press has its own sound, and each game sound has a layer above 500 Hz so that phone speakers play it.
+- **Sharing:** a 1080×1350 share card with your Chog, stars, score and one accolade: **BOSS SLAYER** after a win in which a boss fell, **PERFECT DEFENSE** for a win with all 20 jars, or else the number of Chogs stopped. The [stats page](https://knock.timidan.xyz/stats) has a community goal of 100,000 monsters stopped and a share image of it.
+- **Settings:** music and effects volume, Lite mode, screen shake, vibration (Android), full screen on Play, golden towers and a stats opt-out. Reduced-motion preferences are respected.
+- **Desktop:** hovering a hero power, spell, perk badge, trap or supply shows a one-line tip. Keys: Space pause, 1 and 2 spells, Q special, R ultimate, Z and X talents, E emotes, N next wave.
+
+</details>
+
+The [player guide](docs/HOLDERS.md) covers every mode in more detail.
+
+## Porch Party co-op
+
+Two holders, one porch. Each player brings a Chog they hold, with its own kit, special, ultimate and talents. Candy, towers, traps, spells and jars are shared, so you agree on what to build, and a talent pick pauses both games. Open a room from the hero picker on any night you've unlocked, and send the invite link.
+
+Both browsers run the whole game in deterministic lockstep. A small relay passes the inputs in a fixed order and compares state hashes. No server runs the game.
+
+**Try it alone:** in one browser, tap **Try as a holder**, then **Porch Party · play together**, and copy the invite. Open the link in a second browser or a private window, tap **Try as a holder**, then **Join Porch Party →**.
+
+## The Candy Vault
+
+The Candy Vault is the shop. It sells cosmetics and small conveniences for $KNOCK, a token on Robinhood Chain testnet. The shop reads every price from the KnockShop contract:
+
+| Item | Price |
+|---|---|
+| Dances: Floss, Dab, Moonwalk, Robot, Chicken, Breakdance, Disco and Worm | 150 $KNOCK each |
+| Crew costumes: ghosts, witches, pumpkins and bats | 400 $KNOCK each |
+| Golden towers | 600 $KNOCK |
+| Crypto emote pack | 300 $KNOCK |
+| A sweeter start: +50 starting candy | 200 $KNOCK |
+| Bat Roost tower | 400 $KNOCK |
+
+- **A 300 $KNOCK starter grant,** once per wallet, with a little test ETH for gas. A guest wallet made in the browser can claim it and buy, with no extension.
+- **One signature, one transaction.** A purchase is a `permit` signature for the exact price, then one `buyFor` call that only the buyer can send. Ownership is on-chain, so it follows the wallet.
+- **Playing never earns $KNOCK.** A score from a browser can be faked, so the game pays nothing out.
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/readme/porch-bar.webp" alt="An enemy steals a jar. The callout reads: enemies steal jars, lose all 20 and the porch falls. The bar on the house shows 8 of 20."><br><sub>Enemies steal jars. The bar on the house shows 8 of 20 left.</sub></td>
+    <td width="50%"><img src="docs/readme/early-call.webp" alt="Wave 2, Costume Party, called early for bonus candy"><br><sub>Calling a wave early pays bonus candy.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="docs/readme/twister.webp" alt="Chog #175's ultimate, Twister, lifts an enemy Chog off the road"><br><sub>Twister, the ultimate Chog #175 gets from its Sky Blue background.</sub></td>
+    <td width="50%"><img src="docs/readme/victory.webp" alt="Sweet victory: three stars, 20 jars saved, Night 02 unlocked"><br><sub>A 3-star win with all 20 jars unlocks the next night.</sub></td>
+  </tr>
+</table>
+
+## Under the hood
+
+- **Stack:** TypeScript, Phaser 3.90 for the game world and HUD, React 19 for the menus, shop and overlays, and viem for chain reads and testnet purchases. The game runs in the browser, and progress is saved there.
+- **A deterministic simulation.** The game advances in fixed 1/45-second steps. One seeded random stream drives gameplay and a separate one drives visuals, so effects never change the outcome. Every input goes through one `command()` entry point.
+- **Lockstep co-op.** Both browsers run the whole simulation from one seed. Each command is scheduled a fixed number of ticks ahead, set per match from eight round-trip probes, and passes through a Cloudflare Durable Object, one per room. Every 2 seconds both games hash their state, and the relay compares the hashes; a mismatch stops the match. There is no prediction or rollback.
+- **Content is data.** `kits.json`, `traits.json` and `legends.json` map the collection to the rules, and `scripts/rig-check.mts` checks all 1,969 kits.
+- **Performance.** About 60 fps with 60 enemies and 12 towers firing, measured in Chrome on an Intel Iris Xe laptop GPU at a phone-sized viewport. A quality governor and a Lite mode help slower devices. It hasn't been measured on a physical phone yet.
+
+| Service | Built on | Job |
 |---|---|---|
-| Candy Bank | `worker/`, a Cloudflare Worker with D1, https://candy-bank.timidan-knock.workers.dev | Queues starter-grant claims: one per address ever, three new claims per IP per UTC day, and 150 new claims per UTC day across everyone. A rate limiter turns floods away before they reach the database, and IP hashes use a salt that changes daily. |
-| Grant relay | `relay/`, a Node service with no inbound ports | Polls the Candy Bank every 10 seconds and pays queued claims: 300 KNOCK, then 0.0005 ETH. It pays at most 60 grants in any hour and 200 in any 24 hours, pauses when funds run low, and saves each signed transaction before sending it. |
-| Holder sandbox | `sandbox/`, an anvil fork of Monad mainnet behind a JSON-RPC filter, https://sandbox-rpc.timidan.xyz | `POST /holder` gives the caller a random Chog, 1,000 CHOG and 1 MON on the fork. One grant per address per fork and five attempts per IP per hour. It resets nightly at 00:05 UTC. Its public JSON-RPC is read-only and rate-limited per call, with a gas cap on calls. |
-| Live stats | `stats/`, a Cloudflare Worker with D1, https://siege-stats.timidan-knock.workers.dev | Counts anonymous play events for `/stats`. A rate limiter turns floods away before they reach the database, and `/stats` is cached for 30 seconds. |
-| Co-op relay | `coop/`, a Cloudflare Worker with Durable Objects, https://knock-coop.timidan-knock.workers.dev | One Durable Object per Porch Party room: two player slots, inputs relayed in a fixed order, and state-hash checks. It knows room slots, not wallets, and runs no game logic. A room closes 10 minutes after it opens if the game hasn't started, and after an hour at most. Each IP can open about 5 rooms and make about 30 join attempts a minute; these limits are approximate and apply per Cloudflare location. |
-| Hosting | Cloudflare Pages | Serves https://knock.timidan.xyz, with a Content-Security-Policy that lists every service the app calls and blocks framing. |
+| Game | Cloudflare Pages | Serves knock.timidan.xyz |
+| Co-op relay | Cloudflare Worker with Durable Objects | One object per Porch Party room: orders inputs and compares state hashes |
+| Candy Bank | Cloudflare Worker with D1 | Queues starter-grant claims, with rate limits |
+| Grant relay | Node, no inbound ports | Pays queued grants on Robinhood Chain testnet |
+| Holder sandbox | anvil fork of Monad mainnet | Gives "Try as a holder" its Chog and $CHOG |
+| Live stats | Cloudflare Worker with D1 | Counts anonymous play events for `/stats` |
 
-**What the stats collect:** each browser gets a random id. No wallet or IP address is stored; a salted IP hash is kept for one day to stop spam. Players can opt out in Settings, and automated browsers never send. Co-op runs aren't counted.
+The stats store no wallet or IP address, and players can opt out in Settings. Limits, contract addresses and the full privacy note are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-## Running locally
+## Run it locally
 
-You need Node.js 20.19 or newer and, for the portraits, ImageMagick (`magick`).
+You need Node.js 20.19 or newer and ImageMagick (`magick`). The Chog portraits aren't in git, so fetch them once:
 
 ```sh
 cd app
 npm install
-# The Chog portraits are not in git. Fetch them once from IPFS (the script resumes if stopped),
-# then make the 256 px copies the game loads.
-node scripts/snapshot.mjs images   # 512 px portraits into public/chogs/
+node scripts/snapshot.mjs images   # 512 px portraits from IPFS into public/chogs/
 node scripts/thumbs256.mjs         # 256 px copies into public/chogs-256/
 npm run dev
 ```
 
-- **Dev mode:** `npm run dev` doesn't read `app/.env.production`, so the shop is preview-only, the starter grant is hidden and stats are off.
-- **Builds:** `npm run build` reads `app/.env.production`, which sets `VITE_KNOCK_SHOP`, `VITE_CANDY_BANK_URL` and `VITE_STATS_URL`. `npm run preview` serves the build.
-- **Optional overrides:** `VITE_RPC_URL` (the Monad RPC, default `https://rpc.monad.xyz`), `VITE_SHOP_RPC_URL`, `VITE_HOLDER_RPC_URL`, `VITE_HOLDER_URL` and `VITE_COOP_RELAY` (default: the deployed co-op relay).
-- **Co-op:** the relay, its deploy and the two-browser checks are in [coop/README.md](coop/README.md).
-- **Debug view:** add `?siegeStats` to the URL to see fps, draw calls and texture memory in the game.
-- **Checks:** `npx tsc -b`, and `node --experimental-strip-types scripts/rig-check.mts`, which checks all 1,969 kits, the rig poses, the seeded world, the maps and the bosses.
-- **Contracts:** the Solidity libraries aren't in git. In `contracts/`, run `forge install --no-git foundry-rs/forge-std OpenZeppelin/openzeppelin-contracts`, then `forge test`. The deployed build used forge-std 1.17.0 and OpenZeppelin Contracts 5.7.0.
-
-## What's in the repository
-
-| Folder | Contents |
-|---|---|
-| `app/` | The game. `app/src/siege/` is the game itself; `app/src/stats/` is the stats page. |
-| `contracts/` | Foundry. `KnockShop.sol` is the buyer-only shop deployed on Robinhood testnet. `Knock.sol` belongs to the dropped street game and was never deployed to mainnet. |
-| `worker/`, `relay/`, `stats/`, `sandbox/`, `coop/` | The services above. `coop/` also holds the two-browser co-op checks. |
-| `art/` | The SVG art sources and the Python scripts that build the atlases. See [art/README.md](art/README.md). |
-| `archive/street/` | The original Knock street game, which was dropped on 13 Oct. |
-| `docs/` | The [player guide](docs/HOLDERS.md), a [phone test checklist](docs/PHONE-TEST.md), and the 12 Oct design doc ([SIEGE.md](docs/SIEGE.md)). |
+In dev mode the shop is preview-only, and the starter grant and stats are off. Builds, configuration, services, contracts, checks and the repository layout are in **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 
 ## Credits
 
