@@ -1,4 +1,5 @@
 import { attachRoom } from './net/session'
+import { thumb } from '../images'
 import type { CoopSession } from './net/session'
 import type { Lockstep } from './net/Lockstep'
 import type { Player } from './net/protocol'
@@ -10,7 +11,7 @@ import { ShapePool, circle, plate, curbedMap } from './renderShapes'
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
-import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
+import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind } from './data/config'
 import { LEVELS, TUTORIAL } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
@@ -568,6 +569,17 @@ export class SiegeScene extends Phaser.Scene {
     this.sugarRush = Math.max(0, this.sugarRush - dt); this.bonfire = Math.max(0, this.bonfire - dt)
     for (const p of this.props) {
       p.cooldown = Math.max(0, p.cooldown - dt)
+      if (p.data.kind === 'bridge') {
+        if (p.cooldown < 1e-9) p.cooldown = 0
+        // The first ten seconds of the 50-second cooldown are spent raised.
+        if (this.bridgeUp && p.cooldown <= 40 + 1e-9) {
+          this.bridgeUp = false; p.animation = 1
+          const path = this.options.assets.geometry.switch!.path, detour = this.routes.length + this.flyRoutes.length
+          for (const e of this.enemies) if (e.active && !e.boss && !e.returning && !ENEMIES[e.kind].flying && (e.path === path || e.path === detour) && e.distance < this.fork) {
+            e.path = path; e.distance = this.routeFor(e).nearest(e.x, e.y).distance
+          }
+        }
+      }
     }
   }
   private drawWorld(dt: number) {
@@ -580,7 +592,7 @@ export class SiegeScene extends Phaser.Scene {
         : kind === 'bell' ? p.animation ? `ring/${step(6)}` : '0' : kind === 'grate' ? p.animation ? `open/${step(4)}` : '0' : kind === 'bonfire' ? this.bonfire > 0 ? `burn/${Math.floor(idleTime * 8) % 6}` : '0'
         : p.animation ? `move/${step(4)}` : this.bridgeUp ? 'up' : 'down'
       this.art.set(p.image, `prop/${kind}/${name}`)
-      p.label.setText(kind === 'lamp' && p.used ? 'Lamp down' : kind === 'bonfire' && this.bonfire > 0 ? `Burning · ${Math.ceil(this.bonfire)}s` : p.cooldown > 0 ? `${Math.ceil(p.cooldown)}s` : kind === 'lamp' ? 'Drop lamp' : kind === 'shop' ? 'Sugar rush · 50' : kind === 'bell' ? 'Ring the bell' : kind === 'grate' ? 'Open the grate' : kind === 'bonfire' ? 'Light the bonfire' : this.bridgeUp ? 'Lower bridge' : 'Raise bridge')
+      p.label.setText(kind === 'bridge' && this.bridgeUp ? `Raised · ${Math.ceil(p.cooldown - 40)}s` : kind === 'lamp' && p.used ? 'Lamp down' : kind === 'bonfire' && this.bonfire > 0 ? `Burning · ${Math.ceil(this.bonfire)}s` : p.cooldown > 0 ? `${Math.ceil(p.cooldown)}s` : kind === 'lamp' ? 'Drop lamp' : kind === 'shop' ? 'Sugar rush · 50' : kind === 'bell' ? 'Ring the bell' : kind === 'grate' ? 'Open the grate' : kind === 'bonfire' ? 'Light the bonfire' : 'Raise bridge')
     }
     if (this.presentationFrozen) return
     for (const portal of this.portals) for (const image of portal.images) this.art.set(image, `prop/portal/${Math.floor(idleTime * 8) % 6}`)
@@ -599,7 +611,7 @@ export class SiegeScene extends Phaser.Scene {
   private useProp(index: number) {
     const p = this.props[index]
     if (!p || p.cooldown > 0) return
-    // Endless: every prop works again, on a longer cooldown.
+    // Endless props recover more slowly; the timed bridge keeps its 50-second cycle.
     const slow = this.level.endless ? 1.6 : 1
     if (p.data.kind === 'lamp') {
       if (p.used) return
@@ -628,16 +640,16 @@ export class SiegeScene extends Phaser.Scene {
     } else {
       const sw = this.options.assets.geometry.switch
       if (!sw || !this.detour) return
-      this.bridgeUp = !this.bridgeUp; p.cooldown = 12 * slow
-      const detourIndex = this.routes.length + this.flyRoutes.length, destination = this.bridgeUp ? detourIndex : sw.path
+      this.bridgeUp = true; p.cooldown = 50
+      const detourIndex = this.routes.length + this.flyRoutes.length
       const reach = new Route(p.data.reach!)
       for (const e of this.enemies) if (e.active && !e.boss && !ENEMIES[e.kind].flying && (e.path === sw.path || e.path === detourIndex)) {
         const crossing = reach.nearest(e.x, e.y)
-        if (this.bridgeUp && e.path === sw.path && crossing.gap < 55 && crossing.distance > 0 && crossing.distance < reach.length) {
+        if (e.path === sw.path && crossing.gap < 55 && crossing.distance > 0 && crossing.distance < reach.length) {
           this.effect('fx/blink/0', e.x, e.y, .8); e.returning = 6; e.art.root.setVisible(false); e.path = detourIndex; e.distance = this.fork; this.routeFor(e).at(e.distance, e)
-        } else if (!e.returning && e.distance < this.fork) { e.path = destination; e.distance = this.routeFor(e).nearest(e.x, e.y).distance }
+        } else if (!e.returning && e.distance < this.fork) { e.path = detourIndex; e.distance = this.routeFor(e).nearest(e.x, e.y).distance }
       }
-      this.hud.toast(this.bridgeUp ? 'Bridge up! New arrivals take the long way. Fallen marchers return in 6 seconds.' : 'Bridge down. Marchers past the fork keep their route.')
+      this.hud.toast('Bridge up for 10 seconds! New arrivals take the long way. Fallen marchers return in 6 seconds.')
     }
     p.animation = 1; this.options.sfx.play('build'); this.drawWorld(0)
   }
@@ -775,7 +787,7 @@ export class SiegeScene extends Phaser.Scene {
   callWave() {
     if (this.paused || this.ended || this.wave >= this.waveCount || (this.options.tutorial && this.tutorialStep === 0)) return
     this.hud.closePreview()
-    const early = this.wave > 0 ? Math.ceil(Math.max(0, this.countdown) * 1.5) : 0
+    const early = this.wave > 0 ? Math.ceil(Math.max(0, this.countdown) * EARLY_CALL_CANDY_PER_SECOND) : 0
     if (early) { this.earlyCalls++; this.income(early); this.hud.toast(`Early call! +${early} candy`) }
     const data = this.waveAt(this.wave)!
     this.previewHideUntil = this.presentationTime + .3
@@ -1467,7 +1479,7 @@ export class SiegeScene extends Phaser.Scene {
   // The in-game portraits are 64px tiles; the close-up redraws the hero's face from the 256px original.
   private async sharpPortrait() {
     try {
-      const image = await loadImage(`/chogs-256/${this.options.hero}.webp`)
+      const image = await loadImage(thumb(this.options.hero, true))
       if (this.gone) return
       const texture = this.textures.exists('hero-hd') ? this.textures.get('hero-hd') as Phaser.Textures.CanvasTexture : this.textures.createCanvas('hero-hd', 256, 256)!, ctx = texture.context
       ctx.clearRect(0, 0, 256, 256); ctx.save(); ctx.beginPath(); ctx.arc(128, 128, 256 * 61 / 128, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(image, 0, 0, 256, 256); ctx.restore(); texture.refresh()

@@ -62,15 +62,15 @@ export function towerLock(kind: TowerKind, stars: Record<string, number>, owned:
   return unlock && (stars[unlock.level] ?? 0) < unlock.stars ? unlock.hint : ''
 }
 export const ENEMIES: Record<EnemyKind, { name: string; description: string; hp: number; speed: number; candy: number; color: number; flying: boolean; jars: number }> = {
-  treater: { name: 'Trick-or-Treater', description: 'Here for your candy. Their real Chog traits add surprises.', hp: 92, speed: 88, candy: 14, color: 0xffb75d, flying: false, jars: 1 },
-  ghost: { name: 'Ghost Sheet', description: 'Hidden until a Haunted Lantern or Target Lock reveals it.', hp: 95, speed: 105, candy: 19, color: 0xc9ddff, flying: false, jars: 1 },
-  pumpkin: { name: 'Pumpkin Head', description: 'Armoured! Eggs deal only 20% damage. Use magic or TP.', hp: 245, speed: 66, candy: 24, color: 0xff8754, flying: false, jars: 1 },
-  bat: { name: 'Bat Wings', description: 'Fast and airborne. Guards and ground traps cannot stop it.', hp: 78, speed: 135, candy: 17, color: 0xb5a0ef, flying: true, jars: 1 },
-  witch: { name: 'Witch', description: 'Heals nearby marchers, then blinks ahead. Focus her down or stun the cast.', hp: 310, speed: 76, candy: 30, color: 0xb997ed, flying: false, jars: 2 },
-  mummy: { name: 'Mummy', description: 'Unravels into two minis. Save splash damage for the split.', hp: 360, speed: 64, candy: 26, color: 0xe0d6a8, flying: false, jars: 2 },
-  mini: { name: 'Mini Mummy', description: 'Two quick little bandits left behind by a mummy.', hp: 72, speed: 125, candy: 6, color: 0xe0d6a8, flying: false, jars: 1 },
-  goblin: { name: 'Candy Goblin', description: 'A very fast thief who grabs three jars. Slow, root or block him.', hp: 135, speed: 195, candy: 22, color: 0x9ad780, flying: false, jars: 3 },
-  skeleton: { name: 'Skeleton Crew', description: 'Arrives five at a time. Splash and chains scatter the whole crew.', hp: 88, speed: 108, candy: 7, color: 0xeae3cf, flying: false, jars: 1 },
+  treater: { name: 'Trick-or-Treater', description: 'Here for your candy. Their real Chog traits add surprises.', hp: 92, speed: 88, candy: 10, color: 0xffb75d, flying: false, jars: 1 },
+  ghost: { name: 'Ghost Sheet', description: 'Hidden until a Haunted Lantern or Target Lock reveals it.', hp: 95, speed: 105, candy: 13, color: 0xc9ddff, flying: false, jars: 1 },
+  pumpkin: { name: 'Pumpkin Head', description: 'Armoured! Eggs deal only 20% damage. Use magic or TP.', hp: 245, speed: 66, candy: 17, color: 0xff8754, flying: false, jars: 1 },
+  bat: { name: 'Bat Wings', description: 'Fast and airborne. Guards and ground traps cannot stop it.', hp: 78, speed: 135, candy: 12, color: 0xb5a0ef, flying: true, jars: 1 },
+  witch: { name: 'Witch', description: 'Heals nearby marchers, then blinks ahead. Focus her down or stun the cast.', hp: 310, speed: 76, candy: 21, color: 0xb997ed, flying: false, jars: 2 },
+  mummy: { name: 'Mummy', description: 'Unravels into two minis. Save splash damage for the split.', hp: 360, speed: 64, candy: 18, color: 0xe0d6a8, flying: false, jars: 2 },
+  mini: { name: 'Mini Mummy', description: 'Two quick little bandits left behind by a mummy.', hp: 72, speed: 125, candy: 4, color: 0xe0d6a8, flying: false, jars: 1 },
+  goblin: { name: 'Candy Goblin', description: 'A very fast thief who grabs three jars. Slow, root or block him.', hp: 135, speed: 195, candy: 15, color: 0x9ad780, flying: false, jars: 3 },
+  skeleton: { name: 'Skeleton Crew', description: 'Arrives five at a time. Splash and chains scatter the whole crew.', hp: 88, speed: 108, candy: 5, color: 0xeae3cf, flying: false, jars: 1 },
 }
 export const TRAPS: Record<TrapKind, { name: string; cost: number; radius: number; duration: number; status: Status; color: number; description: string }> = {
   pumpkin: { name: 'Pumpkin Trap', cost: 30, radius: 125, duration: 2.5, status: 'stun', color: 0xffa34e, description: 'One burst stuns a crowd.' },
@@ -86,8 +86,8 @@ export const CONSUMABLES = {
 }
 export type ConsumableKind = keyof typeof CONSUMABLES
 export const SPELLS = {
-  rain: { name: 'Candy Rain', cooldown: 22, radius: 175, damage: 125, color: 0xffcc63 },
-  boo: { name: 'Boo!', cooldown: 26, radius: 210, damage: 0, color: 0xc1a1ff },
+  rain: { name: 'Candy Rain', cooldown: 70, radius: 175, damage: 95, color: 0xffcc63 },
+  boo: { name: 'Boo!', cooldown: 80, radius: 210, damage: 0, color: 0xc1a1ff },
 } satisfies Record<SpellKind, { name: string; cooldown: number; radius: number; damage: number; color: number }>
 export const EMOTES = ['boo', 'trick', 'treat', 'lol', 'taunt', 'heart', 'cry', 'gg'] as const
 export type Emote = typeof EMOTES[number]
@@ -96,6 +96,7 @@ export const TARGETING: Targeting[] = ['first', 'last', 'strong', 'close']
 export const LIMITS = { enemies: 96, towers: 12, projectiles: 128, effects: 96, numbers: 40, traps: 12 }
 export const starsFor = (jars: number) => jars >= 18 ? 3 : jars >= 10 ? 2 : jars > 0 ? 1 : 0
 export const STARTING_CANDY = 250
+export const EARLY_CALL_CANDY_PER_SECOND = .5
 
 export const SPECIALISATIONS = {
   rotten: { kind: 'egg', name: 'Rotten Egg', description: 'Poison stacks up to five times on each target.' },

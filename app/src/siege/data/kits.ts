@@ -38,4 +38,7 @@ export const WEAPONS: Record<string, { damage: number; range: number; interval: 
   'ray-gun': { damage: 24, range: 390, interval: 1.15 }, anime: { damage: 38, range: 1500, interval: 3.2 },
   tickle: { damage: 18, range: 120, interval: .44 }, ...LEGEND_WEAPONS,
 }
-export const SPECIAL_COOLDOWNS: Record<string, number> = { laser: 20, 'target-lock': 18, 'deal-with-it': 18, 'tear-flood': 20, charm: 23, 'play-dead': 18, 'stare-down': 17, confetti: 18, 'pep-talk': 22, 'legend-561': 20, 'legend-900': 22, 'legend-942': 20, 'legend-1002': 24, 'legend-1481': 22, 'legend-1514': 19, 'legend-1667': 24, 'legend-1798': 24, 'legend-1881': 20, 'legend-1884': 22 }
+export const SPECIAL_COOLDOWNS: Record<string, number> = { laser: 80, 'target-lock': 36, 'deal-with-it': 36, 'tear-flood': 40, charm: 46, 'play-dead': 36, 'stare-down': 34, confetti: 36, 'pep-talk': 44, 'legend-561': 80, 'legend-900': 44, 'legend-942': 40, 'legend-1002': 48, 'legend-1481': 44, 'legend-1514': 38, 'legend-1667': 48, 'legend-1798': 48, 'legend-1881': 40, 'legend-1884': 44 }
+
+// Shared multiplier for charge from kills and hero damage.
+export const ULTIMATE_CHARGE_RATE = .5

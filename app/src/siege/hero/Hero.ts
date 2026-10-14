@@ -4,7 +4,7 @@ import type { Enemy, Tower } from '../world'
 import { distanceSq, reaction } from '../world'
 import type { Point, Status, TrapKind } from '../data/config'
 import { ENEMIES, TRAPS } from '../data/config'
-import { resolveKit, WEAPONS, SPECIAL_COOLDOWNS } from '../data/kits'
+import { resolveKit, WEAPONS, SPECIAL_COOLDOWNS, ULTIMATE_CHARGE_RATE } from '../data/kits'
 import type { Kit } from '../data/kits'
 import { talentChoices } from '../data/talents'
 import { Rig } from './Rig'
@@ -117,7 +117,7 @@ export class Hero {
       this.offerTalents(); this.scene.effect('fx/talent/0', this.x, this.y - 50, 1, 1.4); this.scene.hud.toast(`Hero level ${this.level} · choose a talent`)
     }
   }
-  addCharge(amount: number) { if (this.alive) this.charge = Math.min(100, this.charge + amount * (this.talents.has('generic:charge') ? 1.25 : 1)) }
+  addCharge(amount: number) { if (this.alive) this.charge = Math.min(100, this.charge + amount * ULTIMATE_CHARGE_RATE * (this.talents.has('generic:charge') ? 1.25 : 1)) }
   towerBuff(tower: Tower) {
     // Deal With the Devil doubles every tower's damage too.
     const devil = this.devil > 0 ? 1 : 0
