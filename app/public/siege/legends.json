@@ -6,14 +6,14 @@
       "weapon": {"name": "Fireball", "effect": "an arcing fireball that sets enemies alight"},
       "special": {"name": "Flare Up", "effect": "a ring of fire bursts around the hero, burning everything near"},
       "ultimate": {"name": "Wildfire", "effect": "sets a long stretch of the road ablaze for 6 seconds"},
-      "boss": {"move": "Wildfire", "effect": "leaves burning footprints that set guards alight; immune to burning"}
+      "boss": {"move": "Wildfire", "effect": "leaves burning footprints and bursts into a ring of flame that scorches guards and your hero; immune to burning"}
     },
     "900": {
       "name": "Hellfire Skull", "costume": "legend-900", "attack": "swing",
       "weapon": {"name": "Chain of Flames", "effect": "a fiery chain sweep that hits everything around the hero"},
       "special": {"name": "Bone Shield", "effect": "spinning bones block every hit for 4 seconds"},
       "ultimate": {"name": "Hell Ride", "effect": "charges down the road in a blaze, burning all it passes"},
-      "boss": {"move": "Hell Ride", "effect": "dashes ahead, scattering guards; revives once"}
+      "boss": {"move": "Hell Ride", "effect": "dashes ahead, flattening guards in its path; revives once"}
     },
     "942": {
       "name": "The Scream", "costume": "legend-942", "attack": "fan",
@@ -27,14 +27,14 @@
       "weapon": {"name": "Brain Toss", "effect": "a squishy brain that slows what it hits"},
       "special": {"name": "Shamble", "effect": "two zombie Chogs rise and fight for you"},
       "ultimate": {"name": "Rise Again", "effect": "the last five fallen enemies rise and fight on your side"},
-      "boss": {"move": "Rise Again", "effect": "raises fallen enemies to walk the road again"}
+      "boss": {"move": "Rise Again", "effect": "raises the last three fallen enemies to walk the road again"}
     },
     "1481": {
       "name": "Pepe", "costume": "legend-1481", "attack": "slap",
       "weapon": {"name": "Tongue Lash", "effect": "a long tongue that pulls an enemy back"},
       "special": {"name": "Feels Bad", "effect": "a sad aura: enemies near the hero slow to a crawl"},
       "ultimate": {"name": "Rare Pepe", "effect": "golden frogs rain down, each one stunning where it lands"},
-      "boss": {"move": "Frog Leap", "effect": "leaps far down the road, shaking off slows"}
+      "boss": {"move": "Frog Leap", "effect": "leaps far down the road, shaking off slows, freezes and stuns"}
     },
     "1514": {
       "name": "Manga", "costume": "legend-1514", "attack": "swing",
@@ -69,7 +69,7 @@
       "weapon": {"name": "Trident", "effect": "three bolts of hellfire in a spread"},
       "special": {"name": "Imp Swarm", "effect": "three imps dive at the toughest enemies"},
       "ultimate": {"name": "Deal With the Devil", "effect": "double damage for 8 seconds; it costs one candy jar"},
-      "boss": {"move": "Pact", "effect": "steals three jars at once and calls a swarm of imps"}
+      "boss": {"move": "Pact", "effect": "steals three jars and calls a swarm of imps; beat it to win the jars back"}
     }
   },
   "greatPumpkin": {

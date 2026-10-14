@@ -65,6 +65,7 @@ const WITCHING_WARNING = 3
 // Road routes start with a 450px off-screen run-up (Route); crossing it is an enemy's arrival at the entrance.
 const ENTRANCE = 450
 const STATUS_KEYS = Object.keys(clearStatuses()) as Status[]
+const RISEN = 0xa8ffc4
 // Golden Touch and frozen towers: dark to light, so the tower's own shading carries over.
 const COAT_RAMPS = { gold: [[58, 30, 4], [138, 84, 10], [214, 158, 28], [255, 214, 86], [255, 247, 205]], ice: [[26, 52, 98], [62, 118, 178], [128, 192, 236], [200, 238, 255], [246, 253, 255]] }
 const DRAW_STATUSES: Status[] = ['freeze', 'charm', 'confuse', 'root', 'mark', 'bleed', 'fear', 'burn', 'poison', 'slow']
@@ -746,9 +747,13 @@ export class SiegeScene extends Phaser.Scene {
     enemy.art.face.setTexture(ref.key, ref.frame).setVisible(true)
     enemy.art.root.setVisible(true).setAlpha(1).setScale(1)
     enemy.art.body.clearTint(); enemy.art.face.clearTint(); enemy.art.drawFrame = -1; enemy.art.faceId = -1; enemy.art.hitTint = false; enemy.art.statusFrame = -1
+    // Raised by a boss (Rise Again, the Pact's imps, the Pumpkin's last wave): they climb out of the ground glowing with grave light.
+    enemy.art.risen = !!entry.risen; enemy.art.shielded = false
+    if (entry.risen) { enemy.art.body.setTint(RISEN); enemy.art.face.setTint(RISEN) }
     this.resetReaction(enemy)
     enemy.art.icons.forEach((icon, i) => { icon.setVisible(!!mods[i]); if (mods[i]) this.art.set(icon, `mod/${mods[i]}`) })
     this.routeFor(enemy).at(distance, enemy)
+    if (entry.risen) { this.effect('fx/poof/0', enemy.x, enemy.y - 10, .6, 1.5); this.effect('fx/bones/0', enemy.x, enemy.y - 30, .7, 1.1) }
     this.waveAlive[wave] = (this.waveAlive[wave] ?? 0) + 1
     const fresh = !this.discovered.has(`enemy/${kind}`)
     this.discover([`enemy/${kind}`, ...mods.map(m => `mod/${m}`)])
@@ -1651,13 +1656,13 @@ export class SiegeScene extends Phaser.Scene {
         art.face.setTexture(face.key, face.frame); art.faceId = e.id; art.faceLeft = flip
       }
       const emoting = this.motion && e.sigCooldown > 3.2, hop = emoting ? Math.abs(Math.sin((5 - e.sigCooldown) * 9)) : 0
-      const spawn = this.motion ? Math.min(1, e.age * 5) : 1, squash = this.motion && v.life ? 1 - Math.min(.2, .06 + Math.hypot(v.x, v.y) * .005) * Math.max(0, spring) : emoting ? 1 - .14 * Math.cos((5 - e.sigCooldown) * 18) : 1
+      const spawn = this.motion ? Math.min(1, e.age * 5) : 1, rise = art.risen && this.motion ? Math.min(1, e.age / .7) : 1, squash = this.motion && v.life ? 1 - Math.min(.2, .06 + Math.hypot(v.x, v.y) * .005) * Math.max(0, spring) : emoting ? 1 - .14 * Math.cos((5 - e.sigCooldown) * 18) : 1
       const blocked = this.motion && art.blockUntil > this.presentationTime && !e.status.stun && !e.status.freeze
       const press = blocked ? Math.sin(art.age * 10) * 4 : 0, gap = blocked ? Math.hypot(art.blockX - e.x, art.blockY - e.y) || 1 : 1
       const x = (held ? v.atX : e.x) + v.x * spring + (art.blockX - e.x) / gap * press
       const y = (held ? v.atY : e.y) + v.y * spring + (art.blockY - e.y) / gap * press
       if (e.art.root.depth !== e.y + 20) e.art.root.setDepth(e.y + 20)
-      e.art.root.setPosition(x, y + bob - hop * 12).setScale(spawn * (2 - squash), spawn * squash)
+      e.art.root.setPosition(x, y + bob - hop * 12).setScale(spawn * (2 - squash), spawn * squash * rise)
       // On a dark map an enemy outside every light vanishes, leaving only two glowing eyes.
       const dim = this.dark && !e.lit && e.status.reveal <= 0 && this.bonfire <= 0
       const alpha = dim ? 0 : e.visible ? v.dodge > 0 && this.motion ? .35 + .45 * Math.abs(Math.sin(v.dodge * 38)) : 1 : .22
@@ -1670,7 +1675,7 @@ export class SiegeScene extends Phaser.Scene {
         this.paint.image('dot', e.x + 5.5, e.y - 69.5, 7, 7, 0xfff4b0, a)
         continue
       }
-      if (art.hitTint !== (v.flash > 0)) { art.hitTint = v.flash > 0; if (art.hitTint) { art.body.setTintFill(0xffffff); art.face.setTintFill(0xffffff) } else { art.body.clearTint(); art.face.clearTint() } }
+      if (art.hitTint !== (v.flash > 0)) { art.hitTint = v.flash > 0; if (art.hitTint) { art.body.setTintFill(0xffffff); art.face.setTintFill(0xffffff) } else if (art.risen) { art.body.setTint(RISEN); art.face.setTint(RISEN) } else { art.body.clearTint(); art.face.clearTint() } }
       let statusName: Status | undefined
       for (const name of DRAW_STATUSES) if (e.status[name] > 0) { statusName = name; break }
       statusName ??= e.status.wrap ? 'root' : e.status.stun ? 'freeze' : undefined
@@ -1681,6 +1686,11 @@ export class SiegeScene extends Phaser.Scene {
       }
       this.bar(x, y - 124, e.hp / e.maxHp, e.visible ? 0x92dcb0 : 0xb9a5e1, 64)
       if (e.armour) this.paint.image('armour', e.x - 46, e.y - 17, 92, 34, 0xfbe394, .6)
+      if (art.risen) this.paint.image('glow', x - 95, y - 160, 190, 190, 0x6dff98, .5 + (idleMotion ? Math.sin(art.age * 5) * .12 : 0), 0, true)
+      // Sanctuary's bubble ripples when it turns a hit aside and pops when it runs out.
+      if (e.shield > 0) { const ripple = Math.max(0, art.deflectAt - this.presentationTime) / .3, size = 150 * (1 + (this.motion ? ripple * .22 : 0)); this.paint.image('bubble', x - size / 2, y - 64 - size / 2, size, size, 0xfff6c8, 1) }
+      else if (art.shielded) { this.effect('combat/ring/0', x, y - 64, .35, 2.2); this.effect('combat/block/0', x, y - 64, .3, 1.2); this.sfx('bubble-pop', e) }
+      art.shielded = e.shield > 0
     }
     // The crowd's feet and wings, sparingly: one quiet step and one flutter at most every third of a second, a little louder for a bigger crowd.
     if (dt > 0 && !this.ended && this.presentationTime >= this.stepAt && (marcher || flyer)) {
@@ -1719,8 +1729,8 @@ export class SiegeScene extends Phaser.Scene {
     this.paint.end()
   }
   // An atlas frame drawn with the pooled overlay quads, centred on (x, y).
-  mark(name: string, x: number, y: number, size: number, alpha = 1, tint = 0xffffff, add = false) {
-    const [key, frame] = this.art.frame(name), f = this.textures.getFrame(key, frame), w = f.realWidth * size, h = f.realHeight * size
+  mark(name: string, x: number, y: number, size: number, alpha = 1, tint = 0xffffff, add = false, squash = 1) {
+    const [key, frame] = this.art.frame(name), f = this.textures.getFrame(key, frame), w = f.realWidth * size, h = f.realHeight * size * squash
     this.paint.sprite(key, frame, x - w / 2, y - h / 2, w, h, tint, alpha, 0, add)
   }
   // A tower turned to gold (Golden Touch) or frozen (Final Panel, a laser stun) wears a recoloured copy of its own frame. The coat
