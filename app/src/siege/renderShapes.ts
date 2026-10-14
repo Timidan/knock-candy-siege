@@ -54,6 +54,15 @@ export function shapeTexture(scene: Phaser.Scene) {
   c.beginPath(); c.roundRect(0, 50, 12, 6, 3); c.fill()
   texture.add('fill', 0, 0, 50, 12, 6)
   c.lineWidth = 2; c.beginPath(); c.ellipse(46, 76, 44, 15, 0, 0, Math.PI * 2); c.strokeStyle = '#fff'; c.stroke(); texture.add('armour', 0, 0, 59, 92, 34)
+  // A shield bubble: clear in the middle, bright at the rim, with one highlight.
+  const bubble = c.createRadialGradient(148, 48, 18, 148, 48, 46)
+  bubble.addColorStop(0, 'rgba(255,255,255,0)'); bubble.addColorStop(.75, 'rgba(255,255,255,.28)'); bubble.addColorStop(1, 'rgba(255,255,255,.75)')
+  c.beginPath(); c.arc(148, 48, 45, 0, Math.PI * 2); c.fillStyle = bubble; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.stroke()
+  c.beginPath(); c.arc(148, 48, 34, Math.PI * 1.1, Math.PI * 1.45); c.lineWidth = 5; c.lineCap = 'round'; c.stroke(); texture.add('bubble', 0, 100, 0, 96, 96)
+  // A soft round glow.
+  const glow = c.createRadialGradient(212, 140, 0, 212, 140, 40)
+  glow.addColorStop(0, 'rgba(255,255,255,.9)'); glow.addColorStop(1, 'rgba(255,255,255,0)')
+  c.fillStyle = glow; c.fillRect(172, 100, 80, 80); texture.add('glow', 0, 172, 100, 80, 80)
   texture.refresh(); return KEY
 }
 
@@ -152,6 +161,7 @@ export function setSweep(scene: Phaser.Scene, image: Phaser.GameObjects.Image, r
 
 // Reuse the same quads in draw order. The pool is allocated before the first wave.
 export class ShapePool {
+  private key: string
   private root: Phaser.GameObjects.Container
   private images: Phaser.GameObjects.Image[] = []
   private bars: { back: Phaser.GameObjects.Image; fill: Phaser.GameObjects.NineSlice }[] = []
@@ -159,7 +169,7 @@ export class ShapePool {
   private barUsed = 0
   private visible = 0
   constructor(scene: Phaser.Scene, depth: number, capacity: number) {
-    const key = shapeTexture(scene)
+    const key = this.key = shapeTexture(scene)
     this.root = scene.add.container(0, 0).setDepth(depth)
     for (let i = 0; i < capacity; i++) {
       const image = scene.add.image(0, 0, key, 'white').setOrigin(0)
@@ -179,12 +189,14 @@ export class ShapePool {
   }
   begin() { this.used = 0; this.barUsed = 0; this.visible = 0 }
   end() { this.root.list.length = this.visible }
-  image(frame: string, x: number, y: number, width: number, height: number, tint: number, alpha = 1, rotation = 0) {
+  image(frame: string, x: number, y: number, width: number, height: number, tint: number, alpha = 1, rotation = 0, add = false) { this.sprite(this.key, frame, x, y, width, height, tint, alpha, rotation, add) }
+  // Any loaded atlas frame (a status icon, a shield) can use the same quads; `add` lights it additively.
+  sprite(key: string, frame: string, x: number, y: number, width: number, height: number, tint: number, alpha = 1, rotation = 0, add = false) {
     if (width <= 0 || height <= 0 || alpha <= 0) return
     const image = this.images[this.used++]
     if (!image) { this.used--; return }
-    if (image.frame.name !== frame) image.setFrame(frame)
-    image.setPosition(x, y).setDisplaySize(width, height).setTint(tint).setAlpha(alpha).setRotation(rotation)
+    if (image.texture.key !== key || image.frame.name !== frame) image.setTexture(key, frame)
+    image.setPosition(x, y).setDisplaySize(width, height).setTint(tint).setAlpha(alpha).setRotation(rotation).setBlendMode(add ? 1 : 0)
     this.root.list[this.visible++] = image
   }
   bar(x: number, y: number, value: number, color: number, width: number) {

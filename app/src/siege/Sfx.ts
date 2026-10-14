@@ -59,6 +59,15 @@ const CUE_TABLE = {
   'boss-enter': beat([['wave', .55, .9], ['hit', .6, .5], ['boo', .7, .55]]), 'boss-enrage': beat([['hit', .55, .6], ['boo', .55, .6], ['armor', .6, .3]]),
   'boss-step': { layers: [['hero-step', .6, .4], ['build', .9, .12]], vary: true, gap: .2, max: 2 }, 'boss-roll': beat([['build', .7, .5], ['throw', .55, .6], ['armor', .6, .35]]),
   'boss-split': beat([['splat', .6, .7], ['boo', .9, .45]]), 'boss-revive': beat([['boo', .5, .7], ['wave', .6, .6]]),
+  // Boss powers as they land on the field: each legend's move, then what follows from it.
+  'power-561': beat([['hit', .5, .6], ['throw', .45, .55], ['boo', 1.7, .3]]), 'power-900': beat([['armor', .55, .6], ['throw', .5, .55], ['boo', .6, .35]]),
+  'power-942': beat([['boo', .42, .85], ['emote', .55, .45], ['laser', .35, .3]]), 'power-1002': beat([['boo', .6, .6], ['splat', .45, .45], ['candy-cascade', .55, .3]]),
+  'power-1481': beat([['trap', 1.25, .5], ['emote', 1.6, .4], ['throw', .8, .4]]), 'power-1514': beat([['throw', 1.5, .5], ['laser', .4, .35], ['armor', 1.8, .4]]),
+  'power-1667': beat([['upgrade', 1.4, .55], ['candy-cascade', 1.6, .3], ['boo', 1.9, .2]]), 'power-1798': beat([['armor', .8, .7], ['guard-attack', .7, .5], ['armor', 1.25, .35]]),
+  'power-1881': beat([['coin', .6, .6], ['upgrade', 1.25, .45], ['candy-cascade', 1.8, .25]]), 'power-1884': beat([['laser', .42, .55], ['boo', .48, .5], ['coin', .7, .35]]),
+  'power-land': act([['build', .6, .6], ['hit', .7, .45], ['armor', 1.3, .3]], .3), 'shield-crack': act([['armor', 1.5, .5], ['hit', 1.4, .3]], .06), 'bubble-pop': act([['splat', 2, .25], ['coin', 2, .2]], .05),
+  'gold-on': act([['coin', .75, .55], ['candy-cascade', 1.5, .3], ['upgrade', 1.7, .2]], .08), 'gold-off': act([['coin', 1.7, .35], ['armor', 1.9, .25]], .08),
+  'ice-on': act([['armor', 1.85, .4], ['laser', .45, .2], ['coin', 2, .2]], .08), 'ice-off': act([['armor', 2, .35], ['splat', 1.7, .2]], .08),
   'boss-defeat': beat([['candy-cascade', 1, 1], ['hit', .6, .6], ['coin', 1, .5]]), 'jars-back': beat([['candy-cascade', 1.2, .9], ['coin', 1.1, .6]]),
   'jar-stolen': beat([['jar-stolen', 1, 1]]),
   // Player actions.
@@ -235,7 +244,7 @@ export class Sfx {
   // A boss's move: the Great Pumpkin's call or the legend's own sound. Its entrance is the shared 'boss-enter'.
   boss(id: number | 'pumpkin', pan = 0) {
     if (id === 'pumpkin') this.play('wave-horn', .55, .85, true, 0, pan)
-    else this.ability(`legend-${id}`, false, pan)
+    else this.play(`power-${id}` as Cue, 1, 1, true, 0, pan)
   }
   // A dance or an enemy's signature (quiet, and routine so it never crowds out a player's move).
   emote(name: string, quiet = false, pan = 0) {

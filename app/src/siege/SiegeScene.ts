@@ -65,6 +65,8 @@ const WITCHING_WARNING = 3
 // Road routes start with a 450px off-screen run-up (Route); crossing it is an enemy's arrival at the entrance.
 const ENTRANCE = 450
 const STATUS_KEYS = Object.keys(clearStatuses()) as Status[]
+// Golden Touch and frozen towers: dark to light, so the tower's own shading carries over.
+const COAT_RAMPS = { gold: [[58, 30, 4], [138, 84, 10], [214, 158, 28], [255, 214, 86], [255, 247, 205]], ice: [[26, 52, 98], [62, 118, 178], [128, 192, 236], [200, 238, 255], [246, 253, 255]] }
 const DRAW_STATUSES: Status[] = ['freeze', 'charm', 'confuse', 'root', 'mark', 'bleed', 'fear', 'burn', 'poison', 'slow']
 type HitCue = { from?: Point; kind?: 'egg' | 'tp' | 'magic' | 'seed' | 'hero'; crit?: boolean }
 const STATUS_POP: Partial<Record<Status, number>> = { burn: 0xffaa62, poison: 0xa8df8b, slow: 0x95dafa, stun: 0xffd56a, fear: 0xc2a4ef, charm: 0xffa9d0 }
@@ -144,6 +146,8 @@ export class SiegeScene extends Phaser.Scene {
   towers: (Tower | null)[] = []
   pads: Phaser.GameObjects.Image[] = []
   private padGlyphs: Phaser.GameObjects.Image[] = []
+  // One coat per pad: the gold (Golden Touch) or ice (a stunned tower) copy of the tower's frame laid over it, and its shine.
+  private coats: { image: Phaser.GameObjects.Image; shine: Phaser.GameObjects.Image; kind: '' | 'gold' | 'ice'; peak: number; recede: number; flake: number }[] = []
   projectiles: Projectile[] = []
   effects: Effect[] = []
   private candyFlights: number[] = []
@@ -227,7 +231,7 @@ export class SiegeScene extends Phaser.Scene {
   schedule: Spawn[] = []
   waveAlive: number[] = []
   private rewarded = new Set<number>()
-  private paint!: ShapePool
+  paint!: ShapePool
   private range!: Phaser.GameObjects.Container
   private rangeFill!: Phaser.GameObjects.Image
   private rangeStroke!: Phaser.GameObjects.Image
@@ -295,6 +299,7 @@ export class SiegeScene extends Phaser.Scene {
     })
     this.options.assets.geometry.pads.forEach((pad, i) => {
       this.pads.push(this.art.image(pad.x, pad.y, 'world/rune-pad').setDisplaySize(144, 86.4).setDepth(5)); this.towers[i] = null
+      this.coats.push({ image: this.add.image(pad.x, pad.y, '__WHITE').setVisible(false).setDepth(pad.y + .1), shine: this.add.image(pad.x, pad.y, '__WHITE').setVisible(false).setDepth(pad.y + .2).setBlendMode(Phaser.BlendModes.ADD), kind: '', peak: 0, recede: -9, flake: 0 })
       // The rune is emissive on Rare Row; it marks a socket without revealing enemies.
       this.padGlyphs.push(this.art.image(pad.x, pad.y, 'world/rune-glyph').setDisplaySize(144, 86.4).setDepth(this.dark ? 1951 : 5.1).setAlpha(.3))
       if (pad.boost) this.boostRings.push(this.art.image(pad.x, pad.y + 2, 'fx/boost/0').setDepth(4))
@@ -1059,7 +1064,12 @@ export class SiegeScene extends Phaser.Scene {
           if (ghost) this.hud.ruleMoment('hidden', ghost, 'enemy/ghost/walk/0', 'HIDDEN · light it with a lantern')
         }
         // The Scream: half the shots go wide.
-        if (target && this.missTime > 0 && this.random() < .5) { tower.cooldown = config.interval; this.towerShot(tower, target); this.combatPop('miss', tower.x, tower.y - 175); this.effect('fx/poof/0', tower.x, tower.y - 120, .4, .8); this.sfx('miss', tower) }
+        if (target && this.missTime > 0 && this.random() < .5) {
+          tower.cooldown = config.interval; this.towerShot(tower, target); this.combatPop('miss', tower.x, tower.y - 175); this.effect('fx/poof/0', tower.x, tower.y - 120, .4, .8); this.sfx('miss', tower)
+          // The wasted shot visibly sails wide of its target.
+          const wide = (this.visualRandom() < .5 ? -1 : 1) * (110 + this.visualRandom() * 60), proj = TOWERS[tower.kind].projectile
+          if (proj) this.effect(proj === 'bat' ? 'unit/bat/0' : `proj/${proj}`, tower.x, tower.y - 125, .42, .9, 'travel', target.x + wide, target.y - 40 - Math.abs(wide) * .5)
+        }
         else if (target && this.towerAttack(tower, target)) { tower.cooldown = config.interval; tower.pop = .15; this.towerShot(tower, target); this.sfx(`fire-${tower.kind}`, tower) }
       }
     }
@@ -1679,14 +1689,18 @@ export class SiegeScene extends Phaser.Scene {
       if (flyer) this.sfx('flap', flyer)
     }
     for (const sig of this.signatures) if (sig.enemy) sig.player.root.setPosition(sig.enemy.art.face.x, sig.enemy.art.face.y)
-    for (const tower of this.towers) if (tower) {
+    const dizzy = this.missTime > 0, spin = Math.floor(this.presentationTime * 8) % 4
+    for (const [pad, tower] of this.towers.entries()) if (tower) {
       tower.pop = Math.max(0, tower.pop - dt)
       const [cadence, amplitude] = TOWER_IDLE[tower.kind]
       const bob = idleMotion && !tower.stun ? Math.sin(this.presentationTime * cadence + tower.x) * amplitude : 0, pop = this.motion ? 1 + Math.sin(tower.pop / .4 * Math.PI) * .1 : 1
       const since = this.presentationTime - (tower.shotAt ?? -99), windup = this.motion && !tower.stun && tower.cooldown > 0 && tower.cooldown < .16 ? 1 - tower.cooldown / .16 : 0
       const shot = this.motion && since < .27 ? since < .035 ? -.5 : Math.sin((since - .035) / .235 * Math.PI) : 0
       const squeeze = 1 + windup * .045 - shot * .1
-      tower.image.setPosition(tower.x - (tower.aimX ?? 0) * shot * 10, tower.y - 90 + bob - (tower.aimY ?? 0) * shot * 10).setDisplaySize(144 * pop / squeeze, 180 / pop * squeeze).setTint(tower.gold > 0 ? 0xffd45e : tower.stun ? 0xb9a4df : 0xffffff)
+      // The Scream: every tower reels for as long as its shots go wide.
+      tower.image.setPosition(tower.x - (tower.aimX ?? 0) * shot * 10, tower.y - 90 + bob - (tower.aimY ?? 0) * shot * 10).setDisplaySize(144 * pop / squeeze, 180 / pop * squeeze).setRotation(dizzy && this.motion ? Math.sin(this.presentationTime * 11 + tower.x) * .07 : 0)
+      this.drawCoat(pad, tower)
+      if (dizzy) this.mark(`status/confuse/${spin}`, tower.x, tower.y - 200, 2.3)
       for (const guard of tower.guards) if (guard.hp > 0) { this.drawGuard(guard, tower.spec === 'knights' ? 'jack' : 'knight'); this.bar(guard.x, guard.y - 80, guard.hp / guard.maxHp, 0xffc17a, 45) }
     }
     for (const ally of this.allies) this.drawGuard(ally, 'knight')
@@ -1703,6 +1717,58 @@ export class SiegeScene extends Phaser.Scene {
       this.paint.image('white', beam.from.x + Math.sin(angle), beam.from.y - Math.cos(angle), length, 2, 0xffffff, 1, angle)
     }
     this.paint.end()
+  }
+  // An atlas frame drawn with the pooled overlay quads, centred on (x, y).
+  mark(name: string, x: number, y: number, size: number, alpha = 1, tint = 0xffffff, add = false) {
+    const [key, frame] = this.art.frame(name), f = this.textures.getFrame(key, frame), w = f.realWidth * size, h = f.realHeight * size
+    this.paint.sprite(key, frame, x - w / 2, y - h / 2, w, h, tint, alpha, 0, add)
+  }
+  // A tower turned to gold (Golden Touch) or frozen (Final Panel, a laser stun) wears a recoloured copy of its own frame. The coat
+  // climbs the tower in .3 s, a shine sweeps it, and in its last .3 s it recedes while flakes or shards fall; a bar counts it down.
+  private drawCoat(pad: number, tower: Tower) {
+    const coat = this.coats[pad], kind = tower.gold > 0 ? 'gold' : tower.stun > 0 ? 'ice' : '', left = kind === 'gold' ? tower.gold : tower.stun
+    const now = this.presentationTime, fancy = this.motion && !this.settings.lite && this.quality.tier < 2
+    if (kind !== coat.kind) { coat.kind = kind; coat.peak = 0; if (kind) this.sfx(kind === 'gold' ? 'gold-on' : 'ice-on', tower) }
+    if (kind) {
+      coat.peak = Math.max(coat.peak, left)
+      const image = tower.image, key = this.coatFrame(image.frame.name, kind), p = this.motion ? Phaser.Math.Clamp(Math.min(coat.peak - left, left) / .3, 0, 1) : 1
+      const w = image.frame.realWidth, h = image.frame.realHeight, top = h * (1 - p)
+      if (coat.image.texture.key !== key) { coat.image.setTexture(key); coat.shine.setTexture(key) }
+      coat.image.setVisible(p > 0).setPosition(image.x, image.y).setDisplaySize(image.displayWidth, image.displayHeight).setRotation(image.rotation).setCrop(0, top, w, h - top)
+      // While it climbs or recedes the shine is the bright edge; while it holds, a band sweeps across every 1.4 s.
+      const band = w * .24, sweep = ((now * .72 + pad * .37) % 1) * (w + band) - band
+      if (p < 1) coat.shine.setCrop(0, top, w, h * .07).setAlpha(.9)
+      else coat.shine.setCrop(Math.max(0, sweep), 0, Math.min(band, band + sweep, w - sweep), h).setAlpha(kind === 'gold' ? .6 : .4)
+      coat.shine.setVisible(fancy && p > 0).setPosition(image.x, image.y).setDisplaySize(image.displayWidth, image.displayHeight).setRotation(image.rotation)
+      if (left < .3 && coat.peak - left > .3 && now - coat.recede > 1) {
+        coat.recede = now; coat.flake = kind === 'gold' ? 0xffd45e : 0xd8f3ff; this.sfx(kind === 'gold' ? 'gold-off' : 'ice-off', tower)
+        if (fancy) this.effect(kind === 'gold' ? 'combat/crit/0' : 'combat/block/0', tower.x, tower.y - 110, .4, 1.3)
+      }
+      this.bar(tower.x, tower.y - 198, left / coat.peak, kind === 'gold' ? 0xffd45e : 0x9fdcff, 80)
+    } else if (coat.image.visible) { coat.image.setVisible(false); coat.shine.setVisible(false) }
+    // Flakes (gold) or shards (ice) fall from the receding edge.
+    const age = now - coat.recede
+    if (fancy && age < .9) for (let j = 0; j < 8; j++) {
+      const a = age - j * .035, r = Math.sin(pad * 31 + j * 12.9898) * 43758.5453 % 1
+      if (a < 0 || a > .55) continue
+      this.paint.image('white', tower.x + r * 64, tower.y - 175 + j * 21 + a * 50 + a * a * 420, 16 + Math.abs(r) * 10, 11 + Math.abs(r) * 8, coat.flake, 1 - a / .55, a * 9 + j)
+    }
+  }
+  // Each frame gets its coat the first time it needs one: a small canvas with the frame's luminance mapped onto the ramp (WebGL and Canvas alike).
+  coatFrame(name: string, kind: 'gold' | 'ice') {
+    const key = `coat-${kind}:${name}`
+    if (this.textures.exists(key)) return key
+    const [atlas, frameName] = this.art.frame(name), f = this.textures.getFrame(atlas, frameName), ramp = COAT_RAMPS[kind]
+    const texture = this.textures.createCanvas(key, f.realWidth, f.realHeight)!, c = texture.context
+    c.drawImage(f.source.image as CanvasImageSource, f.cutX, f.cutY, f.cutWidth, f.cutHeight, f.x, f.y, f.cutWidth, f.cutHeight)
+    const data = c.getImageData(0, 0, f.realWidth, f.realHeight), px = data.data, last = ramp.length - 1
+    for (let i = 0; i < px.length; i += 4) {
+      if (!px[i + 3]) continue
+      const l = Math.min(1, Math.max(0, ((px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11) / 255 - .5) * 1.3 + .55)) * last, k = Math.min(last - 1, Math.floor(l)), t = l - k
+      for (let ch = 0; ch < 3; ch++) px[i + ch] = ramp[k][ch] + (ramp[k + 1][ch] - ramp[k][ch]) * t
+    }
+    c.putImageData(data, 0, 0); texture.refresh()
+    return key
   }
   spriteBeam(frame: string, from: Point, to: Point, duration: number, width: number, color = 0xffffff) {
     const fx = this.effect(frame, (from.x + to.x) / 2, (from.y + to.y) / 2 - 50, duration)
