@@ -709,7 +709,7 @@ export class SiegeScene extends Phaser.Scene {
     const texture = this.textures.createCanvas('siege-digits', 2048, 128)!, context = texture.context
     const chars: Record<number, object> = {}
     context.font = '76px "Luckiest Guy", sans-serif'; context.textAlign = 'center'; context.textBaseline = 'top'; context.fillStyle = '#ffffff'
-    for (const [i, char] of [...'0123456789+-!,'].entries()) {
+    for (const [i, char] of [...'0123456789+-!,/'].entries()) {
       const width = char === ',' ? 48 : 96
       context.fillText(char, i * 96 + width / 2, 10)
       chars[char.charCodeAt(0)] = { x: i * 96, y: 0, width, height: 104, centerX: width / 2, centerY: 52, xOffset: 0, yOffset: 0, xAdvance: char === ',' ? 32 : 64, kerning: {}, data: {}, u0: i * 96 / 2048, v0: 0, u1: (i * 96 + width) / 2048, v1: 104 / 128 }
@@ -1212,8 +1212,7 @@ export class SiegeScene extends Phaser.Scene {
     const lost = Math.min(this.jars, e.jars)
     if (lost > 0) {
       haptic('jar')
-      this.combatPop(`jar-${Math.min(10, lost)}`, Math.max(this.view.left + 90, e.x - 205), e.y - (b ? 215 : 142))
-      this.hud.porchAlarm(lost)
+      this.hud.porchAlarm(lost, e)
       const porch = this.options.assets.geometry.porch
       this.effect('teach/porch-flash', porch.x, porch.y - 90, .35, 3.6)
     }

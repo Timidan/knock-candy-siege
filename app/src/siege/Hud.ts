@@ -13,6 +13,7 @@ import type { BossState } from './Boss'
 import type { Enemy } from './world'
 import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner } from './renderShapes'
 
+const PORCH_BAR = 120 // the porch health bar's inner width, world px
 type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; costRed?: Phaser.GameObjects.Image; hot?: boolean; tip?: () => string; price?: () => number }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
@@ -77,6 +78,13 @@ export class Hud {
   private tipDue = 0
   private alarm: Phaser.GameObjects.Image
   private alarmAge = 1
+  private porchRoot: Phaser.GameObjects.Container
+  private porchFill: Phaser.GameObjects.Image
+  private porchFlash: Phaser.GameObjects.Image
+  private porchText: Phaser.GameObjects.BitmapText
+  private porchAt: { x: number; y: number }
+  private porchShown = -1
+  private porchAge = 9
   private wave: Phaser.GameObjects.Text
   private portrait: Button
   private ability: Button
@@ -174,6 +182,17 @@ export class Hud {
     this.jars = scene.add.bitmapText(44, 0, 'siege-digits', '', 44).setOrigin(0, .5).setTint(0x9fddff).setAlpha(REST); this.jarRoot.add(this.jars)
     this.jarLoss = this.text(90, 53, '', 44, '#EF4444').setOrigin(.5).setStroke('#241b30', 5).setVisible(false); this.jarRoot.add(this.jarLoss)
     this.alarm = scene.art.image(0, 0, 'teach/alarm').setOrigin(0).setDepth(2990).setVisible(false)
+    // The porch's health bar, in the world above the door: jars left of 20, the real loss condition.
+    // Built once from atlas frames; each frame only moves, scales and tints it (added to the world layer, not the HUD).
+    const porch = scene.options.assets.geometry.porch
+    // High enough to clear the thief's signature face, which pops 150 px above the porch on every theft.
+    this.porchAt = { x: porch.x, y: porch.y - 280 }
+    this.porchFill = scene.add.image(-82, 0, 'siege-shapes', 'white').setOrigin(0, .5)
+    this.porchFlash = scene.add.image(-82, 0, 'siege-shapes', 'white').setOrigin(0, .5).setDisplaySize(PORCH_BAR, 22).setVisible(false)
+    this.porchText = scene.add.bitmapText(80, 1, 'siege-digits', '', 30).setOrigin(.5).setTint(0xfff0d5)
+    this.porchRoot = scene.add.container(this.porchAt.x, this.porchAt.y).setDepth(2250) // above effects, so a fleeing thief never hides it
+    this.porchRoot.add([plate(scene, -130, -25, 260, 50, 25, 0x241b30, .92, 0xfff0d5, 3), scene.art.image(-106, -2, 'ui/jar').setDisplaySize(32, 40),
+      scene.add.image(-82, 0, 'siege-shapes', 'white').setOrigin(0, .5).setDisplaySize(PORCH_BAR, 22).setTint(0x120d1b), this.porchFill, this.porchFlash, this.porchText])
     scene.hudLayer.add(this.alarm)
     this.candyRoot = scene.add.container(261, 82); top.add(this.candyRoot)
     this.candyPlate = plate(scene, -20, 37, 198, 3, 1.5, 0xffd23f, .35).setAlpha(PLATE)
@@ -355,10 +374,30 @@ export class Hud {
   private text(x: number, y: number, value: string, size: number, color = '#fff0d5', body = false) {
     return this.scene.add.text(x, y, value, { fontFamily: body ? BODY : DISPLAY, fontSize: `${size}px`, color, resolution: 1, padding: { top: 6, bottom: 6 } }).setOrigin(0, .5)
   }
-  porchAlarm(lost: number) {
-    this.alarmAge = 0
+  porchAlarm(lost: number, enemy?: Enemy) {
+    this.alarmAge = 0; this.porchAge = 0
     this.jarLoss.setText(`−${lost}`).setAlpha(1).setVisible(true)
     this.animateAlarm(0)
+    // The −N pops from the porch bar; the first theft of a level says what the bar means.
+    this.scene.combatPop(`jar-${Math.min(10, lost)}`, this.porchRoot.x - 40, this.porchAt.y - 95)
+    if (!enemy) return
+    this.ruleMoment('porch', enemy, 'ui/jar', 'Enemies steal jars.\nLose all 20 and the porch falls.')
+    // Beside the bar rather than over it: a callout centres on its point and sits 180 px above it.
+    const rule = this.ruleQueue.find(rule => rule.key === 'porch')
+    if (rule) { rule.x = this.porchAt.x - 640; rule.y = this.porchAt.y + 180 }
+  }
+  private animatePorch(dt: number) {
+    const s = this.scene, v = s.view, left = Phaser.Math.Clamp(s.jars / 20, 0, 1)
+    if (s.jars !== this.porchShown) {
+      this.porchShown = s.jars; this.porchText.setText(`${Math.max(0, s.jars)}/20`)
+      this.porchFill.setDisplaySize(Math.max(1, PORCH_BAR * left), 22).setTint(left < .25 ? 0xff5a4f : left < .5 ? 0xffa23e : 0x8fe388).setVisible(left > 0)
+    }
+    const t = this.porchAge += dt, motion = !reducedMotion(), rich = motion && !s.settings.lite && s.quality.tier < 2
+    this.porchFlash.setVisible(t < .35).setAlpha(.9 * Math.max(0, 1 - t / .35))
+    const shake = motion && s.settings.shake && t < .3 ? Math.sin(t * Math.PI * 40) * 7 * (1 - t / .3) : 0
+    const pulse = rich && left > 0 && left < .25 ? 1 + .06 * Math.sin(s.presentationTime * 9) : 1
+    // Kept inside the view, which crops the map's sides on narrow screens.
+    this.porchRoot.setPosition(Phaser.Math.Clamp(this.porchAt.x, v.left + 140, v.right - 140) + shake, this.porchAt.y).setScale(pulse)
   }
   private animateAlarm(dt: number) {
     const s = this.scene, motion = !reducedMotion()
@@ -383,7 +422,7 @@ export class Hud {
       const index = this.ruleQueue.findIndex(rule => { const p = s.worldToView(rule); return p.x >= v.left + 30 && p.x <= v.right - 30 && p.y >= v.top && p.y <= v.bottom })
       if (index < 0) return
       this.rule = this.ruleQueue.splice(index, 1)[0]; this.taughtRules.add(this.rule.key)
-      s.art.set(this.ruleIcon, this.rule.key === 'trait' ? this.rule.icon : `enemy/${this.rule.enemy.kind}/walk/0`); this.ruleIcon.setDisplaySize(92, 92)
+      s.art.set(this.ruleIcon, this.rule.key === 'trait' || this.rule.key === 'porch' ? this.rule.icon : `enemy/${this.rule.enemy.kind}/walk/0`); this.ruleIcon.setDisplaySize(this.rule.key === 'porch' ? 75 : 92, 92)
       this.ruleText.setText(this.rule.copy.replace(' · ', '!\n')).setScale(1); this.ruleText.setScale(Math.min(1, 104 / this.ruleText.height)); this.ruleRoot.setVisible(true); s.options.sfx.play('callout')
     }
     const rule = this.rule
@@ -957,6 +996,7 @@ export class Hud {
     this.ultimateRing.setVisible(pulse && this.ultimateReady && burst < 1).setDisplaySize(140 + 100 * burst, 140 + 100 * burst).setAlpha(1 - burst)
     this.portrait.glow.setVisible(s.heroSelected).setTint(0xffe296)
     this.animateAlarm(dt)
+    this.animatePorch(dt)
     this.animatePerks(dt)
     this.animateRules(dt)
     this.animateBoss(dt)
