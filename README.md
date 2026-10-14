@@ -69,7 +69,7 @@ Each trick-or-treater wears a costume with a real Chog's face, drawn at random f
 
 Tap any enemy to see its Chog number and its modifiers. If Chog #175 knocks on your door, its Crown armours the enemies around it, and it steals two jars.
 
-<img src="docs/readme/enemy-tap.webp" alt="Rosie Row mid-wave. A tapped enemy's toast reads: Trick-or-Treater #1513, laser: zaps a tower for a 1s stun">
+<img src="docs/readme/enemy-tap.webp" alt="Rosie Row, wave 1. A tapped enemy's toast reads: Trick-or-Treater #1880, laser: zaps a tower for a 1s stun, skull: revives once, elite: more health and candy">
 
 <details>
 <summary><b>All 18 enemy modifiers</b> (<code>app/src/siege/data/traits.ts</code>)</summary>
