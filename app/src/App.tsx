@@ -11,11 +11,19 @@ const StatsPage = lazy(() => import('./stats/StatsPage'))
 const logo = <img className="boot-logo" src="/art/ui/logo.svg" alt="Knock" width="240" height="80" />
 const loading = <main className="boot" role="status">{logo}<span className="boot-candy" aria-hidden="true" /><p>Unpacking the candy…</p></main>
 // A lazy chunk that fails to load (often a stale tab after a deploy) or a render error ends here instead of a blank page.
-class Boundary extends Component<{ children: ReactNode }, { broken: boolean }> {
-  state = { broken: false }
-  static getDerivedStateFromError() { return { broken: true } }
+class Boundary extends Component<{ children: ReactNode }, { error: unknown }> {
+  state = { error: null as unknown }
+  static getDerivedStateFromError(error: unknown) { return { error } }
+  componentDidCatch(error: unknown) {
+    console.error(error)
+    // A chunk from an older deploy is gone; one automatic reload per tab session fetches the new build.
+    if (!/dynamically imported module|Importing a module script failed/i.test(String((error as Error)?.message))) return
+    try { if (sessionStorage.getItem('knock-chunk-reload')) return; sessionStorage.setItem('knock-chunk-reload', '1') } catch { return }
+    location.reload()
+  }
   render() {
-    return this.state.broken ? <main className="boot" role="alert">{logo}<p>Something broke.</p><Sticker tone="orange" onClick={() => location.reload()}>Reload</Sticker></main> : this.props.children
+    const detail = this.state.error ? String((this.state.error as Error).message || this.state.error).slice(0, 200) : ''
+    return this.state.error ? <main className="boot" role="alert">{logo}<p>Something broke.</p><p style={{ fontSize: 12, opacity: .7, maxWidth: 420, overflowWrap: 'anywhere' }}>{detail}</p><Sticker tone="orange" onClick={() => location.reload()}>Reload</Sticker></main> : this.props.children
   }
 }
 
