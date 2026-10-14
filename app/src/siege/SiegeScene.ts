@@ -1702,6 +1702,8 @@ export class SiegeScene extends Phaser.Scene {
     }
     for (const sig of this.signatures) if (sig.enemy) sig.player.root.setPosition(sig.enemy.art.face.x, sig.enemy.art.face.y)
     const dizzy = this.missTime > 0, spin = Math.floor(this.presentationTime * 8) % 4
+    // A tower sold while gilded or frozen takes its coat with it.
+    for (const [pad, coat] of this.coats.entries()) if (!this.towers[pad] && coat.kind) { coat.kind = ''; coat.image.setVisible(false); coat.shine.setVisible(false) }
     for (const [pad, tower] of this.towers.entries()) if (tower) {
       tower.pop = Math.max(0, tower.pop - dt)
       const [cadence, amplitude] = TOWER_IDLE[tower.kind]

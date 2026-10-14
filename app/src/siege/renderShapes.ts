@@ -175,9 +175,9 @@ export class ShapePool {
       const image = scene.add.image(0, 0, key, 'white').setOrigin(0)
       this.root.add(image); this.images.push(image)
     }
-    // 96 enemies, 36 guards, and the hero. A three-slice fill keeps the rounded
-    // ends at three pixels while its middle stretches, with one display object.
-    for (let i = 0; i < 133; i++) {
+    // 96 enemies, 36 guards, the hero and 12 tower countdowns. A three-slice fill keeps
+    // the rounded ends at three pixels while its middle stretches, with one display object.
+    for (let i = 0; i < 145; i++) {
       const back = scene.add.image(0, 0, key, 'bar-68').setOrigin(0).setTint(0x241c32).setAlpha(.9)
       const fill = scene.add.nineslice(0, 0, key, 'fill', 64, 6, 3, 3, 0, 0).setOrigin(0)
       this.root.add([back, fill]); this.bars.push({ back, fill })
