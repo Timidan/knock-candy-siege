@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Address, Hash } from 'viem'
 import { track } from './telemetry'
+import { timeoutSignal } from '../abort'
 
 export const BANK_URL = (import.meta.env.VITE_CANDY_BANK_URL || '').replace(/\/$/, '')
 type Claim = { state: 'none' | 'queued' | 'paid' | 'failed'; tx?: Hash }
 const bankError = (text: string) => /already|claimed/i.test(text) ? 'This wallet has already claimed its one-time grant.' : /limit|rate|too many/i.test(text) ? 'The Candy Bank has reached its limit. Please try again later.' : 'The Candy Bank could not be reached. Please check again in a moment.'
 async function requestClaim(address: Address, post: boolean, signal: AbortSignal): Promise<Claim> {
   const response = await fetch(`${BANK_URL}/claim${post ? '' : `/${address}`}`, {
-    method: post ? 'POST' : 'GET', signal: AbortSignal.any([signal, AbortSignal.timeout(12_000)]),
+    method: post ? 'POST' : 'GET', signal: timeoutSignal(12_000, signal),
     ...(post ? { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address }) } : {}),
   })
   const body = await response.json().catch(() => null)

@@ -76,7 +76,9 @@ export function heroPainter(assets: AssetPack, kit: Kit, heads: ChogHeads, costu
 export function HeroPreview({ assets, kit, costume = kit.costume, dance = 'idle', lite = false, still = false }: { assets: AssetPack; kit: Kit; costume?: string; dance?: string; lite?: boolean; still?: boolean }) {
   const ref = useRef<HTMLCanvasElement>(null), [error, setError] = useState(false)
   useEffect(() => {
-    const canvas = ref.current!, ctx = canvas.getContext('2d')!, controller = new AbortController()
+    const canvas = ref.current!, ctx = canvas.getContext('2d'), controller = new AbortController()
+    // Safari returns no context once its canvas memory is used up; show the fallback instead of crashing the picker.
+    if (!ctx) { setError(true); return }
     let frame = 0, start = 0, last = 0
     setError(false)
     ctx.clearRect(0, 0, canvas.width, canvas.height)

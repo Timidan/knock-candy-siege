@@ -33,6 +33,7 @@ import { useSiegeWallet } from './guestWallet'
 import { WalletChoice } from './WalletChoice'
 import { useCandyBank } from './candyBank'
 import { holderUrl } from '../chain'
+import { timeoutSignal } from '../abort'
 import { thumb } from '../images'
 import { reopenShop } from './shopChain'
 import { SHOP_ITEMS, canDance } from './data/shop'
@@ -231,7 +232,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     if (!guest) return
     setTryingHolder(true); setHolderError(''); setPartyError('')
     try {
-      const response = await fetch(holderUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: guest.address }), signal: AbortSignal.timeout(20_000) })
+      const response = await fetch(holderUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ address: guest.address }), signal: timeoutSignal(20_000) })
       const data = await response.json()
       const id = Number(data.chogId)
       if (!response.ok || !Number.isInteger(id) || id < 1 || id > 1969) throw new Error('Unavailable')
@@ -349,15 +350,19 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     // create() is async and Phaser doesn't await it, so a failure there (the Chog head art, say) would leave the lanterns unlit for good.
     const create = world.create.bind(world)
     world.create = () => create().catch(reason => { console.error(reason); if (scene.current === world) setFailed('lanterns') })
+    // A tablet can report WebGL yet fail to open a context (too many open, or a lost GPU), and Phaser then throws: test one first and use canvas if it fails.
+    const webgl = (() => { try { const gl = document.createElement('canvas').getContext('webgl'); gl?.getExtension('WEBGL_lose_context')?.loseContext(); return !!gl } catch { return false } })()
     // Expand from the design buffer without multiplying it by devicePixelRatio.
-    const game = new Phaser.Game({ type: Phaser.AUTO, parent: host.current, width: 1920, height: 1080, transparent: true, banner: false,
+    const game = (() => { try { return new Phaser.Game({ type: webgl ? Phaser.AUTO : Phaser.CANVAS, parent: host.current, width: 1920, height: 1080, transparent: true, banner: false,
       // No Pre/Post FX is used; leaving them on allocates ~180 MB of render targets at boot, which can crash a phone tab.
       disablePreFX: true, disablePostFX: true,
       scale: { mode: Phaser.Scale.EXPAND, autoCenter: Phaser.Scale.CENTER_BOTH, width: 1920, height: 1080 },
       render: { antialias: true, roundPixels: false, powerPreference: 'high-performance', maxTextures: 8 },
       fps: { target: 60 }, audio: { noAudio: true }, input: { activePointers: 2 }, scene: world,
       callbacks: { postBoot: game => { game.canvas.setAttribute('aria-label', 'Candy Siege. Tap pads to build; select the hero portrait then tap the ground to move. Space pauses. 1 and 2 select spells. Q uses your ability. R uses your ultimate. Z and X choose a talent. E opens emotes.'); game.canvas.setAttribute('role', 'application'); game.canvas.tabIndex = 0 } },
-    })
+    }) } catch (reason) { console.error(reason); return null } })()
+    // If the renderer still can't start, offer the level's own retry instead of the app's error screen.
+    if (!game) { scene.current = null; setFailed('lanterns'); return }
     const hide = () => { if (run.coop) { world.cancel(); return }; if (document.hidden && world.ready && !world.paused && !world.ended) world.pauseGame() }
     const resize = () => game.scale.refresh()
     const observer = new ResizeObserver(resize); observer.observe(host.current)

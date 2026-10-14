@@ -6,6 +6,7 @@ import { ENEMIES } from '../siege/data/config'
 import { LEVELS } from '../siege/data/level1'
 import { SHOP_ITEMS } from '../siege/data/shop'
 import { STATS_URL } from '../siege/telemetry'
+import { timeoutSignal } from '../abort'
 import { renderCommunityCard } from './communityCard'
 import './stats.css'
 
@@ -120,7 +121,7 @@ export default function StatsPage() {
     const load = async () => {
       if (document.hidden) return
       try {
-        const response = await fetch(`${STATS_URL}/stats`, { signal: AbortSignal.timeout(10_000) })
+        const response = await fetch(`${STATS_URL}/stats`, { signal: timeoutSignal(10_000) })
         if (!response.ok) throw new Error(`Stats returned ${response.status}`)
         const next: Stats = await response.json()
         if (active) { setStats(next); setFailed(false) }

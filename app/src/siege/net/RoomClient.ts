@@ -1,10 +1,11 @@
 import { PROTOCOL, INPUT_DELAY, MAX_DELAY, TICK_RATE, HASH_EVERY, ROOM_CODE, BUILD, MAX_PACKET_BYTES } from './protocol'
 import type { ClientMessage, HeroSelection, Player, RoomInfo, Roster, ServerMessage } from './protocol'
+import { timeoutSignal } from '../../abort'
 
 export type RoomTicket = { room: RoomInfo; hostToken: string; invite: string }
 export async function createRoom(relay: string, build: string, level: number, signal?: AbortSignal): Promise<RoomTicket> {
   const response = await fetch(`${relay.replace(/\/$/, '')}/rooms`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: PROTOCOL, build, level }), signal: signal ?? AbortSignal.timeout(15000),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ version: PROTOCOL, build, level }), signal: signal ?? timeoutSignal(15000),
   })
   if (!response.ok) throw new Error(response.status === 429 ? 'Too many rooms. Try again in a minute.' : `Room creation failed (${response.status})`)
   return response.json()
