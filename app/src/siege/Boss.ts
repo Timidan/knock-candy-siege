@@ -225,7 +225,7 @@ function splitPumpkin(s: SiegeScene, e: Enemy, b: BossState) {
   e.hp = hp; e.maxHp = hp; e.jars = Math.ceil(e.jars / 2); b.scale = .6; b.sprite!.setScale(s.textures.exists('boss') ? .6 : 1.8)
   let made = 0
   for (const other of s.enemies) if (made < 2 && !other.active) { setup(s, other, { id: 'pumpkin' }, e.wave, hp, Math.max(0, at + (made ? 55 : -55)), { ...b, holder: null, bornAt: s.presentationTime, fromX: e.x, fromY: e.y }); made++ }
-  s.effect('fx/poof/0', e.x, e.y - 60, .6, 3); s.shake(.008); s.sfx('boss-split', e)
+  s.effect('fx/poof/0', e.x, e.y - 60, .5, 1.8); s.shake(.008); s.sfx('boss-split', e) // small enough to see the halves hop out
 }
 
 // Damage the boss absorbs before it reaches the shared damage code: Testudo blocks and the split's grace period.
@@ -289,10 +289,11 @@ function bossPowers(s: SiegeScene, e: Enemy, b: BossState, holder: Phaser.GameOb
     for (let i = b.blocks; i < Math.min(5, b.fxBlocks ?? 0); i++) { const x = holder.x + TESTUDO[i], y = holder.y - 112; s.effect('combat/block/0', x, y, .35, 1.8); s.effect('fx/poof/0', x, y, .45, 1); s.sfx('shield-crack', e) }
     b.fxBlocks = b.blocks
   }
-  if (b.id === 1884 && b.portal && since < 1.5) { // Pact: the imps pour out of a portal
-    const open = Math.min(1, since / .2, (1.5 - since) / .3), p = b.portal
-    s.paint.image('glow', p.x - 110 * open, p.y - 75 - 45 * open, 220 * open, 90 * open, 0xff2a4a, .95, 0, true)
-    s.mark('combat/ring/1', p.x, p.y - 75, 2.3 * open * (1 + Math.sin(now * 20) * .04), 1, 0xff4d6a, true, .4)
+  if (b.id === 1884 && b.portal && since < 2.2) { // Pact: the imps pour out of a portal
+    const open = Math.min(1, since / .2, (2.2 - since) / .3), p = b.portal
+    s.paint.image('glow', p.x - 135 * open, p.y - 80 - 55 * open, 270 * open, 110 * open, 0xff2a4a, .95, 0, true)
+    s.mark('combat/ring/1', p.x, p.y - 80, 2.9 * open * (motion ? 1 + Math.sin(now * 20) * .04 : 1), 1, 0xff4d6a, true, .4)
+    if (fancy && since < 1.2 && now >= (b.fxAt ?? 0)) { b.fxAt = now + .15; s.effect('fx/blink/0', p.x + (s.visualRandom() - .5) * 140, p.y - 100, .5, .9) }
   }
 }
 // Jars fly in an arc, one after another: to the boss when the Pact takes them, home when it breaks.
