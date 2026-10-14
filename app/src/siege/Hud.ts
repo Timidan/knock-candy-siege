@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import type { SiegeScene } from './SiegeScene'
-import { EMOTES, SPELLS, TARGETING, TOWERS, TRAPS, SPECIALISATIONS, SPEC_COST, rankCost, CONSUMABLES } from './data/config'
+import { EMOTES, SPELLS, TARGETING, TOWERS, TRAPS, SPECIALISATIONS, SPEC_COST, rankCost, CONSUMABLES, EARLY_CALL_CANDY_PER_SECOND } from './data/config'
 import type { TowerKind, TrapKind, Specialisation, ConsumableKind } from './data/config'
 import type { FocusTarget } from './TutorialFocus'
 import { Rig } from './hero/Rig'
@@ -626,7 +626,7 @@ export class Hud {
       this.enabled(b, !!wave && s.tutorialStep > 0)
       const early = s.wave > 0 && s.countdown > 0
       b.early.setVisible(early); b.bounty.setVisible(early); b.icon.setVisible(!early)
-      b.label.setText(s.wave === 0 ? 'GO' : `+${Math.ceil(Math.max(0, s.countdown) * 1.5)}`)
+      b.label.setText(s.wave === 0 ? 'GO' : `+${Math.ceil(Math.max(0, s.countdown) * EARLY_CALL_CANDY_PER_SECOND)}`)
       b.label.setPosition(early ? -17 : 0, early ? 24 : 31)
       b.sweep.setVisible(!!s.wave && !!wave).setScale(1)
       if (s.wave && wave) setSweep(s, b.sweep, s.countdown / wave.countdown, b.size / 2 - 3, 6)
