@@ -39,8 +39,6 @@ function load(s: SiegeScene, state: string, atlas: string, done: (atlas: AssetPa
 export function preloadBoss(s: SiegeScene, id: BossId) {
   load(s, 'boss-sheet', 'boss', atlas => { s.bossSheet = atlas; makeUi(s, atlas) })
   if (id === 'pumpkin') return
-  // Golden Touch and Final Panel coat the towers; make the coats for the towers already standing before the first cast.
-  if (id === 1881 || id === 1514) for (const t of s.towers) if (t) s.coatFrame(t.image.frame.name, id === 1881 ? 'gold' : 'ice')
   s.heads.prepare([id])
   const key = bossAtlasKey(id)
   if (s.textures.exists(key)) { if (!s.bossArt.has(key)) s.bossArt.set(key, 'ready'); return } // the hero already wears this legend

@@ -149,6 +149,7 @@ export class SiegeScene extends Phaser.Scene {
   private padGlyphs: Phaser.GameObjects.Image[] = []
   // One coat per pad: the gold (Golden Touch) or ice (a stunned tower) copy of the tower's frame laid over it, and its shine.
   private coats: { image: Phaser.GameObjects.Image; shine: Phaser.GameObjects.Image; kind: '' | 'gold' | 'ice'; peak: number; recede: number; flake: number }[] = []
+  private coated = new Set<string>() // tower frames whose coats are made or on their way
   projectiles: Projectile[] = []
   effects: Effect[] = []
   private candyFlights: number[] = []
@@ -1709,6 +1710,7 @@ export class SiegeScene extends Phaser.Scene {
       const squeeze = 1 + windup * .045 - shot * .1
       // The Scream: every tower reels for as long as its shots go wide.
       tower.image.setPosition(tower.x - (tower.aimX ?? 0) * shot * 10, tower.y - 90 + bob - (tower.aimY ?? 0) * shot * 10).setDisplaySize(144 * pop / squeeze, 180 / pop * squeeze).setRotation(dizzy && this.motion ? Math.sin(this.presentationTime * 11 + tower.x) * .07 : 0)
+      if (!this.coated.has(tower.image.frame.name)) this.prepareCoats(tower.image.frame.name)
       this.drawCoat(pad, tower)
       if (dizzy) this.mark(`status/confuse/${spin}`, tower.x, tower.y - 200, 2.3)
       for (const guard of tower.guards) if (guard.hp > 0) { this.drawGuard(guard, tower.spec === 'knights' ? 'jack' : 'knight'); this.bar(guard.x, guard.y - 80, guard.hp / guard.maxHp, 0xffc17a, 45) }
@@ -1764,20 +1766,30 @@ export class SiegeScene extends Phaser.Scene {
       this.paint.image('white', tower.x + r * 64, tower.y - 175 + j * 21 + a * 50 + a * a * 420, 16 + Math.abs(r) * 10, 11 + Math.abs(r) * 8, coat.flake, 1 - a / .55, a * 9 + j)
     }
   }
-  // Each frame gets its coat the first time it needs one: a small canvas with the frame's luminance mapped onto the ramp (WebGL and Canvas alike).
-  coatFrame(name: string, kind: 'gold' | 'ice') {
+  // A tower frame's coats are made as soon as the frame is on the field, from a copy decoded off the main thread: the first
+  // synchronous draw from a tower atlas decodes the whole sheet (7-14 ms, a dropped frame mid-fight). Gold only where Midas can come.
+  private prepareCoats(name: string) {
+    this.coated.add(name)
+    const [atlas, frameName] = this.art.frame(name), f = this.textures.getFrame(atlas, frameName), midas = this.level.endless || this.level.waves.some(w => w.boss?.id === 1881)
+    void createImageBitmap(f.source.image as ImageBitmapSource, f.cutX, f.cutY, f.cutWidth, f.cutHeight).then(copy => {
+      if (!this.gone) { this.coatFrame(name, 'ice', copy); if (midas) this.coatFrame(name, 'gold', copy) }
+      copy.close()
+    }).catch(() => { /* coatFrame draws from the sheet when the coat is needed */ })
+  }
+  // A coat is a small canvas with the frame's luminance mapped onto the ramp (WebGL and Canvas alike).
+  coatFrame(name: string, kind: 'gold' | 'ice', copy?: ImageBitmap) {
     const key = `coat-${kind}:${name}`
     if (this.textures.exists(key)) return key
     const [atlas, frameName] = this.art.frame(name), f = this.textures.getFrame(atlas, frameName), ramp = COAT_RAMPS[kind]
-    const texture = this.textures.createCanvas(key, f.realWidth, f.realHeight)!, c = texture.context
-    c.drawImage(f.source.image as CanvasImageSource, f.cutX, f.cutY, f.cutWidth, f.cutHeight, f.x, f.y, f.cutWidth, f.cutHeight)
+    const canvas = document.createElement('canvas'), c = Object.assign(canvas, { width: f.realWidth, height: f.realHeight }).getContext('2d', { willReadFrequently: true })!
+    if (copy) c.drawImage(copy, f.x, f.y); else c.drawImage(f.source.image as CanvasImageSource, f.cutX, f.cutY, f.cutWidth, f.cutHeight, f.x, f.y, f.cutWidth, f.cutHeight)
     const data = c.getImageData(0, 0, f.realWidth, f.realHeight), px = data.data, last = ramp.length - 1
     for (let i = 0; i < px.length; i += 4) {
       if (!px[i + 3]) continue
       const l = Math.min(1, Math.max(0, ((px[i] * .3 + px[i + 1] * .59 + px[i + 2] * .11) / 255 - .5) * 1.3 + .55)) * last, k = Math.min(last - 1, Math.floor(l)), t = l - k
       for (let ch = 0; ch < 3; ch++) px[i + ch] = ramp[k][ch] + (ramp[k + 1][ch] - ramp[k][ch]) * t
     }
-    c.putImageData(data, 0, 0); texture.refresh()
+    c.putImageData(data, 0, 0); this.textures.addCanvas(key, canvas)
     return key
   }
   spriteBeam(frame: string, from: Point, to: Point, duration: number, width: number, color = 0xffffff) {
