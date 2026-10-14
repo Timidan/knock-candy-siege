@@ -67,7 +67,7 @@ FAMILIES = {
         'focus': ('Focus', '+10% critical hits'),
         'bucket-shield': ('Bucket Shield', 'blocks the first hit each wave'),
         'chill': ('Chill', 'immune to slows; enemies near the hero hit softer'),
-        'prankster': ('Prankster', 'traps cost 20% less'),
+        'prankster': ('Prankster', 'one more of each trap'),
         'oddity': ('Oddity', 'a one-of-a-kind effect (banana lure, poison mushroom, magic 8-ball, extra laser)'),
         'bareheaded': ('Bareheaded', '+5% move speed'),
     },

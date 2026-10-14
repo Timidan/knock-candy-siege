@@ -7,7 +7,7 @@ Play at https://knock.timidan.xyz, on a phone held sideways or in a desktop brow
 ## The basics
 
 - **Jars are your lives.** You start each level with 20. An enemy that reaches the porch steals one or more. At 0 jars you lose.
-- **Candy is your money.** You start with 250. You earn it from each enemy you stop, from a bonus for each wave you clear, and from calling waves early. You spend it on towers, upgrades, traps and supplies during the level. If you tap something you can't afford, the game says how much more candy you need.
+- **Candy is your money.** You start with 250. You earn it from each enemy you stop, from a bonus for each wave you clear, and from calling waves early. You spend it on towers and upgrades during the level; traps and supplies come as a stock of 5 each per level. If you tap something you can't afford, the game says how much more candy you need.
 - **Stars:** survive every wave to win. 18 to 20 jars left earns 3 stars, 10 to 17 earns 2, and 1 to 9 earns 1.
 - **Waves:** the first wave starts when you call it. After that, each wave calls itself when its countdown ends. You can call it early for extra candy: half a candy for each second left on the countdown, rounded up.
 - **Where to start:** Rosie Row, marked "Start here", is always open. Each later level unlocks when you win the one before, and a Rosie Row win also unlocks Endless and the Daily. A locked level shows a padlock and the level to beat, and the win that unlocks a level says so, for example "Night 02 unlocked!". Levels you have already played stay unlocked. Your first Rosie Row is a 7-step tutorial, and you can skip it. To replay it, tap **Play with the tutorial again** in the hero picker.
@@ -104,15 +104,15 @@ These are on the second page of the build ring (**MORE →**). They have three l
 
 ## Traps, spells and supplies
 
-The number on each trap and supply button is its price in candy, paid each time you use one. It turns red when you can't afford it.
+Traps and supplies don't cost candy. You get 5 of each per level (in Porch Party, one shared stock). The ×N on each button is how many are left; each use takes one, and at ×0 the button greys out until the next level.
 
 **Traps** go on the road. You can have up to 12 down at once. Flyers aren't affected by them.
 
-| Trap | Cost | Effect |
+| Trap | Per level | Effect |
 |---|---|---|
-| Pumpkin Trap | 30 | One burst stuns a crowd for 2.5 seconds, then the trap is gone. |
-| Candy Bowl | 25 | Enemies that reach it stop to eat. It lasts 7 seconds from the first bite. Enemies with visor eyes ignore it. |
-| Bubblegum | 25 | A sticky patch that slows enemies walking through it. It lasts 10 seconds from the first step. |
+| Pumpkin Trap | 5 | One burst stuns a crowd for 2.5 seconds, then the trap is gone. |
+| Candy Bowl | 5 | Enemies that reach it stop to eat. It lasts 7 seconds from the first bite. Enemies with visor eyes ignore it. |
+| Bubblegum | 5 | A sticky patch that slows enemies walking through it. It lasts 10 seconds from the first step. |
 
 **Spells** are free and have cooldowns.
 
@@ -121,15 +121,15 @@ The number on each trap and supply button is its price in candy, paid each time 
 | Candy Rain | 70 s | 95 magic damage in an area. |
 | Boo! | 80 s | Enemies in the area run back for 2 seconds. |
 
-**Supplies** cost candy and have their own cooldowns. Open them with the **SUPPLIES** button.
+**Supplies** come 5 of each per level and have their own cooldowns. Open them with the **SUPPLIES** button.
 
-| Supply | Cost | Effect |
+| Supply | Per level | Effect |
 |---|---|---|
-| Pumpkin Bomb | 65 | Thrown for 160 splash damage. |
-| Holy Water | 45 | Reveals ghosts for 5 seconds. It deals 180 damage to ghosts and 20 to anything else. |
-| Garlic Cloud | 55 | Poisons and slows ground enemies for 6 seconds. |
-| Giant Candy Cane | 55 | Blocks the road for 8 seconds. Flyers pass over it. |
-| Scarecrow | 50 | A decoy with 240 health that lures ground enemies for up to 12 seconds. Bosses and visor eyes ignore it. |
+| Pumpkin Bomb | 5 | Thrown for 160 splash damage. |
+| Holy Water | 5 | Reveals ghosts for 5 seconds. It deals 180 damage to ghosts and 20 to anything else. |
+| Garlic Cloud | 5 | Poisons and slows ground enemies for 6 seconds. |
+| Giant Candy Cane | 5 | Blocks the road for 8 seconds. Flyers pass over it. |
+| Scarecrow | 5 | A decoy with 240 health that lures ground enemies for up to 12 seconds. Bosses and visor eyes ignore it. |
 
 ## Enemies and how to beat them
 
@@ -208,7 +208,7 @@ Every trait value of every Chog maps to part of a kit, so all 1,969 Chogs have a
 | Eyes | Special | Laser Sweep (fire burns, green poisons, cyan freezes, purple pierces), Target Lock, Deal With It, Tear Flood, Charm, Play Dead, Stare Down, Confetti Bomb, Pep Talk |
 | Aura | Ultimate | Candy Corn Meteor, Tidal Wave, Twister, Vanishing Act, Arcane Storm, Bloom, Love Bomb, Purify, Thunder Chain, Candy Bomb. A Chog with no aura gets one from its background colour. |
 | Mouth | Passive | Money Mouth (+15% candy from kills), Sticky, Rainbow Trail, Sweet Tooth, Honk, Tough, Pity, Cheerful |
-| Head | Headgear | Royal Command, Spellcraft, Hellfire, Armored, Degen Luck, Focus, Bucket Shield, Chill, Prankster (traps 20% cheaper), Oddity, Bareheaded |
+| Head | Headgear | Royal Command, Spellcraft, Hellfire, Armored, Degen Luck, Focus, Bucket Shield, Chill, Prankster (one more of each trap), Oddity, Bareheaded |
 | Accessory | Trinket | Lucky Frog (revive), Lucky Coin (+50 starting candy), Snack Bag (a jar back each wave), Smoke Puff, Pump, Dump, Heart, Shiv, or none |
 | Skin | Quirk | Metal (armoured), Jade (lucky drops), Multi Colored (a random buff each wave), rare tones (a small status resistance) |
 | Form, Base, Tier | Quirks | Skull: undead (revives once, not frightened). Radioactive: attacks poison. Rare, Epic and Legendary: +1, +2 and +3 starting hero levels. |

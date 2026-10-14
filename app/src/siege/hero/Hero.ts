@@ -72,6 +72,8 @@ export class Hero {
       if (event === 'land') { scene.sfx('hit', this); scene.effect('fx/poof/0', this.x, this.y, .35, .7) }
     }, selection.costume || this.kit.costume)
     if (!scene.options.coop && this.kit.trinket === 'lucky-coin') scene.candy += 50
+    // Prankster: one more of each trap in the (shared) stock; its talent adds another.
+    if (this.kit.headgear === 'prankster') for (const kind of Object.keys(TRAPS) as TrapKind[]) scene.stock[kind]++
     this.offerTalents()
   }
   has(slot: 'weapon' | 'special' | 'ultimate' | 'passive' | 'headgear') { return this.talents.has(`${slot}:${this.kit[slot]}`) }
@@ -83,7 +85,6 @@ export class Hero {
   get labels() {
     return [...(this.kit.undead ? ['Undead'] : []), ...(this.kit.toxic ? ['Toxic attacks'] : []), ...(this.kit.home ? ['Home +1'] : []), ...(this.shield ? [`Shield ×${this.shield}`] : []), ...(this.streak ? [`Pump ×${this.streak}`] : []), ...(this.waveBuff ? [`Wave: ${this.waveBuff}`] : [])].join(' · ')
   }
-  trapCost(kind: TrapKind) { return Math.ceil(TRAPS[kind].cost * (this.kit.headgear === 'prankster' ? this.has('headgear') ? .65 : .8 : 1)) }
   private offerTalents() {
     for (let level = 2; level <= Math.min(5, this.level); level++) if (!this.offered.has(level)) { this.offered.add(level); this.talentLevels.push(level) }
   }
@@ -92,6 +93,7 @@ export class Hero {
     if (!choices || !choices[index] || this.scene.paused || this.scene.ended) return
     const choice = choices[index]
     this.talents.add(choice.id); this.talentLevels.shift()
+    if (choice.id === 'headgear:prankster') for (const kind of Object.keys(TRAPS) as TrapKind[]) this.scene.stock[kind]++
     if (choice.id === 'generic:health' || choice.id === 'passive:tough') { const extra = this.maxHp * (choice.id === 'generic:health' ? .25 : .2); this.maxHp += extra; if (this.alive) this.hp += extra }
     this.scene.effect('fx/talent/0', this.x, this.y - 50, .9, 1.3)
     this.scene.hud.toast(`${choice.name} · ${choice.effect}`); this.scene.sfx('talent-pick', this)

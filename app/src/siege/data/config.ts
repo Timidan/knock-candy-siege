@@ -72,19 +72,21 @@ export const ENEMIES: Record<EnemyKind, { name: string; description: string; hp:
   goblin: { name: 'Candy Goblin', description: 'A very fast thief who grabs three jars. Slow, root or block him.', hp: 135, speed: 195, candy: 15, color: 0x9ad780, flying: false, jars: 3 },
   skeleton: { name: 'Skeleton Crew', description: 'Arrives five at a time. Splash and chains scatter the whole crew.', hp: 88, speed: 108, candy: 5, color: 0xeae3cf, flying: false, jars: 1 },
 }
-export const TRAPS: Record<TrapKind, { name: string; cost: number; radius: number; duration: number; status: Status; color: number; description: string }> = {
-  pumpkin: { name: 'Pumpkin Trap', cost: 30, radius: 125, duration: 2.5, status: 'stun', color: 0xffa34e, description: 'One burst stuns a crowd.' },
-  bowl: { name: 'Candy Bowl', cost: 25, radius: 95, duration: 7, status: 'stun', color: 0xffdc75, description: 'Stops enemies to eat. Visors ignore it.' },
-  gum: { name: 'Bubblegum', cost: 25, radius: 115, duration: 10, status: 'slow', color: 0xf29cda, description: 'A sticky patch that slows feet.' },
+// Traps and supplies are a stock: each use takes one; nothing costs candy. Refilled every level (co-op shares one stock).
+export const TRAPS: Record<TrapKind, { name: string; stock: number; radius: number; duration: number; status: Status; color: number; description: string }> = {
+  pumpkin: { name: 'Pumpkin Trap', stock: 5, radius: 125, duration: 2.5, status: 'stun', color: 0xffa34e, description: 'One burst stuns a crowd.' },
+  bowl: { name: 'Candy Bowl', stock: 5, radius: 95, duration: 7, status: 'stun', color: 0xffdc75, description: 'Stops enemies to eat. Visors ignore it.' },
+  gum: { name: 'Bubblegum', stock: 5, radius: 115, duration: 10, status: 'slow', color: 0xf29cda, description: 'A sticky patch that slows feet.' },
 }
 export const CONSUMABLES = {
-  'pumpkin-bomb': { name: 'Pumpkin Bomb', cost: 65, cooldown: 18, radius: 155, duration: 0, color: 0xffaa61, description: 'Throw a bomb for 160 splash damage.' },
-  'holy-water': { name: 'Holy Water', cost: 45, cooldown: 16, radius: 145, duration: 0, color: 0xb7e5ff, description: 'Reveals ghosts for 5 seconds; 180 damage to ghosts, 20 to others.' },
-  garlic: { name: 'Garlic Cloud', cost: 55, cooldown: 20, radius: 140, duration: 6, color: 0xb4df8e, description: 'A lingering cloud poisons and slows ground enemies for 6 seconds.' },
-  'candy-cane': { name: 'Giant Candy Cane', cost: 55, cooldown: 24, radius: 90, duration: 8, color: 0xffd0dc, description: 'Blocks the road for 8 seconds. Flyers pass over.' },
-  scarecrow: { name: 'Scarecrow', cost: 50, cooldown: 22, radius: 185, duration: 12, color: 0xf3c784, description: 'A 240-health decoy lures ground enemies for up to 12 seconds. Bosses and visors ignore it.' },
+  'pumpkin-bomb': { name: 'Pumpkin Bomb', stock: 5, cooldown: 18, radius: 155, duration: 0, color: 0xffaa61, description: 'Throw a bomb for 160 splash damage.' },
+  'holy-water': { name: 'Holy Water', stock: 5, cooldown: 16, radius: 145, duration: 0, color: 0xb7e5ff, description: 'Reveals ghosts for 5 seconds; 180 damage to ghosts, 20 to others.' },
+  garlic: { name: 'Garlic Cloud', stock: 5, cooldown: 20, radius: 140, duration: 6, color: 0xb4df8e, description: 'A lingering cloud poisons and slows ground enemies for 6 seconds.' },
+  'candy-cane': { name: 'Giant Candy Cane', stock: 5, cooldown: 24, radius: 90, duration: 8, color: 0xffd0dc, description: 'Blocks the road for 8 seconds. Flyers pass over.' },
+  scarecrow: { name: 'Scarecrow', stock: 5, cooldown: 22, radius: 185, duration: 12, color: 0xf3c784, description: 'A 240-health decoy lures ground enemies for up to 12 seconds. Bosses and visors ignore it.' },
 }
 export type ConsumableKind = keyof typeof CONSUMABLES
+export type SupplyKind = TrapKind | ConsumableKind
 export const SPELLS = {
   rain: { name: 'Candy Rain', cooldown: 70, radius: 175, damage: 95, color: 0xffcc63 },
   boo: { name: 'Boo!', cooldown: 80, radius: 210, damage: 0, color: 0xc1a1ff },

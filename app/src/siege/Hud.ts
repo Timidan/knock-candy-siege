@@ -261,12 +261,10 @@ export class Hud {
     for (const [i, kind] of (['pumpkin', 'bowl', 'gum'] as const).entries()) {
       const b = this.button(this.bottomRight, 1488 + i * 152, 984, `trap/${kind}/0`, 132, p => {
         scene.selectTrap(kind, scene.viewToWorld(p))
-        const cost = scene.trapCost(kind)
-        if (this.firstCost(kind, cost)) this.toast(`${TRAPS[kind].name} · Drag onto the path\nCosts ${cost} candy each use`)
+        if (this.firstUse(kind)) this.toast(`${TRAPS[kind].name} · Drag onto the path\n${TRAPS[kind].stock} per level · ${scene.stock[kind]} left`)
       })
-      this.cost(b, scene.trapCost(kind)); this.trapButtons[kind] = b
-      b.price = () => scene.trapCost(kind)
-      b.tip = () => tipLine(TRAPS[kind].name, TIPS[`trap:${kind}`], scene.trapCost(kind) ? `${scene.trapCost(kind)} candy` : 'FREE')
+      this.count(b, scene.stock[kind]); this.trapButtons[kind] = b
+      b.tip = () => tipLine(TRAPS[kind].name, TIPS[`trap:${kind}`], `${TRAPS[kind].stock} per level`, `${scene.stock[kind]} left`)
     }
     this.suppliesButton = this.button(this.bottomRight, 1792, 824, 'item/pumpkin-bomb', 120, () => {
       const open = !this.suppliesOpen; scene.cancel(); this.suppliesOpen = open; this.supplies.setVisible(open)
@@ -278,11 +276,10 @@ export class Hud {
       const b = this.button(this.supplies, (i - 2) * 146, 0, `item/${kind}`, 124, p => {
         scene.selectConsumable(kind, scene.viewToWorld(p))
         const c = CONSUMABLES[kind]
-        if (this.firstCost(kind, c.cost)) this.toast(`${c.name} · ${c.description}\nDrag or tap the road · Costs ${c.cost} candy each use`)
+        if (this.firstUse(kind)) this.toast(`${c.name} · ${c.description}\nDrag or tap the road · ${c.stock} per level · ${scene.stock[kind]} left`)
       }, false, false, '#22C55E')
-      this.cost(b, CONSUMABLES[kind].cost); this.itemButtons[kind] = b
-      b.price = () => CONSUMABLES[kind].cost
-      b.tip = () => tipLine(CONSUMABLES[kind].name, TIPS[`item:${kind}`], `${CONSUMABLES[kind].cost} candy`, `${CONSUMABLES[kind].cooldown}s`)
+      this.count(b, scene.stock[kind]); this.itemButtons[kind] = b
+      b.tip = () => tipLine(CONSUMABLES[kind].name, TIPS[`item:${kind}`], `${CONSUMABLES[kind].stock} per level`, `${scene.stock[kind]} left`, `${CONSUMABLES[kind].cooldown}s cooldown`)
     }
     this.preview = scene.add.container(0, 0).setDepth(3250).setVisible(false)
     const entrances = [...scene.routes, ...scene.flyRoutes]
@@ -433,7 +430,7 @@ export class Hud {
     s.tweens.add({ targets: this.candyPlate, alpha: PLATE, duration: 240, onComplete: () => this.candyPlate.clearTint() })
     if (!reducedMotion()) s.tweens.add({ targets: this.candyRoot, scaleX: 1.12, scaleY: .88, duration: 90, yoyo: true, ease: 'Sine.Out' })
   }
-  // Candy only falls when it is spent: towers, upgrades, specialisations, traps, supplies and the Sugar Rush prop.
+  // Candy only falls when it is spent: towers, upgrades, specialisations and the Sugar Rush prop (traps and supplies use a stock).
   // ponytail: income and a spend inside one check window net out (a kill in that frame shrinks the −N); exact amounts need a scene hook.
   private watchSpend() {
     const s = this.scene, drop = this.candySeen - s.candy
@@ -472,9 +469,9 @@ export class Hud {
     const y = m.ty < (v.top + v.bottom) / 2 ? m.ty + gap : m.ty - gap
     this.tip.setPosition(Phaser.Math.Clamp(m.tx, v.left + (w + h) / 2 + 8, v.right - (w + h) / 2 - 8), y).setVisible(true)
   }
-  // The first selection of each trap or supply says its badge is a price, not a stock count.
-  private firstCost(kind: TrapKind | ConsumableKind, cost: number) {
-    if (this.scene.mode !== kind || cost <= 0 || this.costTaught.has(kind)) return false
+  // The first selection of each trap or supply says its badge is the stock left this level.
+  private firstUse(kind: TrapKind | ConsumableKind) {
+    if (this.scene.mode !== kind || this.costTaught.has(kind)) return false
     this.costTaught.add(kind); return true
   }
   hide() { this.scene.hudLayer.setVisible(false) }
@@ -564,6 +561,20 @@ export class Hud {
     b.costLabel = this.text(18, y, `${refund ? '+' : ''}${value}`, 34, PRICE).setResolution(2).setOrigin(.5)
     b.root.add(b.costLabel)
   }
+  // A trap or supply's badge is its stock left this level (×N), never a price; it pops when one is used.
+  private count(b: Button, value: number) {
+    const s = this.scene
+    if (!b.costLabel) {
+      const y = b.size / 2 - 8
+      b.costRed = plate(s, -44, y - 22, 88, 44, 22, 0x4a1420, 1, 0xff6b6b, 3).setVisible(false)
+      b.root.add([plate(s, -44, y - 22, 88, 44, 22, 0x2a1838, 1, 0xffc83d, 3), b.costRed])
+      b.costLabel = this.text(0, y, '', 34, PRICE).setResolution(2).setOrigin(.5); b.root.add(b.costLabel)
+    }
+    const text = `×${value}`, used = b.costLabel.text !== '' && b.costLabel.text !== text
+    if (b.costLabel.text === text) return
+    b.costLabel.setText(text); this.afford(b, value > 0)
+    if (used && !reducedMotion()) { s.tweens.killTweensOf(b.costLabel); b.costLabel.setScale(1.6); s.tweens.add({ targets: b.costLabel, scale: 1, duration: 280, ease: 'Back.Out' }) }
+  }
   // Only on change: setColor redraws the label.
   private afford(b: Button, ok: boolean) {
     if (!b.costRed || b.costRed.visible !== ok) return
@@ -616,9 +627,8 @@ export class Hud {
     this.cooldown(this.rain, s.spellCooldown.rain, SPELLS.rain.cooldown * factor)
     this.cooldown(this.boo, s.spellCooldown.boo, SPELLS.boo.cooldown * factor)
     for (const kind of ['pumpkin', 'bowl', 'gum'] as const) {
-      const b = this.trapButtons[kind], cost = s.trapCost(kind), free = kind === 'pumpkin' && s.freePumpkin > 0
-      this.enabled(b, s.candy >= cost); this.afford(b, s.candy >= cost)
-      b.costLabel?.setText(free ? 'FREE' : String(cost)).setFontSize(free ? 26 : 34)
+      const b = this.trapButtons[kind]
+      this.enabled(b, s.stock[kind] > 0); this.count(b, s.stock[kind])
     }
     this.calls.forEach((b, path) => {
       const wave = s.waveAt(s.wave)
@@ -638,16 +648,17 @@ export class Hud {
     }
     else if (this.tutorialCard.visible && this.tutorialCard.alpha === 1) this.close(this.tutorialCard)
     for (const item of this.radialButtons) { this.enabled(item.button, s.candy >= item.cost && (!item.kind || !s.towerLock(item.kind))); this.afford(item.button, s.candy >= item.cost) }
-    for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown); this.enabled(b, s.itemCooldown[kind] <= 0 && s.candy >= CONSUMABLES[kind].cost); this.afford(b, s.candy >= CONSUMABLES[kind].cost) }
+    for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown, 's'); this.enabled(b, s.itemCooldown[kind] <= 0 && s.stock[kind] > 0); this.count(b, s.stock[kind]) }
     this.suppliesButton.root.setVisible(!s.focus?.active)
     this.suppliesButton.glow.setVisible(this.suppliesOpen)
     for (const button of this.buttons) this.shade(button)
     if (this.previewWave !== s.wave) this.closePreview()
     if (this.statsText.visible && s.time.now >= this.statsAt) { this.statsAt = s.time.now + 500; const stats = s.stats(); this.statsText.setText(`${stats.fps} FPS · Q${stats.quality} · ${stats.enemies} foes · ${stats.objects} objects · ${s.game.renderer.type === Phaser.WEBGL ? stats.draws + ' draws · GPU tex ≈' + stats.textureMB + ' MB' : 'Canvas'}`) }
   }
-  private cooldown(b: Button, remaining: number, total: number) {
+  // Supplies show a unit ("18s") so a countdown never reads as their stock.
+  private cooldown(b: Button, remaining: number, total: number, unit = '') {
     this.enabled(b, remaining <= 0)
-    b.label.setText(remaining > 0 ? String(Math.ceil(remaining)) : '').setStroke('#241b30', 5)
+    b.label.setText(remaining > 0 ? `${Math.ceil(remaining)}${unit}` : '').setStroke('#241b30', 5)
     if (b.label.style.color !== '#fff0d5') b.label.setColor('#fff0d5')
     b.sweep.setVisible(remaining > 0)
     if (remaining > 0) setSweep(this.scene, b.sweep, remaining / total, b.size / 2 - 7)

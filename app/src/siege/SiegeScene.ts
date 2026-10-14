@@ -12,7 +12,7 @@ import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
 import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
-import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind } from './data/config'
+import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
 import { LEVELS, TUTORIAL } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
 import { endlessWave, endlessHealth, endlessScore, shuffledKinds } from './data/endless'
@@ -155,10 +155,10 @@ export class SiegeScene extends Phaser.Scene {
   traps: Trap[] = []
   items: PlacedItem[] = []
   itemCooldown = Object.fromEntries(Object.keys(CONSUMABLES).map(k => [k, 0])) as Record<ConsumableKind, number>
-  freePumpkin = 0
+  // One stock per level, shared in co-op like candy; commands check it in the simulation.
+  stock = Object.fromEntries([...Object.entries(TRAPS), ...Object.entries(CONSUMABLES)].map(([k, v]) => [k, v.stock])) as Record<SupplyKind, number>
   get crew() { return this.options.street.crew }
   towerLock(kind: TowerKind) { return towerLock(kind, this.localSelection.stars, this.localSelection.owned) }
-  trapCost(kind: TrapKind, hero = this.localHero) { return kind === 'pumpkin' && this.freePumpkin > 0 ? 0 : hero.trapCost(kind) }
   hero!: Hero // Stable player zero; simulation code never swaps this reference.
   heroes: Hero[] = []
   net?: Lockstep
@@ -309,7 +309,7 @@ export class SiegeScene extends Phaser.Scene {
       this.heroes.push(new Hero(this, { x: spawn.x + 95, y: spawn.y }, partner))
       if (this.heroes.some(hero => hero.kit.trinket === 'lucky-coin')) this.candy += 50
     }
-    this.candy += this.options.street.candy; this.freePumpkin = this.options.street.trap ? 1 : 0
+    this.candy += this.options.street.candy; if (this.options.street.trap) this.stock.pumpkin++
     if (this.options.owned.includes(23)) this.candy += 50
     this.heroRings = this.heroes.map((hero, player) => this.art.image(hero.x, hero.y, 'hero/ring').setDisplaySize(116, 44).setDepth(6).setTint(player ? 0x9ae8ff : 0xffffff))
     this.preview = this.art.image(0, 0, 'trap/pumpkin/0').setDepth(2900).setAlpha(.75).setVisible(false)
@@ -489,7 +489,7 @@ export class SiegeScene extends Phaser.Scene {
       case 'specialise': this.specialise(command.pad, command.spec); break
       case 'target': { const t = this.towers[command.pad]; if (t && TARGETING.includes(command.targeting)) { t.targeting = command.targeting; this.hud.radial(); this.sfx('target', t) }; break }
       case 'consumable': if (Object.hasOwn(CONSUMABLES, command.kind)) useConsumable(this, command.kind, command.x, command.y, hero); break
-      case 'trap': if (Object.hasOwn(TRAPS, command.kind)) this.placeTrap(command.kind, command.x, command.y, hero); break
+      case 'trap': if (Object.hasOwn(TRAPS, command.kind)) this.placeTrap(command.kind, command.x, command.y); break
       case 'spell': if (Object.hasOwn(SPELLS, command.kind)) this.cast(command.kind, command.x, command.y, hero); break
       case 'move': this.moveHero(command, hero); break
       case 'ability': hero.abilityUse(); break
@@ -1356,13 +1356,14 @@ export class SiegeScene extends Phaser.Scene {
     this.cancel(); this.mode = kind; this.hud.toast(`${SPELLS[kind].name} · Tap a spot on the path`)
   }
   selectTrap(kind: TrapKind, point?: Point) {
-    if (this.paused || this.ended || this.candy < this.trapCost(kind)) { this.hud.toast('Not enough candy for this trap.'); return }
-    this.cancel(); this.mode = kind; this.dragStart = point ?? null; this.hud.toast(`${TRAPS[kind].name} · Drag onto the path\n${this.trapCost(kind)} candy`)
+    if (this.paused || this.ended) return
+    if (this.stock[kind] <= 0) { this.hud.toast(`No ${TRAPS[kind].name}s left this level.`); return }
+    this.cancel(); this.mode = kind; this.dragStart = point ?? null; this.hud.toast(`${TRAPS[kind].name} · Drag onto the path\n${this.stock[kind]} left this level`)
   }
   selectConsumable(kind: ConsumableKind, point?: Point) {
-    if (this.paused || this.ended || this.itemCooldown[kind] > 0 || this.candy < CONSUMABLES[kind].cost) return
+    if (this.paused || this.ended || this.itemCooldown[kind] > 0 || this.stock[kind] <= 0) return
     this.cancel(); this.mode = kind; this.dragStart = point ?? null
-    this.hud.toast(`${CONSUMABLES[kind].name} · ${CONSUMABLES[kind].description}\nDrag or tap the road · ${CONSUMABLES[kind].cost} candy`)
+    this.hud.toast(`${CONSUMABLES[kind].name} · ${CONSUMABLES[kind].description}\nDrag or tap the road · ${this.stock[kind]} left this level`)
   }
   private cast(kind: SpellKind, x: number, y: number, hero = this.hero) {
     if (this.spellCooldown[kind] > 0) return
@@ -1377,13 +1378,12 @@ export class SiegeScene extends Phaser.Scene {
     if (kind === 'rain') { this.shake(.005); this.tutorial('rain'); for (let i = 0; i < (this.settings.lite ? 6 : 12); i++) this.effect('fx/coin', x + (this.visualRandom() - .5) * 280, y - 200, .5 + this.visualRandom() * .4, .25, 'jar', x + (this.visualRandom() - .5) * 220, y + 40) }
     this.cancel(); this.hud.refresh()
   }
-  private placeTrap(kind: TrapKind, x: number, y: number, hero = this.hero) {
+  private placeTrap(kind: TrapKind, x: number, y: number) {
     const spot = this.nearestPath(x, y), config = TRAPS[kind]
-    if (spot.gap > 65 || x < 50 || x > 1820 || y < 150 || y > 915) { this.hud.toast('Place it on the path. Candy is only spent when placed.'); return }
-    if (this.candy < this.trapCost(kind, hero)) { this.hud.toast('Not enough candy.'); this.cancel(); return }
+    if (spot.gap > 65 || x < 50 || x > 1820 || y < 150 || y > 915) { this.hud.toast('Place it on the path. One is used only when placed.'); return }
+    if (this.stock[kind] <= 0) { this.hud.toast(`No ${config.name}s left this level.`); this.cancel(); return }
     if (this.traps.length >= LIMITS.traps) { this.hud.toast('The path is full of surprises already.'); return }
-    this.candy -= this.trapCost(kind, hero)
-    if (kind === 'pumpkin' && this.freePumpkin > 0) this.freePumpkin--
+    this.stock[kind]--
     this.traps.push({ x: spot.x, y: spot.y, kind, life: config.duration, armed: false, image: this.art.image(spot.x, spot.y, `trap/${kind}/0`).setDepth(7).setDisplaySize(100, 75) })
     this.effect('fx/poof/0', spot.x, spot.y, .4); this.sfx('trap-set', spot); this.tutorial('trap'); this.cancel(); this.hud.refresh()
   }

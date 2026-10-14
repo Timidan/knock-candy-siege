@@ -10,7 +10,7 @@ export function simulationSnapshot(scene: SiegeScene) {
     const internal = scene as unknown as { later: { at: number; run: () => void; state: unknown }[]; rewarded: Set<number>; combos: Set<string> }
     return {
       rules: { level: scene.options.level, mode: scene.options.mode, players: scene.heroes.map(hero => hero.selection) },
-      scene: pick(scene, 'seed clock candy jars kills killsByKind bossesDefeated jarsLost earlyCalls wave countdown spellCooldown itemCooldown freePumpkin schedule waveAlive bridgeUp sugarRush bonfire missTime speedScale candyScale shuffle ended'),
+      scene: pick(scene, 'seed clock candy jars kills killsByKind bossesDefeated jarsLost earlyCalls wave countdown spellCooldown itemCooldown stock schedule waveAlive bridgeUp sugarRush bonfire missTime speedScale candyScale shuffle ended'),
       rng: { seed: scene.seed, draws: scene.randomDraws },
       rewarded: internal.rewarded, combos: internal.combos, talents: scene.talentDeadlines,
       heroes: scene.heroes.map(hero => ({ ...pick(hero, 'kit x y target level xp hp maxHp cooldown ability respawn hit fear slow charge dealt attackCount specials ultimates revives talents talentLevels offered frogUsed skullUsed shield untargetable devil scare pep smoke streak lastKill waveBuff zones trail oddity attackTarget'), rig: rigState(hero.rig) })),

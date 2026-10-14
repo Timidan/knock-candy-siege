@@ -7,10 +7,10 @@ import { distanceSq } from './world'
 export type PlacedItem = Point & { kind: ConsumableKind; life: number; pulse: number; hp: number; image: Phaser.GameObjects.Image }
 export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y: number, hero = s.hero) {
   const c = CONSUMABLES[kind], spot = s.nearestPath(x, y)
-  if (s.itemCooldown[kind] > 0 || s.candy < c.cost) return
-  if (spot.gap > 90 || x < 50 || x > 1820 || y < 150 || y > 915) { s.hud.toast('Aim beside the road. Candy is spent only on a valid target.'); return }
+  if (s.itemCooldown[kind] > 0 || s.stock[kind] <= 0) return
+  if (spot.gap > 90 || x < 50 || x > 1820 || y < 150 || y > 915) { s.hud.toast('Aim beside the road. One is used only on a valid target.'); return }
   if (s.items.length >= 8) { s.hud.toast('Let a few supplies finish first.'); return }
-  s.candy -= c.cost; s.itemCooldown[kind] = c.cooldown; s.discover([`item/${kind}`])
+  s.stock[kind]--; s.itemCooldown[kind] = c.cooldown; s.discover([`item/${kind}`])
   // Road blockers snap onto it; the decoy stands just beside it, drawing marchers off to one side.
   const at = kind === 'candy-cane' ? spot : kind === 'scarecrow' ? { x: spot.x, y: spot.y + (spot.y > 820 ? -52 : 52) } : { x, y }
   if (!c.duration) {
