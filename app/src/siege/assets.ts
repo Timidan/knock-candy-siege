@@ -15,8 +15,8 @@ import type { SignatureData } from './hero/Signature'
 const inventory = import.meta.glob([
   '/public/siege/{traits,kits,skins,legends}.json', '/public/chogs.json', '/public/siege/atlas/hero-*@2x.json', '/public/siege/atlas/cards2.json', '/public/siege/atlas/{rig,sig}.json', '/public/siege/atlas/{kit,fx2,sig,units2,props}.{png,json}', '/public/siege/atlas/{units,fx,ui}.{png,json}', '/public/siege/atlas/faces.json',
   '/public/siege/levels/level{1,2,3}.{json,webp}', '/public/siege/atlas/dances.json',
-  '/public/siege/audio/sfx/{throw,splat,coin,hit,hero-step,laser}-{1,2,3}.{ogg,mp3}', '/public/siege/audio/sfx/{armor,guard-attack}-{1,2}.{ogg,mp3}',
-  '/public/siege/audio/sfx/{build,upgrade,wave,jar-stolen,emote,victory,defeat,boo,candy-cascade,trap,ui-open,ui-click,ui-close,ui-confirm,ui-error,ui-toggle}-1.{ogg,mp3}',
+  '/public/siege/audio/sfx/{throw,splat,coin,hit,hero-step,laser,boo,sell,guard-hit}-{1,2,3}.{ogg,mp3}', '/public/siege/audio/sfx/{armor,guard-attack}-{1,2}.{ogg,mp3}',
+  '/public/siege/audio/sfx/{build,upgrade,wave,jar-stolen,emote,victory,defeat,candy-cascade,trap,ui-open,ui-click,ui-close,ui-confirm,ui-error,ui-toggle}-1.{ogg,mp3}',
 ], { query: '?url', import: 'default', eager: true })
 export const hasAsset = (path: string) => `/public${path}` in inventory
 type Anchor = { x: number; y: number; r: number; die?: { x: number; y: number; r: number }[]; cast?: { x: number; y: number; r: number }[]; grab?: { x: number; y: number; r: number }[]; frames?: { x: number; y: number; r?: number }[]; hurt?: { x: number; y: number; r: number } }

@@ -21,7 +21,7 @@ import type { Daily } from './data/endless'
 import { eliteBonus, modifiersFor, traitsFor, MODIFIERS } from './data/traits'
 import { reducedMotion } from './data/save'
 import type { Settings } from './data/save'
-import { Sfx, type Cue } from './Sfx'
+import { Sfx, KIND_PITCH, type Cue } from './Sfx'
 import { Route, clearStatuses, distanceSq, reaction } from './world'
 import type { Ally, Blocker, DamageNumber, Effect, Enemy, Guard, Projectile, Reaction, Tower, Trap, UnitArt } from './world'
 import { Hud } from './Hud'
@@ -62,6 +62,8 @@ export type SceneOptions = { coop?: CoopSession; assets: AssetPack; level: numbe
 // Decorative cadence and amplitude, in seconds and design pixels, per tower family.
 const TOWER_IDLE: Record<TowerKind, readonly [number, number]> = { egg: [2.4, .8], tp: [1.8, 1.2], lantern: [1.2, 2.4], patch: [1.5, .5], roost: [2.1, 1.4], cauldron: [1.7, .7], catapult: [1.1, .4], lighthouse: [.9, 1.5], organ: [1.4, .9] }
 const WITCHING_WARNING = 3
+// Road routes start with a 450px off-screen run-up (Route); crossing it is an enemy's arrival at the entrance.
+const ENTRANCE = 450
 const STATUS_KEYS = Object.keys(clearStatuses()) as Status[]
 const DRAW_STATUSES: Status[] = ['freeze', 'charm', 'confuse', 'root', 'mark', 'bleed', 'fear', 'burn', 'poison', 'slow']
 type HitCue = { from?: Point; kind?: 'egg' | 'tp' | 'magic' | 'seed' | 'hero'; crit?: boolean }
@@ -196,6 +198,9 @@ export class SiegeScene extends Phaser.Scene {
   private nextHitPause = 0
   private impactProjectile: Projectile | null = null
   private impactSound: Cue | null = null
+  private impactKind: NonNullable<HitCue['kind']> = 'seed'
+  private stepAt = 0
+  private celebrating = false
   get presentationFrozen() { return this.hitPause > 0 && this.motion && this.settings.shake }
   private combos = new Set<string>()
   private signatures: { player: Signature; enemy?: Enemy; generation?: number; bubble?: boolean }[] = []
@@ -310,6 +315,9 @@ export class SiegeScene extends Phaser.Scene {
     this.preview = this.art.image(0, 0, 'trap/pumpkin/0').setDepth(2900).setAlpha(.75).setVisible(false)
     if (this.dark) this.darkness = new Darkness(this)
     this.hud = new Hud(this)
+    // Co-op: a high-level Chog's starting talents resolve at once, to the left card on both peers, so the partner never waits.
+    // Live level-ups keep the shared pause. A choice that is refused stays queued for that pause.
+    if (this.options.coop) for (const hero of this.heroes) for (let n = hero.talentLevels.length; n > 0; n--) hero.chooseTalent(0)
     this.focus = new TutorialFocus(this)
     this.createPathPreview()
     this.layout()
@@ -479,7 +487,7 @@ export class SiegeScene extends Phaser.Scene {
       case 'upgrade': this.upgrade(command.pad); break
       case 'sell': this.sell(command.pad); break
       case 'specialise': this.specialise(command.pad, command.spec); break
-      case 'target': { const t = this.towers[command.pad]; if (t && TARGETING.includes(command.targeting)) { t.targeting = command.targeting; this.hud.radial() }; break }
+      case 'target': { const t = this.towers[command.pad]; if (t && TARGETING.includes(command.targeting)) { t.targeting = command.targeting; this.hud.radial(); this.sfx('target', t) }; break }
       case 'consumable': if (Object.hasOwn(CONSUMABLES, command.kind)) useConsumable(this, command.kind, command.x, command.y, hero); break
       case 'trap': if (Object.hasOwn(TRAPS, command.kind)) this.placeTrap(command.kind, command.x, command.y, hero); break
       case 'spell': if (Object.hasOwn(SPELLS, command.kind)) this.cast(command.kind, command.x, command.y, hero); break
@@ -490,7 +498,7 @@ export class SiegeScene extends Phaser.Scene {
       case 'talent': if ((command.index === 0 || command.index === 1) && (!this.options.coop || command.level === hero.talentLevels[0])) { hero.chooseTalent(command.index); this.talentDeadlines[player] = 0 }; break
       case 'wave': this.callWave(); break
       case 'prop': this.useProp(command.index); break
-      case 'speed': this.speed = this.speed % 3 + 1; this.hud.refresh(); break
+      case 'speed': this.speed = this.speed % 3 + 1; this.hud.refresh(); this.sfx('speed'); break
     }
   }
   private specialise(pad: number, spec: Specialisation) {
@@ -499,7 +507,7 @@ export class SiegeScene extends Phaser.Scene {
     this.candy -= SPEC_COST; t.spent += SPEC_COST; t.spec = spec; t.pop = .4
     this.art.set(t.image, this.towerFrame(t.kind, t.level, spec)); this.discover([`spec/${spec}`])
     if (t.kind === 'patch') this.guardsFor(t)
-    this.effect('fx/levelup/0', t.x, t.y - 80, .7, 1.5); this.cancel(); this.hud.toast(SPECIALISATIONS[spec].name)
+    this.effect('fx/levelup/0', t.x, t.y - 80, .7, 1.5); this.sfx('spec', t); this.cancel(); this.hud.toast(SPECIALISATIONS[spec].name)
   }
   private towerAttack(t: Tower, target: Enemy): boolean {
     const c = towerStats(t), damage = c.damage * this.towerBuff(t), spec = t.spec, rank = t.rank
@@ -551,35 +559,40 @@ export class SiegeScene extends Phaser.Scene {
       image.setInteractive().on('pointerdown', (p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); if (this.mode) this.worldDown(p); else if (!this.focus.active) this.command({ type: 'prop', index }); else this.focus.input(this.viewToWorld(p), true) })
       this.props.push({ data, image, label, cooldown: 0, used: false, animation: 0 })
     }
+    if (!this.settings.lite) this.createAmbience()
+    this.drawWorld(0)
+  }
+  // Fog, glows, fireflies, leaves and bats: made at the start, or when Lite mode is first turned off mid-run.
+  private createAmbience() {
+    const ambient = this.options.assets.geometry.ambient
     const add = (kind: string, x: number, y: number, n: number, size = 1) => {
       const image = this.art.image(x, y, `amb/${kind}${kind === 'leaf' || kind === 'bat' ? '/0' : ''}`).setDepth(kind === 'glow' ? 1800 : 1900).setScale(size).setVisible(!this.settings.lite)
       if (kind === 'glow' || kind === 'firefly') image.setBlendMode(Phaser.BlendModes.ADD)
       this.ambience.push({ image, kind, x, y, n })
     }
-    if (!this.settings.lite) {
-      for (const [n, y] of (geometry.ambient?.fog ?? []).entries()) { add('fog', 960, y, n); this.ambience.at(-1)!.image.setDisplaySize(2400, 180).setAlpha(.28) }
-      for (const [n, g] of (geometry.ambient?.glows ?? []).entries()) { add('glow', g.x, g.y, n); this.ambience.at(-1)!.image.setDisplaySize(g.r * 2, g.r * 2) }
-      for (let i = 0; i < Math.min(30, geometry.ambient?.fireflies ?? 0); i++) add('firefly', 100 + i * 137 % 1700, 220 + i * 173 % 650, i)
-      if (geometry.ambient?.leaves) for (let i = 0; i < 10; i++) add('leaf', i * 199, i * 117 % 1080, i)
-      if (geometry.ambient) for (let i = 0; i < 3; i++) add('bat', -100, 190 + i * 35, i)
-    }
-    this.drawWorld(0)
+    for (const [n, y] of (ambient?.fog ?? []).entries()) { add('fog', 960, y, n); this.ambience.at(-1)!.image.setDisplaySize(2400, 180).setAlpha(.28) }
+    for (const [n, g] of (ambient?.glows ?? []).entries()) { add('glow', g.x, g.y, n); this.ambience.at(-1)!.image.setDisplaySize(g.r * 2, g.r * 2) }
+    for (let i = 0; i < Math.min(30, ambient?.fireflies ?? 0); i++) add('firefly', 100 + i * 137 % 1700, 220 + i * 173 % 650, i)
+    if (ambient?.leaves) for (let i = 0; i < 10; i++) add('leaf', i * 199, i * 117 % 1080, i)
+    if (ambient) for (let i = 0; i < 3; i++) add('bat', -100, 190 + i * 35, i)
   }
   private updateWorld(dt: number) {
     this.sugarRush = Math.max(0, this.sugarRush - dt); this.bonfire = Math.max(0, this.bonfire - dt)
     for (const p of this.props) {
+      const waiting = p.cooldown > 0
       p.cooldown = Math.max(0, p.cooldown - dt)
       if (p.data.kind === 'bridge') {
         if (p.cooldown < 1e-9) p.cooldown = 0
         // The first ten seconds of the 50-second cooldown are spent raised.
         if (this.bridgeUp && p.cooldown <= 40 + 1e-9) {
-          this.bridgeUp = false; p.animation = 1
+          this.bridgeUp = false; p.animation = 1; this.sfx('bridge-down', p.data)
           const path = this.options.assets.geometry.switch!.path, detour = this.routes.length + this.flyRoutes.length
           for (const e of this.enemies) if (e.active && !e.boss && !e.returning && !ENEMIES[e.kind].flying && (e.path === path || e.path === detour) && e.distance < this.fork) {
             e.path = path; e.distance = this.routeFor(e).nearest(e.x, e.y).distance
           }
         }
       }
+      if (waiting && !p.cooldown) this.sfx('prop-ready', p.data)
     }
   }
   private drawWorld(dt: number) {
@@ -651,7 +664,7 @@ export class SiegeScene extends Phaser.Scene {
       }
       this.hud.toast('Bridge up for 10 seconds! New arrivals take the long way. Fallen marchers return in 6 seconds.')
     }
-    p.animation = 1; this.options.sfx.play('build'); this.drawWorld(0)
+    p.animation = 1; this.sfx(`prop-${p.data.kind!}`, p.data); this.drawWorld(0)
   }
   private drawMap() {
     if (this.textures.exists('siege-background')) curbedMap(this, [...this.routes, ...(this.detour ? [this.detour] : [])], this.options.assets.geometry)
@@ -683,7 +696,7 @@ export class SiegeScene extends Phaser.Scene {
     const icons = [0, 1].map(i => this.art.image(-19 + i * 38, -150, 'mod/wind').setDisplaySize(30, 30).setVisible(false))
     const status = this.art.image(0, -85, 'status/burn/0').setVisible(false).setName('status')
     const root = this.add.container(0, 0, [body, face, ...icons, status]).setDepth(100)
-    return { root, body, face, icons, statusImage: status, drawFrame: -1, faceId: id, faceLeft: false, hitTint: false, statusFrame: -1, reaction: reaction(), age: 0, walkAge: 0, blockUntil: 0, blockX: 0, blockY: 0, popAt: 0, deflectAt: 0, missAt: 0, statusSlot: 0 }
+    return { root, body, face, icons, statusImage: status, drawFrame: -1, faceId: id, faceLeft: false, hitTint: false, statusFrame: -1, reaction: reaction(), age: 0, walkAge: 0, blockUntil: 0, blockX: 0, blockY: 0, popAt: 0, deflectAt: 0, missAt: 0, statusSlot: 0, shown: false }
   }
   private makePools() {
     for (let i = 0; i < LIMITS.enemies; i++) {
@@ -788,7 +801,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.paused || this.ended || this.wave >= this.waveCount || (this.options.tutorial && this.tutorialStep === 0)) return
     this.hud.closePreview()
     const early = this.wave > 0 ? Math.ceil(Math.max(0, this.countdown) * EARLY_CALL_CANDY_PER_SECOND) : 0
-    if (early) { this.earlyCalls++; this.income(early); this.hud.toast(`Early call! +${early} candy`) }
+    if (early) { this.earlyCalls++; this.income(early); this.hud.toast(`Early call! +${early} candy`); this.sfx('early-call') }
     const data = this.waveAt(this.wave)!
     this.previewHideUntil = this.presentationTime + .3
     const wave = this.wave++
@@ -805,7 +818,8 @@ export class SiegeScene extends Phaser.Scene {
     if (next?.boss) preloadBoss(this, next.boss.id)
     this.schedule.sort((a, b) => a.time - b.time)
     this.countdown = next?.countdown ?? 0
-    this.options.sfx.play('wave-horn')
+    this.options.sfx.play(data.witching ? 'witching' : 'wave-horn')
+    if (data.witching) this.options.sfx.duck(2.5)
     if (data.witching) { this.warning = { until: this.presentationTime + 3.5, edges: [...new Set(this.schedule.filter(e => e.wave === wave && e.edge !== undefined).map(e => e.edge!))] }; this.hud.banner("WITCHING HOUR: they're coming from everywhere!") }
     else this.hud.banner(`WAVE ${this.wave}  ·  ${data.name}`)
     this.tutorial('wave'); this.hud.refresh()
@@ -820,9 +834,14 @@ export class SiegeScene extends Phaser.Scene {
     if (this.hudTime > .12) { this.hud.refresh(); this.hudTime = 0 }
     this.drawPathPreview(this.paused ? 0 : real)
     if (this.ended) {
-      const clip = this.options.assets.rig.clips[this.hero.rig.clip]
-      if (!this.options.coop && this.hero.rig.clip.startsWith('dance-') && !clip.loop && this.hero.rig.time >= clip.ms) this.hero.rig.play(this.hero.rig.clip)
-      if (!this.options.coop) this.hero.rig.update(real); this.drawWorld(real); this.updateSignatures(real); this.updateEffects(real); updateCorpses(this, real); this.drawUnits(real); return
+      // Co-op: no more checkpoints once the final one matched, so the Chogs may dance.
+      if (!this.celebrating && this.coopResult && this.net && this.net.verifiedTick >= this.coopFinishAt) this.celebrate(this.coopResult.won)
+      if (this.celebrating) for (const hero of this.heroes) {
+        const clip = this.options.assets.rig.clips[hero.rig.clip]
+        if (hero.rig.clip.startsWith('dance-') && !clip.loop && hero.rig.time >= clip.ms) hero.rig.play(hero.rig.clip)
+        hero.rig.update(real)
+      }
+      this.drawWorld(real); this.updateSignatures(real); this.updateEffects(real); updateCorpses(this, real); this.drawUnits(real); return
     }
     if (this.paused) return
     if (!this.focus.waiting) {
@@ -857,6 +876,7 @@ export class SiegeScene extends Phaser.Scene {
     for (let w = 0; w < this.wave; w++) if (!this.rewarded.has(w) && !this.waveAlive[w] && !this.schedule.some(s => s.wave === w)) {
       const bonus = this.waveAt(w)!.bonus
       this.rewarded.add(w); this.income(bonus); this.hud.toast(`Wave cleared! +${Math.round(bonus * this.candyScale)} candy`)
+      if (w + 1 < this.waveCount) this.sfx('wave-clear')
     }
     for (const key of ['rain', 'boo'] as const) this.spellCooldown[key] = Math.max(0, this.spellCooldown[key] - dt)
     this.missTime = Math.max(0, this.missTime - dt)
@@ -878,7 +898,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.allies.length >= 8) return
     const image = this.art.image(x, y - 35, 'guard/knight/walk/0').setDisplaySize(75, 75).setTint(tint)
     this.allies.push({ x, y, hp, maxHp: hp, respawn: 0, cooldown: 0, slow: 0, image, life, damage })
-    this.effect('fx/poof/0', x, y - 40, .5, 1)
+    this.effect('fx/poof/0', x, y - 40, .5, 1); this.sfx('summon', { x, y })
   }
   // A wall of shields blocks the march for a few seconds.
   wall(x: number, y: number, life: number, name: string) {
@@ -926,25 +946,26 @@ export class SiegeScene extends Phaser.Scene {
     e.lit = this.isLit(e)
     if (this.bonfire > 0) e.status.reveal = Math.max(e.status.reveal, .2)
     e.visible = (e.kind !== 'ghost' || e.status.reveal > 0) && (!this.dark || e.lit || e.status.reveal > 0 || !!e.boss)
+    if (e.kind === 'ghost' && e.visible !== e.art.shown) { e.art.shown = e.visible; if (e.visible) this.sfx('ghost-reveal', e) }
     e.armour = e.mods.includes('metal')
     for (const other of this.crowns) if (other.active && !other.returning && other !== e && distanceSq(e, other) < 160 ** 2) { e.armour = true; break }
     if (e.skill <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear && !e.status.charm && !e.status.confuse) {
       if (e.kind === 'witch') {
         e.casting = .7
-        this.effect('fx/heal/0', e.x, e.y - 50, .7)
+        this.effect('fx/heal/0', e.x, e.y - 50, .7); this.sfx('witch-heal', e)
         for (const other of this.enemies) if (other.active && !other.returning && distanceSq(e, other) < 200 ** 2) { other.hp = Math.min(other.maxHp, other.hp + 45); this.effect('fx/heal/0', other.x, other.y - 45, .7, .65) }
       }
       if (e.mods.includes('laser')) {
         const tower = this.towers.find(t => t && distanceSq(e, t) < 350 ** 2)
-        if (tower) { tower.stun = 1; this.addBeam(e, { x: tower.x, y: tower.y - 100 }, 0xff747f); this.effect('status/freeze/0', tower.x, tower.y - 120, 1, 1.4) }
+        if (tower) { tower.stun = 1; this.addBeam(e, { x: tower.x, y: tower.y - 100 }, 0xff747f); this.effect('status/freeze/0', tower.x, tower.y - 120, 1, 1.4); this.sfx('laser-stun', tower) }
       }
-      if (e.mods.includes('wizard') && !e.status.stun) { e.distance += 80; this.effect('fx/poof/0', e.x, e.y - 50, .6) }
-      if (e.mods.includes('gum')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (distanceSq(e, guard) < 120 ** 2) { guard.slow = 3; this.effect('trap/gum/0', guard.x, guard.y, .7, .5) }
+      if (e.mods.includes('wizard') && !e.status.stun) { e.distance += 80; this.effect('fx/poof/0', e.x, e.y - 50, .6); this.sfx('wizard-blink', e) }
+      if (e.mods.includes('gum')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (distanceSq(e, guard) < 120 ** 2) { guard.slow = 3; this.effect('trap/gum/0', guard.x, guard.y, .7, .5); this.sfx('gum', guard) }
       e.skill = 6
     }
     if (e.casting > 0) {
       e.casting = Math.max(0, e.casting - dt)
-      if (!e.casting && !e.status.stun && !e.status.freeze && !e.status.root) { this.effect('fx/blink/0', e.x, e.y - 50, .6); e.distance += 120; this.routeFor(e).at(e.distance, e); this.effect('fx/blink/0', e.x, e.y - 50, .6) }
+      if (!e.casting && !e.status.stun && !e.status.freeze && !e.status.root) { this.effect('fx/blink/0', e.x, e.y - 50, .6); e.distance += 120; this.routeFor(e).at(e.distance, e); this.effect('fx/blink/0', e.x, e.y - 50, .6); this.sfx('witch-blink', e) }
       return
     }
     if (e.status.charm > 0) {
@@ -966,21 +987,23 @@ export class SiegeScene extends Phaser.Scene {
     if (targetHero && distanceSq(e, targetHero) < 90 ** 2 && e.attack <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear) { targetHero.hurt((e.boss ? 24 : 11) * targetHero.enemyDamage(e), e); e.attack = 1 }
     const slow = e.status.slow && !e.mods.includes('burning') ? e.slowPower : 1
     const candle = e.mods.includes('candle') ? (Math.floor(e.age / 3) % 2 ? .65 : 1.5) : 1
+    if (candle > 1 && Math.floor(e.age / 3) !== Math.floor((e.age - dt) / 3)) this.sfx('candle-pump', e)
     // Radioactive Ridge: ground enemies inside a toxic pool move 30% faster.
     let toxic = 1
     if (!e.route && !ENEMIES[e.kind].flying) for (const z of this.zones) if (distanceSq(e, z) < z.r ** 2) { toxic = 1.3; break }
     const decoy = !e.boss && !ENEMIES[e.kind].flying && !e.mods.includes('visor') && !e.status.fear ? this.items.find(item => item.kind === 'scarecrow' && item.hp > 0 && distanceSq(e, item) < CONSUMABLES.scarecrow.radius ** 2) : undefined
-    const lure = decoy ? this.routeFor(e).nearest(decoy.x, decoy.y).distance : 0
+    const lure = decoy ? this.routeFor(e).nearest(decoy.x, decoy.y).distance : 0, from = e.distance
     if (decoy && !blocked && !e.status.stun && !e.status.freeze && !e.status.root) {
       e.distance += Phaser.Math.Clamp(lure - e.distance, -dt * e.speed * slow, dt * e.speed * slow)
-      if (Math.abs(e.distance - lure) < 55 && e.attack <= 0) { decoy.hp -= 24; e.attack = .8; this.effect('item/scarecrow/fx/0', decoy.x, decoy.y - 50, .3, .6) }
+      if (Math.abs(e.distance - lure) < 55 && e.attack <= 0) { decoy.hp -= 24; e.attack = .8; this.effect('item/scarecrow/fx/0', decoy.x, decoy.y - 50, .3, .6); this.sfx('decoy-hit', decoy) }
     }
     const held = !!decoy || !!e.boss && (e.boss.casting > 0 || e.boss.intro > 0 || e.boss.dash > 0)
     if (!e.status.stun && !e.status.freeze && !e.status.root && (!blocked || e.status.fear) && !held) e.distance += dt * e.speed * slow * candle * toxic * Math.min(...this.heroes.map(hero => hero.enemySpeed(e))) * (e.status.fear ? -1.25 : e.status.confuse ? Math.sin(e.age * 3) : 1)
     e.distance = Math.max(0, e.distance)
+    if (from < ENTRANCE && e.distance >= ENTRANCE && !e.route && !e.boss) this.sfx('arrive', e, KIND_PITCH[e.kind])
     // Mon Manor: walking into a portal comes out of its twin further along; flyers pass over.
     if (!e.route && !ENEMIES[e.kind].flying) for (const portal of this.portals) if (e.path === portal.path && e.distance >= portal.at && e.distance < portal.to) {
-      this.effect('fx/teleport/0', e.x, e.y - 20, .6, 1.3); e.distance = portal.to + 4; this.routeFor(e).at(e.distance, e); this.effect('fx/teleport/0', e.x, e.y - 20, .6, 1.3)
+      this.effect('fx/teleport/0', e.x, e.y - 20, .6, 1.3); e.distance = portal.to + 4; this.routeFor(e).at(e.distance, e); this.effect('fx/teleport/0', e.x, e.y - 20, .6, 1.3); this.sfx('portal', e)
     }
     this.routeFor(e).at(e.distance, e)
     if (decoy) { const pull = Math.max(0, 1 - Math.abs(e.distance - lure) / 70); e.x += (decoy.x - e.x) * pull; e.y += (decoy.y - e.y) * pull }
@@ -1003,7 +1026,7 @@ export class SiegeScene extends Phaser.Scene {
       guard.poseUntil = this.presentationTime + .24; guard.recoilX = dx / length * 5; guard.recoilY = dy / length * 5
       this.kick(e.art.reaction, e, -dx / length * 9, -dy / length * 9, 0)
       this.effect('combat/block/0', (e.x + guard.x) / 2, (e.y + guard.y) / 2 - 48, .24, .72)
-      if (this.presentationTime >= e.art.popAt) { this.combatPop('block', guard.x, guard.y - 106); this.options.sfx.play('block'); e.art.popAt = this.presentationTime + 1.2 }
+      if (this.presentationTime >= e.art.popAt) { this.combatPop('block', guard.x, guard.y - 106); this.sfx('block', guard); e.art.popAt = this.presentationTime + 1.2 }
     }
     return true
   }
@@ -1023,9 +1046,10 @@ export class SiegeScene extends Phaser.Scene {
       if (tower.kind === 'patch') {
         for (const guard of tower.guards) {
           guard.slow = Math.max(0, guard.slow - dt); guard.cooldown -= dt * (guard.slow ? .5 : 1) * Math.max(...this.heroes.map(hero => hero.towerSpeed(tower))) * (this.sugarRush > 0 ? 1.6 : 1)
-          if (guard.hp <= 0) { guard.respawn -= dt; guard.image.setAlpha(.2); if (guard.respawn <= 0) { guard.hp = guard.maxHp; guard.respawn = 8; this.effect('fx/poof/0', guard.x, guard.y - 40, .5) }; continue }
+          // A fallen guard's respawn clock starts at 8; its first tick down is the fall.
+          if (guard.hp <= 0) { if (guard.respawn === 8) this.sfx('guard-down', guard); guard.respawn -= dt; guard.image.setAlpha(.2); if (guard.respawn <= 0) { guard.hp = guard.maxHp; guard.respawn = 8; this.effect('fx/poof/0', guard.x, guard.y - 40, .5); this.sfx('guard-up', guard) }; continue }
           const target = this.target(guard, 150, 'close', true)
-          if (target && guard.cooldown <= 0) { this.damage(target, config.damage * this.towerBuff(tower) * (tower.spec === 'knights' ? 1.4 : 1), 'physical', true, false, { from: guard }); if (tower.spec === 'vines') { this.status(target, 'root', 1 + tower.rank * .3); this.effect('fx/vines/0', target.x, target.y, .8) }; guard.cooldown = config.interval; guard.poseUntil = this.presentationTime + .24; if (!target.mods.includes('slippery')) target.distance = Math.max(0, target.distance - 5) }
+          if (target && guard.cooldown <= 0) { this.damage(target, config.damage * this.towerBuff(tower) * (tower.spec === 'knights' ? 1.4 : 1), 'physical', true, false, { from: guard }); if (tower.spec === 'vines') { this.status(target, 'root', 1 + tower.rank * .3); this.effect('fx/vines/0', target.x, target.y, .8) }; guard.cooldown = config.interval; guard.poseUntil = this.presentationTime + .24; this.sfx('fire-patch', guard); if (!target.mods.includes('slippery')) target.distance = Math.max(0, target.distance - 5) }
         }
       } else if (tower.cooldown <= 0) {
         const target = this.target(tower, config.range, tower.targeting, tower.kind === 'cauldron' || tower.kind === 'catapult', tower.kind === 'roost', tower.kind === 'lighthouse')
@@ -1035,8 +1059,8 @@ export class SiegeScene extends Phaser.Scene {
           if (ghost) this.hud.ruleMoment('hidden', ghost, 'enemy/ghost/walk/0', 'HIDDEN · light it with a lantern')
         }
         // The Scream: half the shots go wide.
-        if (target && this.missTime > 0 && this.random() < .5) { tower.cooldown = config.interval; this.towerShot(tower, target); this.combatPop('miss', tower.x, tower.y - 175); this.effect('fx/poof/0', tower.x, tower.y - 120, .4, .8) }
-        else if (target && this.towerAttack(tower, target)) { tower.cooldown = config.interval; tower.pop = .15; this.towerShot(tower, target); this.options.sfx.tower(tower.kind) }
+        if (target && this.missTime > 0 && this.random() < .5) { tower.cooldown = config.interval; this.towerShot(tower, target); this.combatPop('miss', tower.x, tower.y - 175); this.effect('fx/poof/0', tower.x, tower.y - 120, .4, .8); this.sfx('miss', tower) }
+        else if (target && this.towerAttack(tower, target)) { tower.cooldown = config.interval; tower.pop = .15; this.towerShot(tower, target); this.sfx(`fire-${tower.kind}`, tower) }
       }
     }
   }
@@ -1086,14 +1110,15 @@ export class SiegeScene extends Phaser.Scene {
           else if (p.target?.active && p.target.generation === p.generation) hit(p.target)
           if (validTarget) p.after?.()
         } finally { this.impactProjectile = null }
-        if (this.impactSound) this.options.sfx.play(this.impactSound)
+        // One sound per projectile: a landed hit ('splat') speaks for its type, the potion and candy corn for their splash.
+        if (this.impactSound) this.sfx(this.impactSound !== 'splat' ? this.impactSound : p.kind === 'cauldron' || p.kind === 'catapult' ? 'impact-splash' : `impact-${this.impactKind}`, { x: p.endX, y: p.endY })
         this.impactSound = null
       }
     }
   }
   resetReaction(e: Enemy) {
     Object.assign(e.art.reaction, reaction())
-    Object.assign(e.art, { age: 0, walkAge: 0, blockUntil: 0, popAt: 0, deflectAt: 0, missAt: 0, statusSlot: 0 })
+    Object.assign(e.art, { age: 0, walkAge: 0, blockUntil: 0, popAt: 0, deflectAt: 0, missAt: 0, statusSlot: 0, shown: false })
   }
   private kick(v: Reaction, at: Point, x: number, y: number, stop: number) {
     v.x = x; v.y = y; v.atX = at.x; v.atY = at.y; v.life = .28; v.stop = this.motion ? stop : 0
@@ -1114,13 +1139,13 @@ export class SiegeScene extends Phaser.Scene {
   dodgeFeedback(at: Point) {
     this.effect('combat/dodge/0', at.x, at.y - 58, .36, 1.1, 'travel', at.x - (this.motion ? 38 : 0), at.y - 58)
     this.combatPop('miss', at.x, at.y - 142)
-    if (!this.impactProjectile) this.options.sfx.play('miss')
+    if (!this.impactProjectile) this.sfx('miss', at)
   }
   shieldFeedback(at: Point) {
     this.effect('combat/shield/0', at.x, at.y - 75, .4, 1.9)
     this.effect('combat/block/0', at.x + 35, at.y - 82, .22, .7)
     this.combatPop('block', at.x, at.y - 166)
-    if (!this.impactProjectile) this.options.sfx.play('block')
+    if (!this.impactProjectile) this.sfx('block', at)
   }
   private deflectFeedback(e: Enemy, cue?: HitCue) {
     if (this.presentationTime < e.art.deflectAt) return
@@ -1131,7 +1156,7 @@ export class SiegeScene extends Phaser.Scene {
     if (streak) streak.angle = Math.atan2(-d.y, -d.x) + Math.PI / 4
     this.effect('proj/egg', x, y, .3, .6, 'travel', x - d.x * (this.motion ? 95 : 0), y - d.y * (this.motion ? 95 : 0) - (this.motion ? 35 : 0))
     this.combatPop('tink', x, y - 76)
-    if (!this.impactProjectile) this.options.sfx.play('armor')
+    if (!this.impactProjectile) this.sfx('armor', e)
   }
   private hitFeedback(e: Enemy, amount: number, type: 'magic' | 'physical' | 'egg', hero: boolean, cue: HitCue | undefined, deflected: boolean) {
     const p = this.impactProjectile, v = e.art.reaction, d = this.hitDirection(e, cue)
@@ -1145,8 +1170,12 @@ export class SiegeScene extends Phaser.Scene {
       const kind = cue?.kind ?? (type === 'magic' ? 'magic' : type === 'egg' ? 'egg' : p?.kind === 'tp' ? 'tp' : hero ? 'hero' : 'seed')
       const hit = this.effect(`combat/impact-${kind}/0`, e.x, e.y - (e.boss ? 100 : 55), .26, .7 + weight * .65)
       if (hit && kind !== 'tp') hit.angle = Math.atan2(d.y, d.x)
+      // A projectile's sound plays once when it lands (updateProjectiles); melee, beams and blasts sound here, one per frame.
+      if (p) this.impactKind = kind; else this.sfx(`impact-${kind}`, e)
+      // A heavy blow (90+, where the kick and flash max out: catapult, crits, blasts, ultimates) lands with a body thump.
+      if (amount >= 90) this.sfx('hurt', e)
     }
-    if (cue?.crit) { this.combatPop('crit', e.x, e.y - (e.boss ? 210 : 140)); this.effect('combat/crit/0', e.x, e.y - (e.boss ? 125 : 72), .38, 1.5); this.options.sfx.play('crit') }
+    if (cue?.crit) { this.combatPop('crit', e.x, e.y - (e.boss ? 210 : 140)); this.effect('combat/crit/0', e.x, e.y - (e.boss ? 125 : 72), .38, 1.5); this.sfx('crit', e) }
     // Multiple pellets / splash recipients share a beat, never repeatedly extend it.
     if ((cue?.crit || e.boss) && this.motion && this.settings.shake && this.presentationTime >= this.nextHitPause) {
       this.hitPause = cue?.crit ? .05 : .035; this.nextHitPause = this.presentationTime + .24
@@ -1179,6 +1208,7 @@ export class SiegeScene extends Phaser.Scene {
       this.effect(`${ref.key}:${ref.frame}`, x, y, .75, a.r * 2 / e.art.face.width, 'steal', x + runX, y + runY)
     }
     this.effect('combat/impact-hero/0', e.x + 24, e.y - 60, .23, .6)
+    this.sfx('flee', e, 1, 1, .2) // as it starts to run
     const lost = Math.min(this.jars, e.jars)
     if (lost > 0) {
       haptic('jar')
@@ -1214,8 +1244,8 @@ export class SiegeScene extends Phaser.Scene {
     }
     if (e.hp <= 0) {
       if (e.boss && bossRevives(this, e)) return true
-      if (e.mods.includes('lucky') && !e.lucky) { e.lucky = true; e.hp = 1; this.effect('fx/levelup/0', e.x, e.y - 50, .5); return true }
-      if (e.mods.includes('skull') && !e.revived) { e.revived = true; e.hp = e.maxHp * .4; this.status(e, 'stun', .7); this.effect('fx/poof/0', e.x, e.y - 50, .6); return true }
+      if (e.mods.includes('lucky') && !e.lucky) { e.lucky = true; e.hp = 1; this.effect('fx/levelup/0', e.x, e.y - 50, .5); this.sfx('enemy-lucky', e); return true }
+      if (e.mods.includes('skull') && !e.revived) { e.revived = true; e.hp = e.maxHp * .4; this.status(e, 'stun', .7); this.effect('fx/poof/0', e.x, e.y - 50, .6); this.sfx('enemy-revive', e); return true }
       const candyBefore = this.candy
       this.kills++; this.income(Math.max(...this.heroes.map(hero => hero.killIncome(e.candy))) * (this.options.street.chog ? 1.1 : 1))
       this.rewardFeedback(this.candy - candyBefore, e)
@@ -1227,7 +1257,7 @@ export class SiegeScene extends Phaser.Scene {
       else {
         this.effect(`enemy/${e.kind}/die/0`, e.x, e.y - 50, .3, .9)
         this.exitPortrait(e, 'die', .1, .9)
-        this.effect('fx/candy-burst/0', e.x, e.y - 50, .5, .8)
+        this.effect('fx/candy-burst/0', e.x, e.y - 50, .5, .8); this.sfx(`die-${e.kind}`, e)
         if (e.kind === 'skeleton') this.effect('fx/bones/0', e.x, e.y - 35, .7)
         if (e.kind === 'mummy') {
           this.effect('fx/split/0', e.x, e.y - 45, .7)
@@ -1294,7 +1324,7 @@ export class SiegeScene extends Phaser.Scene {
     const tower: Tower = { ...pad, kind, level: 1, spec: null, rank: 0, spent: cost, targeting: 'first', cooldown: 0, stun: 0, image: this.art.image(pad.x, pad.y - 90, this.towerFrame(kind, 1)).setDepth(pad.y).setDisplaySize(144, 180), guards: [], pop: .4, boost: !!pad.boost, gold: 0 }
     this.discover([`tower/${kind}`]); this.towers[padIndex] = tower; this.candy -= cost
     if (kind === 'patch') this.guardsFor(tower)
-    this.effect('fx/poof/0', pad.x, pad.y - 60, .6, 1.4); this.options.sfx.play('build'); this.tutorial('build'); this.cancel(); this.hud.toast(`${TOWERS[kind].name} built`); this.hud.refresh()
+    this.effect('fx/poof/0', pad.x, pad.y - 60, .6, 1.4); this.sfx('build', pad); this.tutorial('build'); this.cancel(); this.hud.toast(`${TOWERS[kind].name} built`); this.hud.refresh()
   }
   private upgrade(padIndex: number) {
     const tower = this.towers[padIndex]
@@ -1304,14 +1334,14 @@ export class SiegeScene extends Phaser.Scene {
     this.candy -= cost; tower.spent += cost; if (tower.spec) tower.rank++; else tower.level++; tower.pop = .4
     this.art.set(tower.image, this.towerFrame(tower.kind, tower.level, tower.spec))
     if (tower.kind === 'patch') this.guardsFor(tower)
-    this.effect('fx/levelup/0', tower.x, tower.y - 70, .8, 1.5); this.options.sfx.play('upgrade'); this.tutorial('upgrade'); this.cancel(); this.hud.toast(tower.spec ? `${SPECIALISATIONS[tower.spec].name} · Rank ${tower.rank}` : `${TOWERS[tower.kind].name} · Level ${tower.level}`); this.hud.refresh()
+    this.effect('fx/levelup/0', tower.x, tower.y - 70, .8, 1.5); this.sfx('upgrade', tower); this.tutorial('upgrade'); this.cancel(); this.hud.toast(tower.spec ? `${SPECIALISATIONS[tower.spec].name} · Rank ${tower.rank}` : `${TOWERS[tower.kind].name} · Level ${tower.level}`); this.hud.refresh()
   }
   private sell(padIndex: number) {
     const tower = this.towers[padIndex]
     if (this.paused || this.ended || !tower) return
     if (this.tutorialStep < 3) { this.hud.toast('Keep your first tower for the tutorial.'); return }
     this.candy += Math.floor(tower.spent * .7); tower.image.destroy(); for (const guard of tower.guards) guard.image.destroy(); this.towers[padIndex] = null
-    this.options.sfx.play('coin'); this.cancel(); this.hud.toast(`Tower sold · +${Math.floor(tower.spent * .7)} candy`); this.hud.refresh()
+    this.sfx('sell', tower); this.cancel(); this.hud.toast(`Tower sold · +${Math.floor(tower.spent * .7)} candy`); this.hud.refresh()
   }
   private guardsFor(tower: Tower) {
     const config = towerStats(tower), near = this.nearestPath(tower.x, tower.y)
@@ -1343,8 +1373,8 @@ export class SiegeScene extends Phaser.Scene {
       else this.status(e, 'fear', 2)
     }
     this.effect(kind === 'rain' ? 'fx/candy-rain/0' : 'fx/boo/0', x, y - 30, 1, spell.radius / 45)
+    this.sfx(kind === 'rain' ? 'spell-rain' : 'spell-boo', { x, y })
     if (kind === 'rain') { this.shake(.005); this.tutorial('rain'); for (let i = 0; i < (this.settings.lite ? 6 : 12); i++) this.effect('fx/coin', x + (this.visualRandom() - .5) * 280, y - 200, .5 + this.visualRandom() * .4, .25, 'jar', x + (this.visualRandom() - .5) * 220, y + 40) }
-    else this.options.sfx.play('emote')
     this.cancel(); this.hud.refresh()
   }
   private placeTrap(kind: TrapKind, x: number, y: number, hero = this.hero) {
@@ -1355,7 +1385,7 @@ export class SiegeScene extends Phaser.Scene {
     this.candy -= this.trapCost(kind, hero)
     if (kind === 'pumpkin' && this.freePumpkin > 0) this.freePumpkin--
     this.traps.push({ x: spot.x, y: spot.y, kind, life: config.duration, armed: false, image: this.art.image(spot.x, spot.y, `trap/${kind}/0`).setDepth(7).setDisplaySize(100, 75) })
-    this.effect('fx/poof/0', spot.x, spot.y, .4); this.options.sfx.play('build'); this.tutorial('trap'); this.cancel(); this.hud.refresh()
+    this.effect('fx/poof/0', spot.x, spot.y, .4); this.sfx('trap-set', spot); this.tutorial('trap'); this.cancel(); this.hud.refresh()
   }
   private updateTraps(dt: number) {
     for (let i = this.traps.length - 1; i >= 0; i--) {
@@ -1368,7 +1398,7 @@ export class SiegeScene extends Phaser.Scene {
         this.status(e, config.status, trap.kind === 'pumpkin' ? config.duration : .18)
         if (trap.kind === 'bowl') { e.status.fear = 0; if (e.status.burn > 0) { e.status.burn = 0; this.status(e, 'stun', 3); this.effect('fx/caramel/0', e.x, e.y, .9, 1.2); this.combo('caramel', e) } }
       }
-      if (triggered && !trap.armed) { trap.armed = true; this.effect(trap.kind === 'pumpkin' ? 'fx/stun/0' : 'fx/splat/0', trap.x, trap.y, .5, 1.5); if (trap.kind === 'pumpkin') trap.life = 0 }
+      if (triggered && !trap.armed) { trap.armed = true; this.effect(trap.kind === 'pumpkin' ? 'fx/stun/0' : 'fx/splat/0', trap.x, trap.y, .5, 1.5); this.sfx(`trap-${trap.kind}`, trap); if (trap.kind === 'pumpkin') trap.life = 0 }
       if (trap.armed) trap.life -= dt
       this.art.set(trap.image, `trap/${trap.kind}/${trap.armed ? 1 : 0}`)
       if (trap.life <= 0) { trap.image.destroy(); this.traps.splice(i, 1) }
@@ -1410,7 +1440,7 @@ export class SiegeScene extends Phaser.Scene {
     this.cancel()
     hero.rig.cancelDance()
     hero.target = { x: Phaser.Math.Clamp(pointer.x, 60, 1850), y: Phaser.Math.Clamp(pointer.y, 180, 885) }
-    this.effect('hero/ring', pointer.x, pointer.y, .55, .8); this.tutorial('move')
+    this.effect('hero/ring', pointer.x, pointer.y, .55, .8); if (hero === this.localHero) this.sfx('move', pointer); this.tutorial('move')
   }
   private worldUp(input: Phaser.Input.Pointer) {
     this.holdAt = null
@@ -1430,7 +1460,7 @@ export class SiegeScene extends Phaser.Scene {
     hero.target = { x: hero.x, y: hero.y }
     if (name === 'signature') this.signature(undefined, false, hero)
     else { hero.rig.dance(dance); this.emote(this.options.assets.dances[dance]?.emote ?? (CRYPTO_EMOTES.includes(name) ? name : 'gg'), hero.x, hero.y - 150) }
-    if (name !== 'signature') this.options.sfx.emote(dance)
+    if (name !== 'signature') this.options.sfx.emote(dance, false, this.pan(hero))
     this.emoteOpen = false; this.hud.emotes()
   }
   emote(name: string, x: number, y: number) { this.effect(`emote/${name}/0`, x, y, 1.7, 1, 'emote') }
@@ -1446,7 +1476,9 @@ export class SiegeScene extends Phaser.Scene {
   setPaused(paused: boolean) { if (this.options.coop) return; if (this.restoring && !paused) return; if (paused) this.hud?.releasePresses(); this.paused = paused; this.tweens.timeScale = paused ? 0 : 1; this.holdAt = null; this.dragStart = null; this.options.sfx.pause(paused) }
   towerFrame(kind: TowerKind, level: number, spec: Specialisation | null = null) { if (spec) return `tower/${kind}/${spec}`; return `${this.settings.gold && this.options.owned.includes(21) && ['egg', 'tp', 'lantern', 'patch'].includes(kind) ? 'skin/gold/' : ''}tower/${kind}/${level}` }
   applySettings(settings: Settings) {
-    this.settings = settings; for (const a of this.ambience) a.image.setVisible(!settings.lite && this.quality.tier === 0); this.options.sfx.apply(settings); this.motion = !reducedMotion()
+    this.settings = settings
+    if (!settings.lite && !this.ambience.length && this.ready) this.createAmbience()
+    for (const a of this.ambience) a.image.setVisible(!settings.lite && this.quality.tier === 0); this.options.sfx.apply(settings); this.motion = !reducedMotion()
     for (const tower of this.towers) if (tower) this.art.set(tower.image, this.towerFrame(tower.kind, tower.level, tower.spec))
   }
   private finish(won: boolean) {
@@ -1454,38 +1486,52 @@ export class SiegeScene extends Phaser.Scene {
     this.cancel(); this.ended = true; this.hud.hide(); this.focus.draw()
     const mode = this.options.mode, daily = this.options.daily
     const result = { level: this.options.level, mode, daily: mode === 'daily' && daily ? daily.number : 0, theme: mode === 'daily' && daily ? daily.theme : 0, won, jars: this.jars, stars: won ? starsFor(this.jars) : 0, kills: this.kills, wave: this.wave, heroLevel: this.hero.level, earlyCalls: this.earlyCalls, seconds: this.clock, date: new Date().toISOString() }
+    this.options.sfx.play(won ? 'victory' : 'defeat')
+    if (won) this.closeUp()
     if (this.options.coop) {
       this.coopResult = { ...result, score: scoreFor(result), party: this.heroes.map(hero => ({ id: hero.kit.id, level: hero.level })) }
       this.coopFinishAt = Math.ceil(((this.net?.tick ?? 0) + 1) / HASH_EVERY) * HASH_EVERY
-      this.options.sfx.play(won ? 'victory' : 'defeat')
-      return // The result is released only after the final matching checkpoint.
+      return // The result is released only after the final matching checkpoint; the Chogs dance then (update).
     }
-    this.hero.rig.cancelDance(); this.hero.rig.play(won ? (this.options.assets.dances[this.options.victoryDance]?.clip ?? 'dance-gg') : 'faint')
-    if (won && this.options.victoryDance === this.hero.kit.emote) this.hero.rig.emote()
-    this.options.sfx.play(won ? 'victory' : 'defeat')
-    if (won) this.options.sfx.emote(this.options.victoryDance)
-    if (won) {
-      // With the double-size parts the close-up can go from 2× to 3.4× and stay sharp; the pan offset keeps the hero left of the result panel.
-      const sharp = this.hero.rig.sharpen(), camera = this.cameras.main, zoom = sharp ? 3.4 : 2, duration = reducedMotion() ? 0 : 950
-      if (sharp) void this.sharpPortrait()
-      camera.zoomTo(zoom * this.renderScale, duration, 'Sine.easeInOut'); camera.pan(this.hero.x + 235 * 2 / zoom, this.hero.y - 110 * 2 / zoom, duration, 'Sine.easeInOut')
-      for (let i = 0; i < (this.settings.lite ? 24 : 48); i++) {
-        const star = this.art.image(this.hero.x + (this.visualRandom() - .5) * 560, this.hero.y - 500 - this.visualRandom() * 140, 'ui/star-full').setDepth(2900).setScale(.16 + this.visualRandom() * .15).setTint([0xffd477, 0xfb8cac, 0xb2eccb][i % 3])
-        this.tweens.add({ targets: star, y: this.hero.y + 60, x: star.x + (this.visualRandom() - .5) * 80, angle: reducedMotion() ? 0 : 180, alpha: 0, duration: reducedMotion() ? 0 : 1800 + this.visualRandom() * 1500, onComplete: () => star.destroy() })
-      }
-    }
+    this.celebrate(won)
     this.time.delayedCall(reducedMotion() || !won ? 0 : 1200, () => this.options.onEnd({ ...result, score: mode === 'endless' ? endlessScore(this.rewarded.size, this.kills) : scoreFor(result) }))
   }
+  // Every Chog dances its victory dance, or faints. Rig clips and times are checkpoint state, so co-op starts this only after the final checkpoint matched.
+  private celebrate(won: boolean) {
+    this.celebrating = true
+    for (const hero of this.heroes) {
+      const dance = hero.selection.victoryDance
+      hero.rig.cancelDance(); hero.rig.play(won ? (this.options.assets.dances[dance]?.clip ?? 'dance-gg') : 'faint')
+      if (won && dance === hero.kit.emote) hero.rig.emote()
+    }
+    if (won) this.options.sfx.emote(this.localSelection.victoryDance)
+  }
+  // The victory close-up and star rain: camera, textures and sprites only, so co-op can run it before the final checkpoint.
+  // With the double-size parts the zoom can go from 2× to 3.4× and stay sharp; two Chogs zoom out until both fit. The pan offset keeps them left of the result panel.
+  private closeUp() {
+    const xs = this.heroes.map(hero => hero.x), ys = this.heroes.map(hero => hero.y), left = Math.min(...xs), right = Math.max(...xs), top = Math.min(...ys), bottom = Math.max(...ys)
+    const x = (left + right) / 2, y = (top + bottom) / 2, sharp = this.heroes.map(hero => hero.rig.sharpen()).every(Boolean)
+    const camera = this.cameras.main, zoom = Phaser.Math.Clamp(Math.min(620 / (right - left + 100), 1080 / (bottom - top + 318)), 1.4, sharp ? 3.4 : 2), duration = reducedMotion() ? 0 : 950
+    if (sharp) this.heroes.forEach((hero, i) => void this.sharpPortrait(hero, `hero-hd-${i}`))
+    camera.zoomTo(zoom * this.renderScale, duration, 'Sine.easeInOut'); camera.pan(x + 235 * 2 / zoom, y - 110 * 2 / zoom, duration, 'Sine.easeInOut')
+    for (let i = 0; i < (this.settings.lite ? 24 : 48); i++) {
+      const star = this.art.image(x + (this.visualRandom() - .5) * (560 + right - left), top - 500 - this.visualRandom() * 140, 'ui/star-full').setDepth(2900).setScale(.16 + this.visualRandom() * .15).setTint([0xffd477, 0xfb8cac, 0xb2eccb][i % 3])
+      this.tweens.add({ targets: star, y: bottom + 60, x: star.x + (this.visualRandom() - .5) * 80, angle: reducedMotion() ? 0 : 180, alpha: 0, duration: reducedMotion() ? 0 : 1800 + this.visualRandom() * 1500, onComplete: () => star.destroy() })
+    }
+  }
   // The in-game portraits are 64px tiles; the close-up redraws the hero's face from the 256px original.
-  private async sharpPortrait() {
+  private async sharpPortrait(hero: Hero, key: string) {
     try {
-      const image = await loadImage(thumb(this.options.hero, true))
+      const image = await loadImage(thumb(hero.kit.id, true))
       if (this.gone) return
-      const texture = this.textures.exists('hero-hd') ? this.textures.get('hero-hd') as Phaser.Textures.CanvasTexture : this.textures.createCanvas('hero-hd', 256, 256)!, ctx = texture.context
+      const texture = this.textures.exists(key) ? this.textures.get(key) as Phaser.Textures.CanvasTexture : this.textures.createCanvas(key, 256, 256)!, ctx = texture.context
       ctx.clearRect(0, 0, 256, 256); ctx.save(); ctx.beginPath(); ctx.arc(128, 128, 256 * 61 / 128, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(image, 0, 0, 256, 256); ctx.restore(); texture.refresh()
-      this.hero.rig.setPortrait('hero-hd')
+      hero.rig.setPortrait(key)
     } catch { /* The 64px face stays if the portrait cannot be fetched. */ }
   }
+  // Presentation only: a cue panned slightly toward the side of the screen where it happens.
+  pan(at: Point) { return Phaser.Math.Clamp(this.worldToView(at).x / this.view.width - .5, -.5, .5) * .7 }
+  sfx(cue: Cue, at?: Point, rate = 1, volume = 1, delay = 0) { this.options.sfx.play(cue, rate, volume, undefined, delay, at ? this.pan(at) : 0) }
   shake(intensity: number) { if (this.settings.shake && this.motion && !reducedMotion()) this.cameras.main.shake(110, intensity) }
   private addBeam(from: Point, to: Point, color: number) { if (this.beam.length < 12) this.beam.push({ from: { x: from.x, y: from.y - 50 }, to: { x: to.x, y: to.y - 30 }, life: .35, color }) }
   private rewardFeedback(value: number, at: Point) {
@@ -1574,10 +1620,12 @@ export class SiegeScene extends Phaser.Scene {
     }
     this.paint.begin()
     const idleMotion = this.motion && !this.settings.lite && this.quality.tier < 2
+    let marcher: Enemy | undefined, marchers = 0, flyer: Enemy | undefined
     for (const e of this.enemies) if (e.active && !e.returning) {
       const v = e.art.reaction, held = this.advanceReaction(v, dt), spring = this.spring(v)
       const immobilized = e.status.stun > 0 || e.status.freeze > 0 || e.status.root > 0
       if (!held) { e.art.age += dt; if (!immobilized) e.art.walkAge += dt }
+      if (!held && !immobilized && !e.boss && e.x > 0 && e.x < 1920 && e.y > 0 && e.y < 1080) { if (ENEMIES[e.kind].flying) flyer = e; else if (e.kind !== 'ghost') { marcher = e; marchers++ } }
       if (e.boss) { drawBoss(this, e); if (e.boss.child) this.bar(e.x, e.y - 190 * e.boss.scale, e.hp / e.maxHp, 0xffc17a, 80); continue }
       const frame = e.casting ? Math.min(3, Math.floor((.7 - e.casting) * 6)) : Math.floor(e.art.walkAge * 9) % 6, bob = idleMotion && (!immobilized || e.kind === 'ghost' || e.kind === 'bat' || e.kind === 'witch') ? Math.sin(e.art.age * (immobilized ? 3 : 14)) * 3 : 0
       const route = this.routeFor(e), point = route.points[Math.min(route.points.length - 1, Math.floor(e.distance / route.length * (route.points.length - 1)) + 1)]
@@ -1625,6 +1673,12 @@ export class SiegeScene extends Phaser.Scene {
       this.bar(x, y - 124, e.hp / e.maxHp, e.visible ? 0x92dcb0 : 0xb9a5e1, 64)
       if (e.armour) this.paint.image('armour', e.x - 46, e.y - 17, 92, 34, 0xfbe394, .6)
     }
+    // The crowd's feet and wings, sparingly: one quiet step and one flutter at most every third of a second, a little louder for a bigger crowd.
+    if (dt > 0 && !this.ended && this.presentationTime >= this.stepAt && (marcher || flyer)) {
+      this.stepAt = this.presentationTime + .34
+      if (marcher) this.sfx('march', marcher, 1, Math.min(1, .5 + marchers * .05))
+      if (flyer) this.sfx('flap', flyer)
+    }
     for (const sig of this.signatures) if (sig.enemy) sig.player.root.setPosition(sig.enemy.art.face.x, sig.enemy.art.face.y)
     for (const tower of this.towers) if (tower) {
       tower.pop = Math.max(0, tower.pop - dt)
@@ -1657,7 +1711,7 @@ export class SiegeScene extends Phaser.Scene {
   }
   private combo(name: string, at: Point) {
     if (this.combos.has(name)) return
-    this.combos.add(name); this.hud.toast(`COMBO! ${name === 'eggsplosion' ? 'Egg + TP = double splash' : name === 'caramel' ? 'Fire + candy bowl = caramel stun' : 'Charmed Chogs fight for you'}`)
+    this.combos.add(name); this.sfx('combo', at); this.hud.toast(`COMBO! ${name === 'eggsplosion' ? 'Egg + TP = double splash' : name === 'caramel' ? 'Fire + candy bowl = caramel stun' : 'Charmed Chogs fight for you'}`)
     const text = this.add.text(at.x, at.y - 160, 'COMBO!', { fontFamily: '"Luckiest Guy", sans-serif', fontSize: '36px', color: '#ffe695', stroke: '#352342', strokeThickness: 5 }).setOrigin(.5).setDepth(2900)
     this.tweens.add({ targets: text, y: at.y - (this.motion ? 200 : 160), alpha: 0, duration: 1400, onComplete: () => text.destroy() })
   }
@@ -1678,7 +1732,7 @@ export class SiegeScene extends Phaser.Scene {
       const bubble = plate(this, -66, -64, 132, 140, 22, 0xffefd0, 1, 0x352342, 4)
       player.root.addAt(bubble, 0); player.root.setPosition(Phaser.Math.Clamp(hero.x, 70, 1850), Math.max(100, hero.y - 225)).setDepth(2800)
     }
-    this.options.sfx.emote(assets.kits.emotes[String(id)], !!enemy)
+    this.options.sfx.emote(assets.kits.emotes[String(id)], !!enemy, this.pan(enemy ?? hero))
     this.signatures.push({ player, enemy: detached ? undefined : enemy, generation: enemy?.generation, bubble: !enemy })
   }
   private updateSignatures(dt: number) {

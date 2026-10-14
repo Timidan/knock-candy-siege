@@ -73,7 +73,7 @@ function setup(s: SiegeScene, e: Enemy, spec: BossSpawn, wave: number, hp: numbe
   if (legend) {
     const kit = resolveKit(a.kits, a.traits, a.chogs, spec.id as number, false)
     const costume = s.textures.exists(`hero-${kit.costume}`) ? kit.costume : s.hero.kit.costume
-    rig = new Rig(s, s.art, a, { ...kit, costume }, event => { if (event === 'step') s.options.sfx.play('hero-step') }, costume)
+    rig = new Rig(s, s.art, a, { ...kit, costume }, event => { if (event === 'step' && e.boss) s.sfx('boss-step', e) }, costume)
     rig.size = 1.8
     aura = s.art.image(0, 0, s.textures.exists(bossAtlasKey(spec.id)) ? `boss/${spec.id}/aura/0` : 'fx/levelup/0').setOrigin(.5, .9)
     holder = s.add.container(0, 0, [aura, rig.root])
@@ -110,13 +110,13 @@ const art = (b: BossState, name: string) => `hero-legend-${b.id}:${name}`
 function startIntro(s: SiegeScene, e: Enemy, b: BossState) {
   s.hud.bossBanner(b)
   if (b.rig) b.rig.emote(); else s.emote('taunt', e.x, e.y - 250)
-  s.options.sfx.boss(b.id, true); s.options.sfx.music('boss'); s.shake(.006)
+  s.options.sfx.duck(3); s.sfx('boss-enter', e); s.options.sfx.music('boss'); s.shake(.006)
 }
 
 function enrage(s: SiegeScene, e: Enemy, b: BossState) {
   b.phase = 2; b.cast = Math.min(b.cast, 2)
   s.cameras.main.flash(reducedMotion() ? 1 : 260, 255, 190, 110); s.shake(.01)
-  s.effect('fx/levelup/0', e.x, e.y - 90, .9, 3); s.options.sfx.boss(b.id)
+  s.effect('fx/levelup/0', e.x, e.y - 90, .9, 3); s.sfx('boss-enrage', e)
   s.hud.toast(`${b.name} is furious!`)
 }
 
@@ -154,7 +154,7 @@ function legendTick(s: SiegeScene, e: Enemy, b: BossState, dt: number) {
 function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
   if (!e.active || !e.boss) return
   const id = b.id as number, fx = (name: string, x = e.x, y = e.y - 70, seconds = 1, size = 2.2) => s.effect(s.textures.exists(b.atlas) ? art(b, name) : 'fx/levelup/0', x, y, seconds, size)
-  s.options.sfx.boss(b.id)
+  s.options.sfx.boss(b.id, s.pan(e))
   if (id === 561) { // Wildfire: a ring of flame scorches guards and the hero
     fx('special/0', e.x, e.y - 20, 1.2, 3)
     guardsNear(s, e.x, e.y, 290, g => { g.hp -= 70; s.effect('status/burn/0', g.x, g.y - 40, .8, 1.4) })
@@ -183,7 +183,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
     s.hud.toast('Golden Touch! Two towers are silenced.')
   } else if (id === 1884) { // Pact
     // The first Pact takes three jars; beating Lil' Devil breaks the bargain and returns them.
-    if (!b.stolen) { b.stolen = Math.max(0, Math.min(3, s.jars - 1)); s.jarsLost += b.stolen; s.jars -= b.stolen; if (b.stolen) haptic('jar'); s.effect('ui/jar', e.x, e.y - 90, 1.2, .7, 'jar', e.x + 150, e.y - 170) }
+    if (!b.stolen) { b.stolen = Math.max(0, Math.min(3, s.jars - 1)); s.jarsLost += b.stolen; s.jars -= b.stolen; if (b.stolen) { haptic('jar'); s.options.sfx.play('jar-stolen') } s.effect('ui/jar', e.x, e.y - 90, 1.2, .7, 'jar', e.x + 150, e.y - 170) }
     for (let i = 0; i < 5; i++) s.schedule.push({ time: s.clock + .1 + i * .15, kind: 'bat', path: 0, route: e.path, wave: e.wave, distance: Math.max(0, e.distance + 20 + i * 30), risen: true })
     s.schedule.sort((p, q) => p.time - q.time); fx('ultimate/0', e.x, e.y - 60, 1.6, 1.8); s.hud.toast(b.stolen ? 'The Pact! Imps pour out. Beat Lil’ Devil to win your jars back.' : 'The Pact! Imps pour out.')
   }
@@ -191,13 +191,13 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
 
 function pumpkinTick(s: SiegeScene, e: Enemy, b: BossState) {
   const route = s.routeFor(e)
-  if (b.state === 'walk' && s.clock >= b.roll && b.intro <= 0 && !b.split) { b.state = 'roll'; b.stateTime = 2.4; b.roll = s.clock + 9; s.options.sfx.play('hit') }
+  if (b.state === 'walk' && s.clock >= b.roll && b.intro <= 0 && !b.split) { b.state = 'roll'; b.stateTime = 2.4; b.roll = s.clock + 9; s.sfx('boss-roll', e) }
   if (b.state === 'roll' && b.stateTime <= 0) b.state = 'walk'
   if (b.state === 'roll') guardsNear(s, e.x, e.y, 95, g => { g.hp = 0; s.effect('fx/splat/0', g.x, g.y - 30, .3, .9); s.shake(.004) }) // flattens guards
   if (!b.child && !b.split && e.hp <= e.maxHp * .5 && b.intro <= 0) { b.split = true; b.state = 'split'; b.stateTime = 1.3; b.immune = 1.3; b.casting = 1.3; s.hud.toast('The Great Pumpkin splits in three!') }
   if (b.state === 'split' && b.stateTime <= 0) splitPumpkin(s, e, b)
   // Whichever half of the Pumpkin reaches the last stretch first calls the final wave, once for the whole family.
-  if (!b.shared.summoned && b.state === 'walk' && e.distance > route.length * .68) { b.shared.summoned = true; b.state = 'summon'; b.stateTime = 1.4; b.casting = 1.4; s.options.sfx.boss(b.id); s.hud.toast('The Great Pumpkin calls a last wave!') }
+  if (!b.shared.summoned && b.state === 'walk' && e.distance > route.length * .68) { b.shared.summoned = true; b.state = 'summon'; b.stateTime = 1.4; b.casting = 1.4; s.options.sfx.boss(b.id, s.pan(e)); s.hud.toast('The Great Pumpkin calls a last wave!') }
   if (b.state === 'summon' && b.stateTime <= 0) {
     b.state = 'walk'
     for (let i = 0; i < 8; i++) s.schedule.push({ time: s.clock + .1 + i * .25, kind: i % 4 === 3 ? 'ghost' : 'treater', path: 0, route: e.path, wave: e.wave, distance: Math.min(route.length - 160, e.distance + 120 + i * 45), risen: true })
@@ -213,7 +213,7 @@ function splitPumpkin(s: SiegeScene, e: Enemy, b: BossState) {
   e.hp = hp; e.maxHp = hp; e.jars = Math.ceil(e.jars / 2); b.scale = .6; b.sprite!.setScale(s.textures.exists('boss') ? .6 : 1.8)
   let made = 0
   for (const other of s.enemies) if (made < 2 && !other.active) { setup(s, other, { id: 'pumpkin' }, e.wave, hp, Math.max(0, at + (made ? 55 : -55)), { ...b, holder: null }); made++ }
-  s.effect('fx/poof/0', e.x, e.y - 60, .6, 3); s.shake(.008)
+  s.effect('fx/poof/0', e.x, e.y - 60, .6, 3); s.shake(.008); s.sfx('boss-split', e)
 }
 
 // Damage the boss absorbs before it reaches the shared damage code: Testudo blocks and the split's grace period.
@@ -229,7 +229,7 @@ export function bossRevives(s: SiegeScene, e: Enemy): boolean {
   const b = e.boss!
   if (b.id !== 900 || b.revived) return false
   b.revived = true; e.hp = e.maxHp * .45; b.cast = 1.2; b.dash = 0
-  s.effect('status/burn/0', e.x, e.y - 90, 1.2, 4); s.shake(.01); s.hud.toast('Hellfire Skull rises again!')
+  s.effect('status/burn/0', e.x, e.y - 90, 1.2, 4); s.shake(.01); s.sfx('boss-revive', e); s.hud.toast('Hellfire Skull rises again!')
   return true
 }
 
@@ -258,13 +258,14 @@ export function bossDeath(s: SiegeScene, e: Enemy) {
   const count = last ? (s.settings.lite ? 14 : 30) : (s.settings.lite ? 4 : 8)
   for (let i = 0; i < count; i++) { const coin = i % 3 === 0; s.effect(coin ? 'fx/coin' : 'fx/candy-burst/0', e.x + (s.visualRandom() - .5) * 220, e.y - 120 - s.visualRandom() * 90, .7 + i * .035, coin ? .3 : .9, coin ? 'coin' : 'burst', 261, 82) }
   s.shake(last ? .014 : .007)
+  if (!last) s.sfx('die-pumpkin', e) // one of the Great Pumpkin's halves
   if (last) {
     haptic('boss')
     s.options.sfx.music('level')
     s.bossesDefeated.push(String(b.id))
-    s.hud.banner(`${b.name.toUpperCase()}  ·  DEFEATED`); s.options.sfx.play('candy-cascade')
+    s.hud.banner(`${b.name.toUpperCase()}  ·  DEFEATED`); s.sfx('boss-defeat', e)
   }
-  if (b.stolen) { s.jars = Math.min(20, s.jars + b.stolen); s.hud.toast('The Pact is broken! Your jars come home.') }
+  if (b.stolen) { s.jars = Math.min(20, s.jars + b.stolen); s.hud.toast('The Pact is broken! Your jars come home.'); s.options.sfx.play('jars-back') }
   e.boss = undefined
 }
 // Boss art is dropped once its corpse is gone; a texture cannot be freed while anything still draws it.

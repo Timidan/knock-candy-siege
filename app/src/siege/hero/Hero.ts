@@ -68,8 +68,8 @@ export class Hero {
     this.hp = this.maxHp
     this.x = spawn.x; this.y = spawn.y + 65; this.target = { x: this.x, y: this.y }
     this.rig = new Rig(scene, scene.art, a, this.kit, event => {
-      if (event === 'step') scene.options.sfx.play('hero-step')
-      if (event === 'land') { scene.options.sfx.play('hit'); scene.effect('fx/poof/0', this.x, this.y, .35, .7) }
+      if (event === 'step') scene.sfx('hero-step', this)
+      if (event === 'land') { scene.sfx('hit', this); scene.effect('fx/poof/0', this.x, this.y, .35, .7) }
     }, selection.costume || this.kit.costume)
     if (!scene.options.coop && this.kit.trinket === 'lucky-coin') scene.candy += 50
     this.offerTalents()
@@ -94,11 +94,11 @@ export class Hero {
     this.talents.add(choice.id); this.talentLevels.shift()
     if (choice.id === 'generic:health' || choice.id === 'passive:tough') { const extra = this.maxHp * (choice.id === 'generic:health' ? .25 : .2); this.maxHp += extra; if (this.alive) this.hp += extra }
     this.scene.effect('fx/talent/0', this.x, this.y - 50, .9, 1.3)
-    this.scene.hud.toast(`${choice.name} · ${choice.effect}`); this.scene.options.sfx.play('upgrade')
+    this.scene.hud.toast(`${choice.name} · ${choice.effect}`); this.scene.sfx('talent-pick', this)
   }
   onWave() {
     if (this.kit.headgear === 'bucket-shield') this.shield = this.has('headgear') ? 2 : 1
-    if (this.kit.trinket === 'snack-bag') { this.scene.jars = Math.min(20, this.scene.jars + 1); this.scene.number(1, this.x, this.y - 140, 0xa4f6a4); this.scene.hud.toast('Snack Bag · +1 jar') }
+    if (this.kit.trinket === 'snack-bag') { this.scene.jars = Math.min(20, this.scene.jars + 1); this.scene.number(1, this.x, this.y - 140, 0xa4f6a4); this.scene.hud.toast('Snack Bag · +1 jar'); this.scene.options.sfx.play('jars-back') }
     if (this.kit.skin === 'multi') { this.waveBuff = ['power', 'haste', 'guard'][Math.floor(this.scene.random() * 3)]; this.scene.hud.toast(`Multi Colored · ${this.waveBuff} this wave`) }
   }
   killIncome(amount: number) {
@@ -114,7 +114,7 @@ export class Hero {
     if (this.kit.trinket === 'pump') { this.streak = this.scene.clock - this.lastKill < 5 ? Math.min(5, this.streak + 1) : 1; this.lastKill = this.scene.clock }
     if (this.xp >= 8 + this.level * 5 && this.level < 5) {
       this.xp = 0; this.level++; this.maxHp += 30; if (this.alive) this.hp = this.maxHp
-      this.offerTalents(); this.scene.effect('fx/talent/0', this.x, this.y - 50, 1, 1.4); this.scene.hud.toast(`Hero level ${this.level} · choose a talent`)
+      this.offerTalents(); this.scene.effect('fx/talent/0', this.x, this.y - 50, 1, 1.4); this.scene.sfx('level-up', this); this.scene.hud.toast(`Hero level ${this.level} · choose a talent`)
     }
   }
   addCharge(amount: number) { if (this.alive) this.charge = Math.min(100, this.charge + amount * ULTIMATE_CHARGE_RATE * (this.talents.has('generic:charge') ? 1.25 : 1)) }
@@ -144,7 +144,7 @@ export class Hero {
     this.hp -= amount * (1 - Math.min(.65, armor))
     if (amount > 1) {
       this.hit = .16
-      this.rig.hurt()
+      this.rig.hurt(); s.sfx('hero-hurt', this)
       const dx = from ? this.x - from.x : -this.rig.facing, dy = from ? this.y - from.y : 0, length = Math.hypot(dx, dy) || 1
       const weight = 6 + Math.min(20, amount * .45)
       Object.assign(this.reaction, { x: dx / length * weight, y: dy / length * weight, atX: this.x, atY: this.y, life: .28, stop: reducedMotion() ? 0 : amount >= 35 ? .04 : 0, flash: .1 })
@@ -155,13 +155,13 @@ export class Hero {
       }
     }
     if (this.hp <= 0) {
-      this.hp = 0; this.rig.play('faint')
+      this.hp = 0; this.rig.play('faint'); s.sfx('hero-down', this)
       if (this.kit.trinket === 'lucky-frog' && !this.frogUsed) { this.frogUsed = true; this.revive(.6) }
       else if (this.kit.undead && !this.skullUsed) { this.skullUsed = true; this.respawn = 1.5; s.hud.toast('Undead · rising again') }
       else { this.respawn = 12; s.hud.toast('Hero resting · back in 12 seconds') }
     }
   }
-  private revive(fraction = 1) { this.hp = this.maxHp * fraction; this.revives++; this.rig.play('revive'); this.scene.effect('fx/revive/0', this.x, this.y - 50, 1.1, 1.4); this.untargetable = 1.1 }
+  private revive(fraction = 1) { this.hp = this.maxHp * fraction; this.revives++; this.rig.play('revive'); this.scene.effect('fx/revive/0', this.x, this.y - 50, 1.1, 1.4); this.scene.sfx('hero-revive', this); this.untargetable = 1.1 }
   update(dt: number) {
     const s = this.scene
     this.cooldown -= dt; this.ability = Math.max(0, this.ability - dt); this.hit = Math.max(0, this.hit - dt)
@@ -222,7 +222,7 @@ export class Hero {
     if (this.kit.weaponMod === 'fire' || this.kit.headgear === 'hellfire') this.dot(e, 'burn', this.has('headgear') && this.kit.headgear === 'hellfire' ? 6 : 3)
     if (this.kit.toxic) this.dot(e, 'poison', 4)
     if (this.kit.passive === 'sticky') { s.status(e, 'slow', 2.2); e.slowPower = this.has('passive') ? .65 : .8 }
-    if (this.kit.passive === 'honk' && this.attackCount % (this.has('passive') ? 5 : 10) === 0) { s.status(e, 'confuse', 3); s.options.sfx.play('emote') }
+    if (this.kit.passive === 'honk' && this.attackCount % (this.has('passive') ? 5 : 10) === 0) { s.status(e, 'confuse', 3); s.sfx('emote', this) }
   }
   dot(e: Enemy, status: Status, duration: number) { this.scene.status(e, status, duration); e.heroDot = true; e.heroOwner = this.scene.heroes.indexOf(this) }
   projectile(e: Enemy, damage: number, frame: string, magic = false, splash = 0, after?: () => void, duration = .26) {
@@ -231,7 +231,7 @@ export class Hero {
   private attack(target: Enemy | null) {
     if (!target || !this.alive) return
     const s = this.scene, k = this.kit, config = WEAPONS[k.weapon], damage = config.damage * this.damageScale
-    this.attackCount++; s.options.sfx.play(['ray-gun', 'anime', 'scepter'].includes(k.weapon) ? 'laser' : 'throw')
+    this.attackCount++; s.sfx(['ray-gun', 'anime', 'scepter'].includes(k.weapon) ? 'laser' : 'throw', this)
     if (k.legend) { legendAttack(this, target); return }
     const weaponFx = (frame: string, point: Point, size = 1) => s.effect(`hero-${k.costume}:${frame}`, point.x, point.y - 40, .45, size)
     if (k.weapon === 'pitch-deck') {
@@ -297,7 +297,7 @@ export class Hero {
   private specialRelease() {
     const s = this.scene, family = this.kit.special, talent = this.has('special'), enemies = this.near(650), target = enemies[0]
     this.specials++
-    s.options.sfx.ability(family)
+    s.options.sfx.ability(family, false, s.pan(this))
     if (this.kit.legend) { legendSpecial(this, enemies, talent); return }
     if (family === 'laser') {
       const colors: Record<string, number> = { fire: 0xff853f, green: 0x82ef5a, cyan: 0x7deeff, purple: 0xcd8cff }
@@ -411,6 +411,7 @@ export class Hero {
   private oddityEffect() {
     const s = this.scene, e = this.near(350)[0]
     if (!e) return
+    s.sfx('oddity', this)
     if (this.kit.oddity === 'banana') { s.status(e, 'stun', 1.5); s.effect('trap/bowl/0', this.x, this.y, 1, .7) }
     else if (this.kit.oddity === 'mushroom') this.zone('poison', this, 160, 3)
     else if (this.kit.oddity === 'eight-ball') { const lucky = this.scene.random() < .5; if (lucky) this.heal(25); else this.hitEnemy(e, 45, true); s.number(8, this.x, this.y - 150, 0xd4a9ff) }

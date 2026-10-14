@@ -25,7 +25,8 @@ export function specialTowerAttack(s: SiegeScene, t: Tower, target: Enemy, damag
           s.status(e, 'slow', 2.5); e.slowPower = .6; s.status(e, 'poison', 3 + t.level * .5)
         }
       },
-      after: () => { s.effect(`fx/${name}/0`, target.x, target.y - 35, .7, c.splash / 65); s.options.sfx.play(potion ? 'splat' : 'hit', potion ? .75 : .6, .6) },
+      // Its splash sounds once when it lands, as 'impact-splash' (SiegeScene.updateProjectiles).
+      after: () => { s.effect(`fx/${name}/0`, target.x, target.y - 35, .7, c.splash / 65) },
     })
   }
   if (t.kind === 'lighthouse') {
