@@ -263,7 +263,7 @@ export function drawBoss(s: SiegeScene, e: Enemy) {
 }
 
 // Testudo's wall: five of Gladius's own shields held across its front (offsets from its feet); the shield is cut from its Shield Wall frame.
-const TESTUDO = [-104, -52, 0, 52, 104], SHIELD = 'testudo-shield'
+const TESTUDO = [-104, -52, 0, 52, 104], SHIELD = 'testudo-shield', BURN = [0, 1, 2, 3].map(i => `status/burn/${i}`)
 // What each power looks like while it plays out; reads the simulation, never writes it.
 function bossPowers(s: SiegeScene, e: Enemy, b: BossState, holder: Phaser.GameObjects.Container) {
   const now = s.presentationTime, since = now - (b.castAt ?? -9), motion = !reducedMotion(), fancy = motion && !s.settings.lite && s.quality.tier < 2
@@ -276,7 +276,7 @@ function bossPowers(s: SiegeScene, e: Enemy, b: BossState, holder: Phaser.GameOb
   if (b.fxDash && b.dash <= 0) { s.effect('fx/poof/0', e.x, e.y - 30, .55, 2.4); s.effect('combat/ring/0', e.x, e.y - 10, .45, 3); s.shake(.007); s.sfx('power-land', e) }
   b.fxDash = b.dash > 0
   if (b.id === 561 && since < .7) { // Wildfire: a ring of flame races out to the edge of its reach
-    const t = since / .7, r = motion ? 290 * (1 - (1 - t) ** 2) : 290, frame = `status/burn/${Math.floor(now * 12) % 4}`
+    const t = since / .7, r = motion ? 290 * (1 - (1 - t) ** 2) : 290, frame = BURN[Math.floor(now * 12) % 4]
     for (let i = 0; i < 22; i++) { const a = i / 22 * Math.PI * 2; s.mark(frame, e.x + Math.cos(a) * r, e.y + Math.sin(a) * r * .55 - 30, 1.9, 1 - t ** 3) }
   }
   if (b.id === 942) { ring(0, .7, 1, 9, 0xd7b6ff, e.y - 120); ring(.18, .7, 1, 9, 0xff9ad0, e.y - 120) } // The Scream: shockwaves

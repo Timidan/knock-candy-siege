@@ -65,7 +65,7 @@ const WITCHING_WARNING = 3
 // Road routes start with a 450px off-screen run-up (Route); crossing it is an enemy's arrival at the entrance.
 const ENTRANCE = 450
 const STATUS_KEYS = Object.keys(clearStatuses()) as Status[]
-const RISEN = 0xa8ffc4
+const RISEN = 0xa8ffc4, CONFUSE = [0, 1, 2, 3].map(i => `status/confuse/${i}`)
 // Golden Touch and frozen towers: dark to light, so the tower's own shading carries over.
 const COAT_RAMPS = { gold: [[58, 30, 4], [138, 84, 10], [214, 158, 28], [255, 214, 86], [255, 247, 205]], ice: [[26, 52, 98], [62, 118, 178], [128, 192, 236], [200, 238, 255], [246, 253, 255]] }
 const DRAW_STATUSES: Status[] = ['freeze', 'charm', 'confuse', 'root', 'mark', 'bleed', 'fear', 'burn', 'poison', 'slow']
@@ -150,6 +150,7 @@ export class SiegeScene extends Phaser.Scene {
   // One coat per pad: the gold (Golden Touch) or ice (a stunned tower) copy of the tower's frame laid over it, and its shine.
   private coats: { image: Phaser.GameObjects.Image; shine: Phaser.GameObjects.Image; kind: '' | 'gold' | 'ice'; peak: number; recede: number; flake: number }[] = []
   private coated = new Set<string>() // tower frames whose coats are made or on their way
+  private coatKeys = { gold: new Map<string, string>(), ice: new Map<string, string>() } // frame name to coat texture key, so drawing builds no strings
   projectiles: Projectile[] = []
   effects: Effect[] = []
   private candyFlights: number[] = []
@@ -1712,7 +1713,7 @@ export class SiegeScene extends Phaser.Scene {
       tower.image.setPosition(tower.x - (tower.aimX ?? 0) * shot * 10, tower.y - 90 + bob - (tower.aimY ?? 0) * shot * 10).setDisplaySize(144 * pop / squeeze, 180 / pop * squeeze).setRotation(dizzy && this.motion ? Math.sin(this.presentationTime * 11 + tower.x) * .07 : 0)
       if (!this.coated.has(tower.image.frame.name)) this.prepareCoats(tower.image.frame.name)
       this.drawCoat(pad, tower)
-      if (dizzy) this.mark(`status/confuse/${spin}`, tower.x, tower.y - 200, 2.3)
+      if (dizzy) this.mark(CONFUSE[spin], tower.x, tower.y - 200, 2.3)
       for (const guard of tower.guards) if (guard.hp > 0) { this.drawGuard(guard, tower.spec === 'knights' ? 'jack' : 'knight'); this.bar(guard.x, guard.y - 80, guard.hp / guard.maxHp, 0xffc17a, 45) }
     }
     for (const ally of this.allies) this.drawGuard(ally, 'knight')
@@ -1778,7 +1779,8 @@ export class SiegeScene extends Phaser.Scene {
   }
   // A coat is a small canvas with the frame's luminance mapped onto the ramp (WebGL and Canvas alike).
   coatFrame(name: string, kind: 'gold' | 'ice', copy?: ImageBitmap) {
-    const key = `coat-${kind}:${name}`
+    let key = this.coatKeys[kind].get(name)
+    if (!key) { key = `coat-${kind}:${name}`; this.coatKeys[kind].set(name, key) }
     if (this.textures.exists(key)) return key
     const [atlas, frameName] = this.art.frame(name), f = this.textures.getFrame(atlas, frameName), ramp = COAT_RAMPS[kind]
     const canvas = document.createElement('canvas'), c = Object.assign(canvas, { width: f.realWidth, height: f.realHeight }).getContext('2d', { willReadFrequently: true })!
