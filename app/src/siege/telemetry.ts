@@ -28,9 +28,10 @@ function referrer() {
   if (host === 't.co') return 'x.com'
   return host === 'com.discord' || /(^|\.)discord(app)?\.com$/.test(host) ? 'discord.com' : host
 }
-// Touch decides phone or tablet, not the user agent: iPadOS reports a Mac. ponytail: a touch-screen laptop counts as a tablet.
+// A coarse main pointer decides phone or tablet, not the user agent: iPadOS reports a Mac. A touch-screen laptop's
+// main pointer is its mouse or trackpad, so it stays a desktop; an iPad with a trackpad attached counts as one too.
 function device() {
-  const touch = !!window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 1
+  const touch = !!window.matchMedia?.('(pointer: coarse)').matches
   return !touch ? 'desktop' : Math.min(screen.width, screen.height) < 600 ? 'phone' : 'tablet'
 }
 // A text/plain body keeps this a simple CORS request (no preflight); keepalive lets it finish while the page closes.
