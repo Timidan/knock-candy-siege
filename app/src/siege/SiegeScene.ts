@@ -22,8 +22,8 @@ import { eliteBonus, modifiersFor, traitsFor, MODIFIERS } from './data/traits'
 import { reducedMotion } from './data/save'
 import type { Settings } from './data/save'
 import { Sfx, KIND_PITCH, type Cue } from './Sfx'
-import { Route, clearStatuses, distanceSq, reaction } from './world'
-import type { Ally, Blocker, DamageNumber, Effect, Enemy, Guard, Projectile, Reaction, Tower, Trap, UnitArt } from './world'
+import { Route, clearStatuses, distanceSq, reaction, wedgePoint, wedgeSpan } from './world'
+import type { Ally, Blocker, DamageNumber, Effect, Enemy, Guard, Projectile, Reaction, Span, Tower, Trap, UnitArt } from './world'
 import { Hud } from './Hud'
 import { Darkness } from './Darkness'
 import type { Light } from './Darkness'
@@ -56,12 +56,14 @@ export type Command =
   | { type: 'speed' }
 export type Mode = 'level' | 'endless' | 'daily'
 export type Outcome = { party?: { id: number; level: number }[]; level: number; mode: Mode; daily: number; theme: number; won: boolean; stars: number; jars: number; kills: number; wave: number; heroLevel: number; score: number; earlyCalls: number; seconds: number; date: string }
-// A schedule entry is one enemy to spawn: on a road, or (edge) from an edge of the view; risen enemies pay no candy; boss entries spawn a legend or the Great Pumpkin.
+// A schedule entry is one enemy to spawn: on a road, or (edge: a quarter of the far-side stretch, see wildRoute) from the edges of the view; risen enemies pay no candy; boss entries spawn a legend or the Great Pumpkin.
 export type Spawn = { chogId?: number; time: number; kind: EnemyKind; path: number; wave: number; distance?: number; route?: number; edge?: number; risen?: boolean; boss?: BossSpawn }
 export type SceneOptions = { coop?: CoopSession; assets: AssetPack; level: number; mode: Mode; daily: Daily | null; seed: number; stars: Record<string, number>; street: StreetBonuses; seen: string[]; onDiscover: (keys: string[]) => void; hero: number; home: boolean; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; settings: Settings; sfx: Sfx; onFullscreen?: () => void; onShop: () => void; onPause: () => void; onEnd: (result: Outcome) => void; onIntro: (kind: string) => void; onTutorial: () => void; onReady: () => void }
 // Decorative cadence and amplitude, in seconds and design pixels, per tower family.
 const TOWER_IDLE: Record<TowerKind, readonly [number, number]> = { egg: [2.4, .8], tp: [1.8, 1.2], lantern: [1.2, 2.4], patch: [1.5, .5], roost: [2.1, 1.4], cauldron: [1.7, .7], catapult: [1.1, .4], lighthouse: [.9, 1.5], organ: [1.4, .9] }
 const WITCHING_WARNING = 3
+// Compass names for swarmSide, by eighths of a turn from screen right, clockwise.
+const SIDES = ['right', 'bottom right', 'bottom', 'bottom left', 'left', 'top left', 'top', 'top right']
 // Road routes start with a 450px off-screen run-up (Route); crossing it is an enemy's arrival at the entrance.
 const ENTRANCE = 450
 const STATUS_KEYS = Object.keys(clearStatuses()) as Status[]
@@ -116,8 +118,8 @@ export class SiegeScene extends Phaser.Scene {
   bossOwned = new Set<string>()
   bossSheet?: AssetPack['atlases'][number]
   missTime = 0
-  // Presentation time only; the scheduled swarm still starts after WITCHING_WARNING.
-  warning: { until: number; edges: number[] } | null = null
+  // Presentation time only; the scheduled swarm still starts after WITCHING_WARNING. away: the side the swarm comes from (swarmAway).
+  warning: { until: number; away: Point } | null = null
   // Daily modifiers and endless scaling.
   speedScale = 1
   candyScale = 1
@@ -244,6 +246,10 @@ export class SiegeScene extends Phaser.Scene {
   private focusRadius = 0
   private warningRoot!: Phaser.GameObjects.Container
   private warningEdges: { stroke: Phaser.GameObjects.Image; arrows: Phaser.GameObjects.Image[] }[] = []
+  private warningPorch = { x: 0, y: 0 }
+  private span: Span = { x: 0, y: 0, dx: 0, dy: 0, u0: 0, u1: 0 }
+  // The map's far side: the mean direction from the porch to where its roads and flight paths enter (set in create).
+  private away = { x: -1, y: 0 }
   private heroRings: Phaser.GameObjects.Image[] = []
   private preview!: Phaser.GameObjects.Image
   private hudTime = 0
@@ -282,6 +288,12 @@ export class SiegeScene extends Phaser.Scene {
     if (daily) { this.speedScale = daily.theme === 1 ? 1.25 : 1; this.candyScale = daily.theme === 2 ? 2 : 1; this.shuffle = daily.theme === 3 ? shuffledKinds(daily.seed) : null }
     this.routes = this.options.assets.geometry.paths.map(path => new Route(path, true))
     this.flyRoutes = (this.options.assets.geometry.fly ?? []).map(path => new Route(path, true))
+    const porch = this.options.assets.geometry.porch
+    this.away = { x: 0, y: 0 }
+    for (const [[x, y]] of [...this.options.assets.geometry.paths, ...(this.options.assets.geometry.fly ?? [])]) {
+      const dx = x - porch.x, dy = y - porch.y, length = Math.sqrt(dx * dx + dy * dy) || 1
+      this.away.x += dx / length; this.away.y += dy / length
+    }
     const sw = this.options.assets.geometry.switch
     if (sw) {
       this.detour = new Route(sw.points, true)
@@ -460,12 +472,13 @@ export class SiegeScene extends Phaser.Scene {
     this.hud.layout(); this.focus.draw()
   }
   viewToWorld(point: Point): Point { return this.cameras.main.getWorldPoint(point.x, point.y) }
-  worldToView(point: Point): Point {
+  worldToView(point: Point, out: Point = { x: 0, y: 0 }): Point {
     const c = this.cameras.main
     const x = (point.x - c.scrollX - c.width / 2) * c.zoomX, y = (point.y - c.scrollY - c.height / 2) * c.zoomY
     const rotation = (c as Phaser.Cameras.Scene2D.Camera & { rotation: number }).rotation
     const cos = Math.cos(rotation), sin = Math.sin(rotation)
-    return { x: (Math.floor(c.x + c.width / 2 + .5) + x * cos - y * sin) / this.renderScale, y: (Math.floor(c.y + c.height / 2 + .5) + x * sin + y * cos) / this.renderScale }
+    out.x = (Math.floor(c.x + c.width / 2 + .5) + x * cos - y * sin) / this.renderScale; out.y = (Math.floor(c.y + c.height / 2 + .5) + x * sin + y * cos) / this.renderScale
+    return out
   }
   discover(keys: string[]) {
     const fresh = keys.filter(k => !this.discovered.has(k))
@@ -726,13 +739,20 @@ export class SiegeScene extends Phaser.Scene {
     this.rewardText = this.add.bitmapText(0, 0, 'siege-digits', '', 44).setOrigin(.5).setDepth(2310).setTint(0xffdc83).setVisible(false)
     for (let i = 0; i < LIMITS.numbers; i++) this.numbers.push({ active: false, text: this.add.bitmapText(0, 0, 'siege-digits', '', 34).setOrigin(.5).setDepth(2300).setVisible(false), life: 0, x: 0, y: 0 })
   }
-  // Edge swarms (Witching Hour) start just outside the visible view and walk straight at the porch; ghosts weave as they drift.
-  private wildRoute(edge: number, kind: EnemyKind) {
-    const half = this.cameras.main.width / this.renderScale / 2, porch = this.options.assets.geometry.porch
-    const at = (t: number) => edge === 0 ? { x: 960 - half - 90, y: 60 + t * 960 } : edge === 1 ? { x: 960 + half + 90, y: 60 + t * 960 } : edge === 2 ? { x: 960 - half + 60 + t * (half * 2 - 120), y: -90 } : { x: 960 - half + 60 + t * (half * 2 - 120), y: 1170 }
-    // Keep at least a few seconds of flight: an edge that is nearly on top of the porch is re-rolled along that edge.
-    let from = at(.1 + this.random() * .8)
-    for (let attempt = 0; attempt < 5 && Math.hypot(from.x - porch.x, from.y - porch.y) < 430; attempt++) from = at(.1 + this.random() * .8)
+  // The side a wave's Witching Hour swarm comes from. Town Square's porch sits between four roads, so it has no single far side:
+  // each Witching Hour (every tenth wave) takes the next road's side in turn, and that road is always open by then.
+  swarmAway(wave: number): Point {
+    if (!this.level.endless) return this.away
+    const paths = this.options.assets.geometry.paths, [x, y] = paths[Math.floor(wave / 10) % paths.length][0], porch = this.options.assets.geometry.porch
+    return { x: x - porch.x, y: y - porch.y }
+  }
+  swarmSide(wave: number) { const a = this.swarmAway(wave); return SIDES[Math.round(Math.atan2(a.y, a.x) / (Math.PI / 4)) & 7] }
+  // Edge swarms (Witching Hour) start just outside the widest view (2400 wide, so off screen on every device and the same for both
+  // co-op players) and walk straight at the porch; ghosts weave as they drift. They enter only from the edges inside the 90° wedge
+  // facing away from the porch, never from the 270° around it; `edge` picks a quarter of that stretch, so the swarm spreads along it.
+  private wildRoute(edge: number, kind: EnemyKind, wave: number) {
+    const porch = this.options.assets.geometry.porch
+    const from = wedgePoint(-330, -90, 2250, 1170, porch, this.swarmAway(wave), (edge + this.random()) / 4, this.span)
     return Route.wild(from, porch, kind === 'ghost' ? 55 + this.random() * 55 : 0, this.random() * 6.28)
   }
   private spawn(entry: Spawn): boolean {
@@ -741,7 +761,7 @@ export class SiegeScene extends Phaser.Scene {
     const enemy = this.enemies.find(e => !e.active)
     if (!enemy) return false
     const id = entry.chogId ?? 1 + Math.floor(this.random() * 1969), traits = traitsFor(this.options.assets.traits, id), mods = modifiersFor(traits), config = ENEMIES[kind]
-    const multiplier = 1 + eliteBonus(traits) * .5, health = this.healthScale(wave), wild = entry.edge === undefined ? undefined : this.wildRoute(entry.edge, kind)
+    const multiplier = 1 + eliteBonus(traits) * .5, health = this.healthScale(wave), wild = entry.edge === undefined ? undefined : this.wildRoute(entry.edge, kind, wave)
     Object.assign(enemy, { active: true, generation: enemy.generation + 1, wave, kind, id, mods, path: wild ? -1 : route ?? this.roadFor(kind, path), route: wild, boss: undefined, distance, returning: 0, casting: 0, poisonStacks: 0, speed: config.speed * (mods.includes('wind') ? 1.2 : 1) * this.speedScale, hp: config.hp * multiplier * health, maxHp: config.hp * multiplier * health, candy: entry.risen ? 0 : Math.round(config.candy * multiplier * (mods.includes('rich') ? 2 : 1) * (this.level.endless ? 1 + wave * .02 : 1)), jars: Math.max(config.jars, mods.includes('hungry') ? 2 : 1), age: 0, hit: 0, attack: .5, skill: 4 + this.random() * 2, lucky: false, revived: false, armour: false, visible: kind !== 'ghost', slowPower: .5, heroDot: false, sigCooldown: 0, shield: 0, gold: 0, lit: true })
     for (const key of Object.keys(enemy.status) as Status[]) enemy.status[key] = 0
     this.art.set(enemy.art.body, `enemy/${kind}/walk/0`)
@@ -819,7 +839,7 @@ export class SiegeScene extends Phaser.Scene {
     const wave = this.wave++
     this.heroes.forEach(hero => hero.onWave())
     this.waveAlive[wave] = 0
-    // Witching Hour: the edge swarms start three seconds after the warning, spread over all four edges.
+    // Witching Hour: the edge swarms start three seconds after the warning, spread over the four quarters of the far-side stretch.
     const warning = data.witching ? WITCHING_WARNING : 0
     let edge = Math.floor(this.random() * 4)
     for (const group of data.groups) for (let i = 0; i < group.count * (group.type === 'skeleton' ? 5 : 1); i++) this.schedule.push({ chogId: 1 + Math.floor(this.random() * 1969), time: this.clock + (group.edge ? warning : 0) + (group.delay ?? 0) + (group.type === 'skeleton' ? Math.floor(i / 5) * group.interval + i % 5 * .09 : i * group.interval), kind: group.type, path: group.path ?? 0, wave, ...(group.edge ? { edge: edge++ % 4 } : {}) })
@@ -832,7 +852,7 @@ export class SiegeScene extends Phaser.Scene {
     this.countdown = next?.countdown ?? 0
     this.options.sfx.play(data.witching ? 'witching' : 'wave-horn')
     if (data.witching) this.options.sfx.duck(2.5)
-    if (data.witching) { this.warning = { until: this.presentationTime + 3.5, edges: [...new Set(this.schedule.filter(e => e.wave === wave && e.edge !== undefined).map(e => e.edge!))] }; this.hud.banner("WITCHING HOUR: they're coming from everywhere!") }
+    if (data.witching) { this.warning = { until: this.presentationTime + 3.5, away: this.swarmAway(wave) }; this.hud.banner(`WITCHING HOUR: they're coming from the ${this.swarmSide(wave)}!`) }
     else this.hud.banner(`WAVE ${this.wave}  ·  ${data.name}`)
     this.tutorial('wave'); this.hud.refresh()
   }
@@ -1883,23 +1903,24 @@ export class SiegeScene extends Phaser.Scene {
     })
     this.drawWarning()
   }
-  // Fixed atlas quads, below the HUD, only on edges present in the actual spawn schedule.
+  // Fixed atlas quads, below the HUD, only along the stretch of the screen edges inside the swarm's wedge as seen from the porch (wildRoute).
   private drawWarning() {
     this.warningRoot.setVisible(false)
     if (!this.warning) return
     if (this.presentationTime >= this.warning.until || this.ended) { this.warning = null; return }
-    const v = this.view, moving = !reducedMotion() && !this.settings.lite && this.quality.tier < 2
+    const v = this.view, moving = !reducedMotion() && !this.settings.lite && this.quality.tier < 2, span = this.span
+    const porch = this.worldToView(this.options.assets.geometry.porch, this.warningPorch), away = this.warning.away
     const elapsed = this.presentationTime - this.warning.until + 3.5
     this.warningRoot.setVisible(true).setAlpha(moving ? .65 + Math.cos(elapsed * Math.PI * 4) * .3 : .85)
     this.warningEdges.forEach(({ stroke, arrows }, edge) => {
-      const active = this.warning!.edges.includes(edge), vertical = edge < 2
-      const x = edge === 0 ? v.left + 5 : edge === 1 ? v.right - 5 : (v.left + v.right) / 2
-      const y = edge === 2 ? v.top + 5 : edge === 3 ? v.bottom - 5 : (v.top + v.bottom) / 2
-      stroke.setVisible(active).setPosition(x, y).setDisplaySize(vertical ? 8 : v.right - v.left, vertical ? v.bottom - v.top : 8)
+      wedgeSpan(v.left, v.top, v.right, v.bottom, edge, porch, away, span)
+      // Inward is the edge's clockwise direction turned a quarter turn; the stroke sits 5px in, the arrows 30px, up to three by length.
+      const size = Math.abs(span.dx) + Math.abs(span.dy), length = (span.u1 - span.u0) * size, mid = (span.u0 + span.u1) / 2
+      const nx = -span.dy / size, ny = span.dx / size, count = Math.min(3, Math.floor(length / 150))
+      stroke.setVisible(length > 0).setPosition(span.x + mid * span.dx + nx * 5, span.y + mid * span.dy + ny * 5).setDisplaySize(span.dx ? Math.max(1, length) : 8, span.dx ? 8 : Math.max(1, length))
       arrows.forEach((arrow, i) => {
-        const ax = vertical ? edge === 0 ? v.left + 30 : v.right - 30 : v.left + (v.right - v.left) * (i + 1) / 4
-        const ay = !vertical ? edge === 2 ? v.top + 30 : v.bottom - 30 : v.top + (v.bottom - v.top) * (i + 1) / 4
-        arrow.setPosition(ax, ay).setRotation([0, Math.PI, Math.PI / 2, -Math.PI / 2][edge]).setVisible(active && moving && !this.hud.coversControl(ax, ay, 34))
+        const u = span.u0 + (span.u1 - span.u0) * (i + 1) / (count + 1), ax = span.x + u * span.dx + nx * 30, ay = span.y + u * span.dy + ny * 30
+        arrow.setPosition(ax, ay).setRotation(Math.atan2(ny, nx)).setVisible(i < count && moving && !this.hud.coversControl(ax, ay, 34))
       })
     })
   }

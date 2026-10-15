@@ -762,7 +762,7 @@ export class Hud {
     s.cancel(); this.preview.removeAll(true); this.previewPath = path; this.previewWave = s.wave
     const wave = s.waveAt(s.wave)!, counts = new Map<string, number>()
     for (const group of wave.groups) if (!group.edge && s.entrancePath(group.type, group.path ?? 0) === path) counts.set(group.type, (counts.get(group.type) ?? 0) + group.count * (group.type === 'skeleton' ? 5 : 1))
-    const extra = [wave.witching ? 'Witching Hour: swarms from every edge' : '', wave.boss ? `Boss: ${wave.boss.id === 'pumpkin' ? 'The Great Pumpkin' : s.options.assets.legends.legends[String(wave.boss.id)].name}` : ''].filter(Boolean)
+    const extra = [wave.witching ? `Witching Hour: swarms from the ${s.swarmSide(s.wave)}` : '', wave.boss ? `Boss: ${wave.boss.id === 'pumpkin' ? 'The Great Pumpkin' : s.options.assets.legends.legends[String(wave.boss.id)].name}` : ''].filter(Boolean)
     const button = this.calls[path], width = Math.max(extra.length ? 560 : 380, counts.size * 112 + 44), tall = extra.length * 40
     const v = s.view
     this.preview.setPosition(Phaser.Math.Clamp(button.root.x + width / 2 + 90, v.left + width / 2 + 24, v.right - 24 - width / 2), Phaser.Math.Clamp(button.root.y, v.top + 340, v.bottom - 300))

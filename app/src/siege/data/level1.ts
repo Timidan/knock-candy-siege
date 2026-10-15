@@ -3,7 +3,7 @@ import type { EnemyKind, Point } from './config'
 // A boss is a legend's token id or the Great Pumpkin; it walks the road beside the wave's ordinary groups.
 export type BossId = number | 'pumpkin'
 export type BossSpawn = { id: BossId; delay?: number; hp?: number }
-// edge: the group pours in from the edges of the view instead of a road (Witching Hour swarms).
+// edge: the group pours in from the edges of the view on the porch's far side instead of a road (Witching Hour swarms).
 export type WaveGroup = { type: EnemyKind; count: number; interval: number; delay?: number; path?: number; edge?: boolean }
 export type Wave = { name: string; groups: WaveGroup[]; bonus: number; countdown: number; witching?: boolean; boss?: BossSpawn }
 export type LevelProp = Point & { kind?: 'lamp' | 'shop' | 'bridge' | 'bell' | 'grate' | 'bonfire'; use?: boolean; reach?: [number, number][]; return?: [number, number]; frame?: string; scale?: number }

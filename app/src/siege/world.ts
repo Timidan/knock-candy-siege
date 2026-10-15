@@ -62,3 +62,36 @@ export class Route {
   }
 }
 export const distanceSq = (a: Point, b: Point) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2
+
+// Witching Hour swarms enter only inside the 90° wedge facing `away` from the porch p: directions d with d·away >= |d·away⊥| (any length of away).
+// Writes the part of edge k of the box [x0, x1] × [y0, y1] inside it (0 top, 1 right, 2 bottom, 3 left, each walked clockwise):
+// the edge's start (x, y) and step (dx, dy), and the fractions u0..u1 inside the wedge (none when u0 >= u1). Plain arithmetic, so co-op peers agree.
+export type Span = { x: number; y: number; dx: number; dy: number; u0: number; u1: number }
+export function wedgeSpan(x0: number, y0: number, x1: number, y1: number, k: number, p: Point, away: Point, out: Span): Span {
+  out.x = k === 1 || k === 2 ? x1 : x0; out.y = k < 2 ? y0 : y1
+  out.dx = k === 0 ? x1 - x0 : k === 2 ? x0 - x1 : 0; out.dy = k === 1 ? y1 - y0 : k === 3 ? y0 - y1 : 0
+  out.u0 = 0; out.u1 = 1
+  // One half-plane per side of the wedge: d·(away ± away⊥) >= 0, with away⊥ = (-away.y, away.x).
+  for (let side = -1; side <= 1; side += 2) {
+    const nx = away.x - side * away.y, ny = away.y + side * away.x
+    const f = (out.x - p.x) * nx + (out.y - p.y) * ny, g = out.dx * nx + out.dy * ny
+    if (g > 0) out.u0 = Math.max(out.u0, -f / g); else if (g < 0) out.u1 = Math.min(out.u1, -f / g); else if (f < 0) out.u1 = -1
+  }
+  return out
+}
+// The point a fraction s (0..1) of the way along the box's edges inside the wedge, measured by length, so spawns spread evenly along them.
+export function wedgePoint(x0: number, y0: number, x1: number, y1: number, p: Point, away: Point, s: number, span: Span): Point {
+  let total = 0
+  for (let k = 0; k < 4; k++) { wedgeSpan(x0, y0, x1, y1, k, p, away, span); total += Math.max(0, span.u1 - span.u0) * (Math.abs(span.dx) + Math.abs(span.dy)) }
+  let rest = s * total
+  const at = { x: p.x, y: p.y }
+  for (let k = 0; k < 4; k++) {
+    wedgeSpan(x0, y0, x1, y1, k, p, away, span)
+    const size = Math.abs(span.dx) + Math.abs(span.dy), length = (span.u1 - span.u0) * size
+    if (length <= 0) continue
+    const u = span.u0 + Math.min(rest, length) / size
+    at.x = span.x + u * span.dx; at.y = span.y + u * span.dy
+    if ((rest -= length) <= 0) break
+  }
+  return at
+}
