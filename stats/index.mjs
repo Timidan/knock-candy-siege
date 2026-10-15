@@ -105,11 +105,12 @@ async function saltFor(db, day) {
 
 async function readStats(db) {
   const top = (kind, limit) => db.prepare('SELECT key, n FROM tallies WHERE kind = ? ORDER BY n DESC LIMIT ?').bind(kind, limit)
-  const [totals, kills, bosses, heroes, levels, purchases, refs, devices, days, week] = (await db.batch([
+  const [totals, kills, bosses, heroes, levels, purchases, refs, devices, days, week, chogs] = (await db.batch([
     db.prepare("SELECT key, n FROM tallies WHERE kind = 'total'"),
     top('kill', MAX_NAMES), top('boss', 30), top('hero', 10), top('level', 20), top('purchase', 30), top('ref', 6), top('device', 3),
     db.prepare("SELECT key, n FROM tallies WHERE kind = 'day' AND key >= ?").bind(utcDay(13)),
     db.prepare('SELECT count(*) AS n FROM players WHERE last_day >= ?').bind(utcDay(6)),
+    db.prepare("SELECT count(*) AS n FROM tallies WHERE kind = 'hero'"),
   ])).map(result => result.results)
   const total = Object.fromEntries(totals.map(row => [row.key, row.n])), daily = Object.fromEntries(days.map(row => [row.key, row.n]))
   const value = key => total[key] ?? 0, device = Object.fromEntries(devices.map(row => [row.key, row.n]))
@@ -130,6 +131,8 @@ async function readStats(db) {
     purchases: { total: value('purchases'), byItem: purchases.map(row => ({ item: row.key, n: row.n })) },
     // Browsers that started at least one level since SINCE.
     runners: { allTime: value('runners'), since: SINCE },
+    // Different Chogs taken into a level since launch: one tally row per hero id.
+    chogsPlayed: chogs[0]?.n ?? 0,
     // Per visit (page load) since SINCE: the referring site's host name, or direct, and the device type.
     visits: { since: SINCE, referrers: refs.map(row => ({ host: row.key, n: row.n })),
       devices: Object.fromEntries(DEVICES.map(name => [name, device[name] ?? 0])) },

@@ -24,6 +24,7 @@ export type Stats = {
   purchases: { total: number; byItem: { item: string; n: number }[] }
   // Newer keys, counted from `since`; absent from an older Worker.
   runners?: { allTime: number; since: string }
+  chogsPlayed?: number
   visits?: { since: string; referrers: { host: string; n: number }[]; devices: Record<'phone' | 'tablet' | 'desktop', number> }
 }
 type Legends = { legends: Record<string, { name: string }>; greatPumpkin: { name: string } }
@@ -194,7 +195,7 @@ export default function StatsPage() {
       <Goal total={stats.kills.total} />
       <section className="stats-headline" aria-label="Headline numbers">
         <Tile n={stats.players.allTime} label="Visitors" sub="browsers that opened the game" />
-        {stats.runners && <Tile n={stats.runners.allTime} label="Players" sub={`started a level, counted from ${since(stats.runners.since)}`} />}
+        {stats.chogsPlayed !== undefined && <Tile n={stats.chogsPlayed} label="Chogs played" sub="different Chogs taken into a level" />}
         <Tile n={stats.kills.total} label="Monsters stopped" sub={`${fmt(skeletons(stats))} of them skeletons`} />
         <Tile n={stats.runs.started} label="Runs" sub={`${fmt(stats.runs.finished)} finished · ${fmt(stats.runs.wins)} won`} />
         <Tile n={stats.bosses.total} label="Bosses defeated" sub={`${plural(stats.bosses.byName.find(row => row.name === 'pumpkin')?.n ?? 0, 'Great Pumpkin')} among them`} />
