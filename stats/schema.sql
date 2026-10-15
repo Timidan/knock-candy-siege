@@ -1,6 +1,7 @@
--- Counters, updated as events arrive. kind 'total' holds the fixed totals (players, runs_started,
+-- Counters, updated as events arrive. kind 'total' holds the fixed totals (players, runners, runs_started,
 -- runs_finished, wins, quits, play_seconds, stars, kills, bosses, grants, purchases); 'day' holds unique
--- players per UTC day (key 2026-10-13); 'kill', 'boss', 'hero', 'level' and 'purchase' hold one row per name.
+-- players per UTC day (key 2026-10-13); 'kill', 'boss', 'hero', 'level', 'purchase', 'ref' (referring host
+-- per visit) and 'device' (phone, tablet or desktop per visit) hold one row per name.
 CREATE TABLE IF NOT EXISTS tallies (
   kind TEXT NOT NULL,
   key TEXT NOT NULL,
@@ -15,6 +16,11 @@ CREATE TABLE IF NOT EXISTS players (
   last_day TEXT NOT NULL
 ) WITHOUT ROWID;
 CREATE INDEX IF NOT EXISTS players_last_day ON players(last_day);
+
+-- One row per browser id that started at least one level (counted from 2026-10-15). The Worker also creates it on first use.
+CREATE TABLE IF NOT EXISTS runners (
+  pid TEXT PRIMARY KEY
+) WITHOUT ROWID;
 
 -- Rate-limit counters. bucket is a UTC hour (2026-10-13T09) or day; key is ip:<hash>, pid:<uuid> or new:<hash>.
 -- Buckets from earlier days are deleted when the day's salt is created.

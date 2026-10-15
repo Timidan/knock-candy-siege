@@ -46,7 +46,7 @@ export async function renderCommunityCard(stats: Stats, goal: number) {
     ctx.restore()
   }
   text(stats.kills.total >= goal ? 'Goal reached!' : `${Math.floor(pct)}% of the way. Every player’s stops count.`, 64, 426, 28, LILAC, 'Patrick Hand', 620)
-  const tiles: [number, string][] = [[stats.players.allTime, 'PLAYERS'], [stats.runs.started, 'RUNS'], [stats.bosses.total, 'BOSSES BEATEN']]
+  const tiles: [number, string][] = [[stats.players.allTime, 'VISITORS'], [stats.runs.started, 'RUNS'], [stats.bosses.total, 'BOSSES BEATEN']]
   tiles.forEach(([n, label], i) => {
     const x = 64 + i * 212
     box(x, 456, 196, 104, 18, DUSK)

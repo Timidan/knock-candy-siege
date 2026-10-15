@@ -57,7 +57,7 @@ npm run dev
 | Co-op relay | `coop/`, a Cloudflare Worker with Durable Objects, https://knock-coop.timidan-knock.workers.dev | One Durable Object per Porch Party room: two player slots, inputs relayed in a fixed order, and state-hash checks. It knows room slots, not wallets, and runs no game logic. A room closes 10 minutes after it opens if the game hasn't started, and after an hour at most. Each IP can open about 5 rooms and make about 30 join attempts a minute; these limits are approximate and apply per Cloudflare location. |
 | Hosting | Cloudflare Pages | Serves https://knock.timidan.xyz, with a Content-Security-Policy that lists every service the app calls and blocks framing. |
 
-**What the stats collect:** each browser gets a random id. No wallet or IP address is stored; a salted IP hash is kept for one day to stop spam. Players can opt out in Settings, and automated browsers never send. Co-op runs aren't counted.
+**What the stats collect:** each browser gets a random id. When the game opens, it also sends the referring site's name (the host only, like `x.com`, or `direct`) and the device type (phone, tablet or desktop). No wallet, IP address or full URL is stored; a salted IP hash is kept for one day to stop spam. Players can opt out in Settings, and automated browsers never send. Co-op runs aren't counted.
 
 ## On-chain pieces
 

@@ -22,6 +22,9 @@ export type Stats = {
   stars: number
   grants: number
   purchases: { total: number; byItem: { item: string; n: number }[] }
+  // Newer keys, counted from `since`; absent from an older Worker.
+  runners?: { allTime: number; since: string }
+  visits?: { since: string; referrers: { host: string; n: number }[]; devices: Record<'phone' | 'tablet' | 'desktop', number> }
 }
 type Legends = { legends: Record<string, { name: string }>; greatPumpkin: { name: string } }
 type Row = { key: string; label: string; n: number; color?: string }
@@ -40,7 +43,7 @@ function ago(seconds: number) {
 const skeletons = (stats: Stats) => stats.kills.byKind.find(row => row.kind === 'skeleton')?.n ?? 0
 function shareText(stats: Stats) {
   const bones = skeletons(stats)
-  return `${plural(stats.players.allTime, 'player has', 'players have')} stopped ${plural(stats.kills.total, 'monster')}${bones ? `, ${fmt(bones)} of them skeletons,` : ''} in Knock: Candy Siege 🎃 ${location.host}/stats`
+  return `Players have stopped ${plural(stats.kills.total, 'monster')}${bones ? `, ${fmt(bones)} of them skeletons,` : ''} in Knock: Candy Siege 🎃 ${location.host}/stats`
 }
 // Names come from the game's own data; anything the game does not know is never printed.
 function killRows(stats: Stats): Row[] {
@@ -61,6 +64,13 @@ function bossRows(stats: Stats, legends: Legends | null): Row[] {
     const label = row.name === 'pumpkin' ? legends.greatPumpkin.name : Object.hasOwn(legends.legends, row.name) ? legends.legends[row.name].name : ''
     return label ? [{ key: row.name, label, n: row.n }] : []
   })
+}
+// Host names are reported by browsers, checked by the Worker against ^[a-z0-9.-]{1,40}$; React prints them as plain text.
+function referrerRows(visits: NonNullable<Stats['visits']>): Row[] {
+  return visits.referrers.map(row => ({ key: row.host, label: row.host === 'direct' ? 'Direct or unknown' : row.host, n: row.n }))
+}
+function deviceRows(visits: NonNullable<Stats['visits']>): Row[] {
+  return (['phone', 'tablet', 'desktop'] as const).map(name => ({ key: name, label: name[0].toUpperCase() + name.slice(1), n: visits.devices[name] ?? 0 })).filter(row => row.n > 0)
 }
 function itemRows(stats: Stats): Row[] {
   return stats.purchases.byItem.flatMap(row => {
@@ -153,6 +163,7 @@ export default function StatsPage() {
   }
   const age = stats ? Math.max(0, Math.round((now - Date.parse(stats.generatedAt)) / 1000)) : 0
   const daily = stats?.players.daily ?? [], best = Math.max(1, ...daily.map(row => row.players))
+  const since = (iso: string) => day(iso, { day: 'numeric', month: 'short' })
   return <main className="stats-page">
     <div className="stats-head">
       <span className="stats-eyebrow">KNOCK: CANDY SIEGE</span>
@@ -182,7 +193,8 @@ export default function StatsPage() {
     </section> : <>
       <Goal total={stats.kills.total} />
       <section className="stats-headline" aria-label="Headline numbers">
-        <Tile n={stats.players.allTime} label="Players" sub={`${fmt(stats.players.today)} today · ${fmt(stats.players.last7Days)} this week`} />
+        <Tile n={stats.players.allTime} label="Visitors" sub="browsers that opened the game" />
+        {stats.runners && <Tile n={stats.runners.allTime} label="Players" sub={`started a level, counted from ${since(stats.runners.since)}`} />}
         <Tile n={stats.kills.total} label="Monsters stopped" sub={`${fmt(skeletons(stats))} of them skeletons`} />
         <Tile n={stats.runs.started} label="Runs" sub={`${fmt(stats.runs.finished)} finished · ${fmt(stats.runs.wins)} won`} />
         <Tile n={stats.bosses.total} label="Bosses defeated" sub={`${plural(stats.bosses.byName.find(row => row.name === 'pumpkin')?.n ?? 0, 'Great Pumpkin')} among them`} />
@@ -197,11 +209,11 @@ export default function StatsPage() {
       <div className="stats-grid">
         <section className="board" aria-labelledby="stats-kills"><h2 id="stats-kills">Who got stopped</h2><Bars rows={killRows(stats)} empty="Nobody has been stopped yet. The porch awaits." /></section>
         <section className="board" aria-labelledby="stats-days">
-          <h2 id="stats-days">Players per day</h2>
-          <ol className="stats-days">{daily.map(row => <li key={row.day} title={`${day(row.day, { day: 'numeric', month: 'short' })}: ${plural(row.players, 'player')}`} aria-label={`${day(row.day, { day: 'numeric', month: 'long' })}: ${plural(row.players, 'player')}`}>
+          <h2 id="stats-days">Visitors per day</h2>
+          <ol className="stats-days">{daily.map(row => <li key={row.day} title={`${day(row.day, { day: 'numeric', month: 'short' })}: ${plural(row.players, 'visitor')}`} aria-label={`${day(row.day, { day: 'numeric', month: 'long' })}: ${plural(row.players, 'visitor')}`}>
             <span style={{ height: `${row.players / best * 100}%` }} /><small aria-hidden="true">{Number(row.day.slice(8))}</small>
           </li>)}</ol>
-          <p className="stats-note">Last 14 days, UTC. Today: {plural(stats.players.today, 'player')}.</p>
+          <p className="stats-note">Last 14 days, UTC. Today: {plural(stats.players.today, 'visitor')} · {fmt(stats.players.last7Days)} in the last 7 days.</p>
         </section>
         <section className="board" aria-labelledby="stats-heroes">
           <h2 id="stats-heroes">Top porch protectors</h2>
@@ -213,8 +225,15 @@ export default function StatsPage() {
         <section className="board" aria-labelledby="stats-levels"><h2 id="stats-levels">Most-played porches</h2><Bars rows={levelRows(stats)} empty="No runs yet. Be the first." /></section>
         <section className="board" aria-labelledby="stats-bosses"><h2 id="stats-bosses">Bosses defeated</h2><Bars rows={bossRows(stats, legends)} empty="No boss has fallen yet." /></section>
         {stats.purchases.total > 0 && <section className="board" aria-labelledby="stats-shop"><h2 id="stats-shop">Shop favourites</h2><Bars rows={itemRows(stats)} empty="" /></section>}
+        {stats.visits && <section className="board" aria-labelledby="stats-visits">
+          <h2 id="stats-visits">Where visitors come from</h2>
+          <Bars rows={referrerRows(stats.visits)} empty="No visits counted yet." />
+          <h3>Phone, tablet or desktop</h3>
+          <Bars rows={deviceRows(stats.visits)} empty="No visits counted yet." />
+          <p className="stats-note">Counted each time the game is opened, from {since(stats.visits.since)} only. Top 6 sites.</p>
+        </section>}
       </div>
     </>}
-    <p className="stats-privacy">These numbers are reported anonymously by players’ browsers, so treat them as a community tally, not an audit. Anonymous by design: each browser gets a random id. No wallet or IP address is stored; a salted IP hash is kept for one day only to stop spam. Opt out any time in the game’s Settings.</p>
+    <p className="stats-privacy">These numbers are reported anonymously by players’ browsers, so treat them as a community tally, not an audit. Anonymous by design: each browser gets a random id. When the game opens, it also sends the name of the site that linked to it (like x.com, never the full address) and whether it’s a phone, tablet or desktop. No wallet or IP address is stored; a salted IP hash is kept for one day only to stop spam. Opt out any time in the game’s Settings.</p>
   </main>
 }

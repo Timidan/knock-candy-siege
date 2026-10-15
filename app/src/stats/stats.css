@@ -35,7 +35,7 @@
 .stats-goal p { margin: 10px 0 0; color: #d5bbdb; font-size: 17px; }
 .stats-goal b { font: 400 20px var(--font-display); color: #ffe1a8; letter-spacing: .02em; }
 
-.stats-headline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.stats-headline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
 .stats-tile { padding: 22px 12px 16px; text-align: center; background: var(--grain), #3a2848; }
 .stats-tile strong {
   display: block;
@@ -90,6 +90,7 @@
 @media (max-width: 760px) {
   .stats-page { gap: 18px; }
   .stats-headline { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stats-headline > :nth-child(odd):last-child { grid-column: 1 / -1; } /* five tiles: the last one spans the row */
   .stats-grid { grid-template-columns: 1fr; }
   .stats-grid > :first-child { grid-row: auto; }
   .stats-tile { padding: 18px 8px 14px; }

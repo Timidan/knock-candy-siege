@@ -1,4 +1,5 @@
-// Anonymous play stats for the public /stats page: a random id per browser, no wallet, nothing else.
+// Anonymous play stats for the public /stats page: a random id per browser, plus on opening the game the referring
+// site's host name and the device type. No wallet, no IP, no full URL.
 // Off when VITE_STATS_URL is unset or the player turns it off in Settings. Fire-and-forget: it never throws or waits.
 export const STATS_URL = (import.meta.env.VITE_STATS_URL || '').replace(/\/$/, '')
 const PID_KEY = 'knock-stats-pid', OFF_KEY = 'knock-stats-off'
@@ -19,10 +20,26 @@ function pid() {
   }
   return id
 }
+// The referring site's host name only (no path or query), or direct. t.co and Discord's app variants are folded into one name.
+function referrer() {
+  let host = ''
+  try { host = new URL(document.referrer).hostname.toLowerCase().replace(/^www\./, '') } catch { /* No referrer. */ }
+  if (!host || host === location.hostname || host === 'knock.timidan.xyz') return 'direct'
+  if (host === 't.co') return 'x.com'
+  return host === 'com.discord' || /(^|\.)discord(app)?\.com$/.test(host) ? 'discord.com' : host
+}
+// Touch decides phone or tablet, not the user agent: iPadOS reports a Mac. ponytail: a touch-screen laptop counts as a tablet.
+function device() {
+  const touch = !!window.matchMedia?.('(pointer: coarse)').matches || navigator.maxTouchPoints > 1
+  return !touch ? 'desktop' : Math.min(screen.width, screen.height) < 600 ? 'phone' : 'tablet'
+}
 // A text/plain body keeps this a simple CORS request (no preflight); keepalive lets it finish while the page closes.
 export function track(type: 'session' | 'run_start' | 'run_end' | 'grant' | 'purchase', data: Record<string, unknown> = {}) {
   if (!statsEnabled()) return
-  try { void fetch(`${STATS_URL}/event`, { method: 'POST', keepalive: true, body: JSON.stringify({ ...data, pid: pid(), type }) }).catch(() => {}) } catch { /* Stats never interrupt play. */ }
+  try {
+    const visit = type === 'session' ? { ref: referrer(), device: device() } : {}
+    void fetch(`${STATS_URL}/event`, { method: 'POST', keepalive: true, body: JSON.stringify({ ...data, ...visit, pid: pid(), type }) }).catch(() => {})
+  } catch { /* Stats never interrupt play. */ }
 }
 
 const slug = (value: unknown) => String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32)

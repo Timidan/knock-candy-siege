@@ -1,6 +1,8 @@
 // Siege Stats: anonymous play counters for Knock: Candy Siege. Browsers POST /event; the public page reads GET /stats.
 const PID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
-const NAME = /^[a-z0-9-]{1,32}$/
+const NAME = /^[a-z0-9-]{1,32}$/, HOST = /^[a-z0-9.-]{1,40}$/, DEVICES = ['phone', 'tablet', 'desktop']
+// Players who started a level, referring sites and devices are counted from this UTC day; nothing earlier is estimated.
+const SINCE = '2026-10-15'
 const TYPES = ['session', 'run_start', 'run_end', 'grant', 'purchase']
 // Per UTC hour: events per IP and per browser id. Per UTC day: new browser ids per IP, so fake ids cannot add many "players".
 const LIMIT = { ip: 120, pid: 60, newPids: 30 }
@@ -18,6 +20,11 @@ function clean(body) {
   if (typeof body.pid !== 'string' || !PID.test(body.pid)) return 'Invalid pid'
   if (!TYPES.includes(body.type)) return 'Unknown type'
   const event = { pid: body.pid, type: body.type }
+  if (body.type === 'session') {
+    // Optional, and dropped when invalid, so a visit still counts.
+    if (typeof body.ref === 'string' && HOST.test(body.ref)) event.ref = body.ref
+    if (DEVICES.includes(body.device)) event.device = body.device
+  }
   if (body.type === 'purchase') {
     if (typeof body.item !== 'string' || !NAME.test(body.item)) return 'Invalid item'
     event.item = body.item
@@ -56,9 +63,19 @@ function writes(db, event, day) {
     // The WHERE skips the write (and its index write) for every event after a player's first one of the day.
     db.prepare('INSERT INTO players (pid, last_day) VALUES (?, ?) ON CONFLICT (pid) DO UPDATE SET last_day = excluded.last_day WHERE players.last_day < excluded.last_day').bind(event.pid, day),
   ]
+  if (event.type === 'session') {
+    if (event.ref) statements.push(add(db, 'ref', { [event.ref]: 1 }))
+    if (event.device) statements.push(add(db, 'device', { [event.device]: 1 }))
+  }
   if (event.type === 'run_start') {
     totals.runs_started = 1
-    statements.push(add(db, 'level', { [event.level]: 1 }), add(db, 'hero', { [event.hero]: 1 }))
+    statements.push(
+      // Created here so the Worker works before schema.sql is re-applied; a no-op once the table exists.
+      db.prepare('CREATE TABLE IF NOT EXISTS runners (pid TEXT PRIMARY KEY) WITHOUT ROWID'),
+      // Like players: decided before the insert, inside the batch, so one browser counts once.
+      db.prepare(`INSERT INTO tallies (kind, key, n) SELECT 'total', 'runners', 1 WHERE NOT EXISTS (SELECT 1 FROM runners WHERE pid = ?) ${plusOne}`).bind(event.pid),
+      db.prepare('INSERT OR IGNORE INTO runners (pid) VALUES (?)').bind(event.pid),
+      add(db, 'level', { [event.level]: 1 }), add(db, 'hero', { [event.hero]: 1 }))
   }
   if (event.type === 'run_end') {
     Object.assign(totals, { [event.quit ? 'quits' : 'runs_finished']: 1, wins: +event.won, stars: event.stars, play_seconds: event.durationS, kills: sum(event.kills), bosses: sum(event.bosses) })
@@ -88,18 +105,19 @@ async function saltFor(db, day) {
 
 async function readStats(db) {
   const top = (kind, limit) => db.prepare('SELECT key, n FROM tallies WHERE kind = ? ORDER BY n DESC LIMIT ?').bind(kind, limit)
-  const [totals, kills, bosses, heroes, levels, purchases, days, week] = (await db.batch([
+  const [totals, kills, bosses, heroes, levels, purchases, refs, devices, days, week] = (await db.batch([
     db.prepare("SELECT key, n FROM tallies WHERE kind = 'total'"),
-    top('kill', MAX_NAMES), top('boss', 30), top('hero', 10), top('level', 20), top('purchase', 30),
+    top('kill', MAX_NAMES), top('boss', 30), top('hero', 10), top('level', 20), top('purchase', 30), top('ref', 6), top('device', 3),
     db.prepare("SELECT key, n FROM tallies WHERE kind = 'day' AND key >= ?").bind(utcDay(13)),
     db.prepare('SELECT count(*) AS n FROM players WHERE last_day >= ?').bind(utcDay(6)),
   ])).map(result => result.results)
   const total = Object.fromEntries(totals.map(row => [row.key, row.n])), daily = Object.fromEntries(days.map(row => [row.key, row.n]))
-  const value = key => total[key] ?? 0
+  const value = key => total[key] ?? 0, device = Object.fromEntries(devices.map(row => [row.key, row.n]))
   return {
     generatedAt: new Date().toISOString(),
     // Every number here is reported by anonymous browsers: the Worker checks shape and rate, not gameplay or payments.
     reported: true,
+    // players: every browser that sent anything, including ones that only opened the title screen (the page calls them visitors).
     players: { allTime: value('players'), today: daily[utcDay()] ?? 0, last7Days: week[0].n,
       daily: Array.from({ length: 14 }, (_, i) => utcDay(13 - i)).map(day => ({ day, players: daily[day] ?? 0 })) },
     runs: { started: value('runs_started'), finished: value('runs_finished'), wins: value('wins'), quits: value('quits'), playSeconds: value('play_seconds') },
@@ -110,6 +128,11 @@ async function readStats(db) {
     stars: value('stars'),
     grants: value('grants'),
     purchases: { total: value('purchases'), byItem: purchases.map(row => ({ item: row.key, n: row.n })) },
+    // Browsers that started at least one level since SINCE.
+    runners: { allTime: value('runners'), since: SINCE },
+    // Per visit (page load) since SINCE: the referring site's host name, or direct, and the device type.
+    visits: { since: SINCE, referrers: refs.map(row => ({ host: row.key, n: row.n })),
+      devices: Object.fromEntries(DEVICES.map(name => [name, device[name] ?? 0])) },
   }
 }
 

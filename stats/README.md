@@ -15,15 +15,16 @@ Event types (`pid` is a lowercase v4 UUID made in the browser):
 
 | `type` | Fields | Counts |
 | --- | --- | --- |
-| `session` | none | the player (any event does) |
-| `run_start` | `level` (`1`–`6`, `endless`, `daily`), `hero` (Chog id 1–1969) | runs started, runs per level, runs per hero |
+| `session` | optional `ref` (referring host name, or `direct`), optional `device` (`phone`, `tablet`, `desktop`) | the visitor (any event does), visits per referring host and per device |
+| `run_start` | `level` (`1`–`6`, `endless`, `daily`), `hero` (Chog id 1–1969) | the player who started a level (once per browser id), runs started, runs per level, runs per hero |
 | `run_end` | `level`, `hero`, `won`, `quit`, `stars`, `score`, `durationS`, `wavesCleared`, `killsByKind`, `bossesDefeated` | finished (win or loss) or quit, wins, stars, play time, kills per kind, bosses per id |
 | `grant` | none | starter grants paid |
 | `purchase` | `item` (shop item id) | purchases, per item |
 
 Validation, at this trust boundary: names (`level`, kill kinds, boss ids, `item`) must match
 `^[a-z0-9-]{1,32}$`. A bad `pid`, `type`, `level`, `hero` or `item` rejects the event. Inside a run, bad
-kind or boss names are dropped and numbers are clamped. A kind counts at most 3,000 kills, and at most 60
+kind or boss names are dropped and numbers are clamped. On `session`, a `ref` not matching `^[a-z0-9.-]{1,40}$` or an
+unknown `device` is dropped and the visit still counts. A kind counts at most 3,000 kills, and at most 60
 kinds and 60 bosses are read. `durationS` is at most 7,200 and stars 0–3, counted only for a win. A run
 holding more than 5,000 kills is scaled down to 5,000 (no level has more than ~520 enemies). `score` and
 `wavesCleared` are accepted but not stored; nothing shows them yet.
@@ -44,8 +45,14 @@ the earlier rate-limit rows are deleted, so old hashes cannot be traced back to 
   "kills": { "total": 0, "byKind": [{ "kind": "skeleton", "n": 0 }] },
   "bosses": { "total": 0, "byName": [{ "name": "pumpkin", "n": 0 }] },
   "heroes": [{ "id": 1481, "runs": 0 }], "levels": [{ "level": "1", "runs": 0 }],
-  "stars": 0, "grants": 0, "purchases": { "total": 0, "byItem": [{ "item": "21", "n": 0 }] } }
+  "stars": 0, "grants": 0, "purchases": { "total": 0, "byItem": [{ "item": "21", "n": 0 }] },
+  "runners": { "allTime": 0, "since": "2026-10-15" },
+  "visits": { "since": "2026-10-15", "referrers": [{ "host": "x.com", "n": 0 }], "devices": { "phone": 0, "tablet": 0, "desktop": 0 } } }
 ```
+
+`players` counts every browser id that sent anything, including ones that only opened the title screen (the
+page calls them visitors). `runners` counts browser ids that started at least one level; `visits` counts each
+`session` (page load) by referring host (top 6) and device. These three started on `since` and have no earlier history.
 
 `daily` always has 14 UTC days, oldest first. Lists are sorted by count: the top 10 heroes, 20 levels,
 30 bosses or items, and 60 kinds. "Finished" means a win or a loss. A quit (leaving a loaded run before
@@ -54,7 +61,7 @@ it ends) is counted separately. Its kills and play time still count.
 Schema (`schema.sql`): `tallies(kind, key, n)` holds every counter: kind `total`, `day`, `kill`,
 `boss`, `hero`, `level` or `purchase`, with a `(kind, n DESC)` index for top lists. Each event is a
 handful of upserts, whatever the number of kinds. `players(pid, last_day)` gives the 7-day unique
-count through an index on `last_day`. New players and each day's uniques are counted inside the event's
+count through an index on `last_day`. `runners(pid)` marks ids already counted as players; the Worker also creates it on first use. New players and each day's uniques are counted inside the event's
 write transaction (guarded by `NOT EXISTS` on `players`), so simultaneous events from one new id count it once. `hits(bucket, key, n)` holds rate limits and `salts(day, salt)`
 the IP salts. A `/stats` read touches at most ~180 counter rows plus one index entry per player active
 in the last 7 days. Each Worker isolate recomputes it at most every 30 seconds, concurrent requests share one D1 read, and it serves the
@@ -65,5 +72,5 @@ CORS: `https://knock.timidan.xyz`, `https://knock-ej6.pages.dev` and its preview
 `http://localhost:*`. Other browser origins get `403`. Requests with no `Origin` (curl) are allowed.
 
 Deploy from this directory with `npm install` (or the cached `npx wrangler`), then `npx wrangler deploy`.
-`schema.sql` is already applied remotely (`npx wrangler d1 execute siege-stats --remote --file schema.sql`).
-To reset the public numbers: `npx wrangler d1 execute siege-stats --remote --command "DELETE FROM tallies; DELETE FROM players; DELETE FROM hits; DELETE FROM salts"`.
+`schema.sql` is idempotent; re-apply it after a schema change (`npx wrangler d1 execute siege-stats --remote --file schema.sql`).
+To reset the public numbers: `npx wrangler d1 execute siege-stats --remote --command "DELETE FROM tallies; DELETE FROM players; DELETE FROM runners; DELETE FROM hits; DELETE FROM salts"`.
