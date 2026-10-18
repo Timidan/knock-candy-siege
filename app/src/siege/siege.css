@@ -11,6 +11,12 @@
 .siege-house { position: absolute; left: 5%; bottom: -11%; font: 500px/1 Georgia, serif; color: #26182f; transform: rotate(8deg); }
 .siege-modal { width: min(790px, calc(100vw - 36px)); max-width: calc(100vw - var(--siege-safe-left) - var(--siege-safe-right) - 36px); max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 36px); left: var(--siege-safe-left); right: var(--siege-safe-right); top: var(--siege-safe-top); bottom: var(--siege-safe-bottom); padding: clamp(22px, 4vw, 42px); overflow: auto; margin: auto; text-align: center; background-color: #3a2848; border-width: 4px; box-shadow: 8px 10px 0 #120d1a; color: var(--paper); }
 .siege-modal::backdrop { background: #160f2088; }
+/* The close button rides the top corner of every dismissible dialog while its card scrolls (Siege.tsx Modal). The anchor has no height, so layout is unchanged. */
+.siege-modal-close-anchor { position: sticky; top: 12px; height: 0; z-index: 4; }
+.siege-modal-close { position: absolute; top: -8px; right: -16px; width: 44px; height: 44px; display: grid; place-items: center; padding: 0; border-radius: 50%; border: 3px solid #120d1a; background: var(--paper); color: #2a1d3d; font: 400 26px/1 var(--font-display, sans-serif); box-shadow: 2px 3px 0 #120d1a; cursor: pointer; }
+.siege-modal-close:hover { background: #fff3d6; }
+.siege-modal-close:active { transform: translateY(2px); box-shadow: 0 1px 0 #120d1a; }
+.siege-modal-close:focus-visible { outline: 3px solid #ff8a3d; outline-offset: 2px; }
 /* Dialogs settle in over 180 ms and leave in 120 ms (Siege.tsx closeMenu waits for the exit). The result card keeps its own slide-in, declared later. */
 .siege-modal { animation: siege-modal-in .18s cubic-bezier(.215, .61, .355, 1) both; }
 .siege-modal::backdrop { animation: siege-fade-in .18s ease-out both; }

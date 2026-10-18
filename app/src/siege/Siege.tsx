@@ -55,12 +55,22 @@ const randomHero = (random: () => number) => { let id: number; do id = Math.floo
 // Dialogs settle in (siege.css); `closing` plays the exit while the parent waits to remove it. One replacing another keeps its backdrop steady.
 // A dialog opening fresh (pause, a new enemy, the in-level shop) plays the open cue; one replacing another came from a tap, which has its own cue.
 // quiet: the result card, which has its fanfare. Buttons and links that aren't stickers click here, after any cue of their own (which wins).
-function Modal({ children, label, onEscape, className = '', closing = false, quiet = false }: { children: ReactNode; label: string; onEscape: () => void; className?: string; closing?: boolean; quiet?: boolean }) {
+// closable: a close button pinned to the top corner does what Escape does, so a card taller than a phone never needs scrolling to leave.
+function Modal({ children, label, onEscape, className = '', closing = false, quiet = false, closable = true }: { children: ReactNode; label: string; onEscape: () => void; className?: string; closing?: boolean; quiet?: boolean; closable?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null)
   const [swap] = useState(() => !!document.querySelector('dialog.siege-modal[open]'))
   // Opening focus (the first button, or [data-initial-focus]) must not scroll: a card taller than a landscape phone (the boss card, the Porch Party lobby) opens at its top.
-  useEffect(() => { const dialog = ref.current; dialog?.showModal(); dialog?.querySelector<HTMLElement>('[data-initial-focus]')?.focus({ preventScroll: true }); if (dialog) dialog.scrollTop = 0; if (!swap && !quiet && !document.hidden) playUi('ui-open'); return () => dialog?.close() }, [])
-  return <dialog ref={ref} inert={closing} className={`siege-modal board ${className}${swap ? ' siege-modal--swap' : ''}${closing ? ' siege-modal--closing' : ''}`} aria-label={label} onCancel={event => { event.preventDefault(); onEscape() }} onClick={event => { if ((event.target as Element).closest('button:not(.sticker), a')) playUi('ui-click') }}>{children}</dialog>
+  // The close button is skipped, so Enter on a fresh dialog never closes it.
+  useEffect(() => {
+    const dialog = ref.current; dialog?.showModal()
+    const first = dialog?.querySelector<HTMLElement>('[data-initial-focus]') ?? dialog?.querySelector<HTMLElement>('button:not(.siege-modal-close):not([disabled]), a[href], input:not([disabled]), select, textarea')
+    first?.focus({ preventScroll: true })
+    if (dialog) dialog.scrollTop = 0; if (!swap && !quiet && !document.hidden) playUi('ui-open'); return () => dialog?.close()
+  }, [])
+  return <dialog ref={ref} inert={closing} className={`siege-modal board ${className}${swap ? ' siege-modal--swap' : ''}${closing ? ' siege-modal--closing' : ''}`} aria-label={label} onCancel={event => { event.preventDefault(); onEscape() }} onClick={event => { if ((event.target as Element).closest('button:not(.sticker), a')) playUi('ui-click') }}>
+    {closable && <div className="siege-modal-close-anchor"><button type="button" className="siege-modal-close" aria-label="Close" tabIndex={-1} onClick={onEscape}>×</button></div>}
+    {children}
+  </dialog>
 }
 function EnemyPortrait({ assets, kind, id }: { assets: AssetPack; kind: EnemyKind; id: number }) {
   const atlas = assets.atlases.find(a => a.data.frames[`enemy/${kind}/walk/0`]), frame = atlas?.data.frames[`enemy/${kind}/walk/0`]?.frame
@@ -491,7 +501,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     {onBack && <div className="siege-back"><Sticker onClick={onBack}>← Knock</Sticker></div>}
     <div className="siege-rotate bubble">Turn your phone sideways for the best view</div>
     {run && !ready && <div className="boot"><img className="boot-logo" src="/art/ui/logo.svg" alt="" width="240" height="80" />{failed === 'lanterns' ? <RetryPanel stage="lanterns" onRetry={retry}><Sticker sound="ui-back" onClick={() => { setFailed(null); leaveLevel() }}>Level select</Sticker></RetryPanel> : <><span className="boot-candy" aria-hidden="true" /><p role="status">{STAGES.lanterns[0]}</p></>}</div>}
-    {menu && <Modal key={menu} closing={closing} quiet={menu === 'result'} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={['result', 'shop', 'hero', 'title', 'levels', 'party', 'settings'].includes(menu) ? `siege-modal--${menu}` : ''}>
+    {menu && <Modal key={menu} closing={closing} quiet={menu === 'result'} closable={menu !== 'title'} label={menu === 'intro' ? 'New enemy' : menu === 'street' ? 'Your $CHOG perks' : `Candy Siege ${menu}`} onEscape={escape} className={['result', 'shop', 'hero', 'title', 'levels', 'party', 'settings'].includes(menu) ? `siege-modal--${menu}` : ''}>
       {installTip && <aside className="siege-install-tip" aria-label="Play full screen on iPhone">
         <strong>Add Knock to your Home Screen to play full screen</strong>
         <p>In Safari, tap Share (the square with an arrow). Scroll down and tap “Add to Home Screen”, then “Add”. Open Knock from its new icon.</p>
