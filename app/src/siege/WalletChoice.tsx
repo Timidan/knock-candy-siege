@@ -17,7 +17,7 @@ export function WalletChoice({ wallet, disabled = false }: { wallet: SiegeWallet
     {/* Phones and tablets have no wallet extension, so offer to reopen this page, invite and all, in a wallet app's browser. */}
     {!injectedWallet() && (matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 1) && <div role="group" aria-label="Open Knock in a wallet app" className="row" style={{ justifyContent: 'center' }}>
       <p style={{ flexBasis: '100%', maxWidth: 'none', textAlign: 'center' }}>No wallet in this browser? Open Knock in your wallet app:</p>
-      {walletLinks(location.href).map(app => <a key={app.name} className="sticker" href={app.href} rel="noreferrer">{app.name}</a>)}
+      {walletLinks(location.href).map(app => <a key={app.name} className="sticker" href={app.href} rel="noreferrer">{app.logo && <img src={`/art/partners/${app.logo}`} alt="" />}{app.name}</a>)}
     </div>}
     {wallet.account && <>
       <span style={pill}>{wallet.guest ? '🎮 Guest pass · testnet' : '🟣 Connected'}</span>

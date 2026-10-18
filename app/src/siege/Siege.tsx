@@ -32,7 +32,7 @@ import { useShop } from './useShop'
 import { useSiegeWallet } from './guestWallet'
 import { WalletChoice } from './WalletChoice'
 import { useCandyBank } from './candyBank'
-import { holderUrl } from '../chain'
+import { holderUrl, CANDY_TOKEN } from '../chain'
 import { timeoutSignal } from '../abort'
 import { thumb } from '../images'
 import { reopenShop } from './shopChain'
@@ -115,6 +115,13 @@ const DIM = 'linear-gradient(#25183a8c, #25183a8c), '
 const PADLOCK = <svg viewBox="0 0 24 28" width="30" height="35" aria-hidden="true"><path d="M6.5 13V9a5.5 5.5 0 0 1 11 0v4" fill="none" stroke="#141414" strokeWidth="6" /><path d="M6.5 13V9a5.5 5.5 0 0 1 11 0v4" fill="none" stroke="#f4eedd" strokeWidth="2.4" /><rect x="2.5" y="12" width="19" height="14" rx="3" fill="#ffc800" stroke="#141414" strokeWidth="2.2" /><circle cx="12" cy="18" r="2.2" fill="#141414" /><path d="M12 19v4" stroke="#141414" strokeWidth="2.2" strokeLinecap="round" /></svg>
 // The title's Settings cog, inked like the /art/icons set: an ink rim under cream teeth (dashes on a ring), then the hub.
 const GEAR = <svg viewBox="-12 -12 24 24" width="28" height="28" aria-hidden="true"><circle r="8.4" fill="none" stroke="#141414" strokeWidth="6.6" strokeDasharray="4.6 1.997" strokeDashoffset=".6" /><circle r="8.4" fill="none" stroke="#f4eedd" strokeWidth="4.6" strokeDasharray="3.4 3.197" /><circle r="6.6" fill="#f4eedd" stroke="#141414" strokeWidth="2" /><circle r="2.4" fill="#836ef9" stroke="#141414" strokeWidth="1.6" /></svg>
+// The title's "Powered by" strip: [name, link, file in /art/partners, logo height px, light plate]. Each logo sits on its brand's own ground (siege.css).
+const POWERED: [string, string, string, number, boolean][] = [
+  ['Chog', 'https://www.chog.xyz', 'chog.png', 28, true],
+  ['Monad', 'https://www.monad.xyz', 'monad.svg', 20, true],
+  ['vibe/vibe', `https://testnet.vibevibe.fun/token/${CANDY_TOKEN}`, 'vibevibe.svg', 30, false],
+  ['Robinhood Chain', 'https://docs.robinhood.com/chain/connecting/', 'robinhood-chain.svg', 20, false],
+]
 // The win fanfare: earned stars start slamming in at these times (ms; siege.css uses the same delays) and land IMPACT ms later.
 const SLAMS = [300, 650, 1000], IMPACT = 200
 const SHAKE: Keyframe[] = [{ translate: '0 0' }, { translate: '-5px 2px' }, { translate: '4px -2px' }, { translate: '-2px 1px' }, { translate: '0 0' }]
@@ -524,6 +531,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
           {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK</button>}
           {STATS_URL && <a className="siege-text-button" href="/stats">Live stats</a>}
         </div>
+        <nav className={`siege-powered${save.settings.lite ? ' siege-powered--still' : ''}`} aria-label="Powered by"><span className="siege-eyebrow" aria-hidden="true">POWERED BY</span>{POWERED.map(([name, href, file, height, light], i) => <a key={name} className={light ? 'siege-powered-light' : undefined} style={{ '--i': i } as CSSProperties} href={href} target="_blank" rel="noopener noreferrer"><img src={`/art/partners/${file}`} alt={name} height={height} /></a>)}</nav>
       </div>}
       {menu === 'levels' && <>
         <span className="siege-eyebrow">CHOG TOWN · AFTER DARK</span><h2>Pick your porch</h2>

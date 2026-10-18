@@ -245,6 +245,9 @@
 .siege-wallet-account span { overflow-wrap: anywhere; }
 .siege-wallet small, .siege-wallet [role], .siege-wallet-sandbox { flex-basis: 100%; }
 .siege-wallet .siege-text-button { margin: 0; color: inherit; }
+/* Wallet app links keep the sticker's ink (the shop's link colour is pale on paper), and their logos keep their own proportions (Trust's shield is taller than wide). */
+.siege-wallet a.sticker { color: var(--ink); }
+.siege-wallet a.sticker img { width: auto; height: 22px; }
 /* Keyboard shortcuts only where there is likely a keyboard; touch players get the touch hints alone. */
 .siege-keys { display: none; }
 @media (any-pointer: fine) { .siege-keys { display: inline; } }
@@ -310,7 +313,7 @@
 .siege-modal .siege-title-mark p { margin: 8px 0 0; padding: 2px 12px; border-radius: 999px; background: #1b0f2bcc; font-size: 18px; }
 .siege-title-chog { position: relative; margin: 0; animation: siege-bob 3.2s ease-in-out infinite; }
 /* The Monad glow is a shadow, not a pseudo-element, so it never makes the dialog scroll. */
-.siege-title-chog img { display: block; width: min(72vw, 330px, calc(100dvh - 510px)); min-width: 160px; aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 0 0 0 4px #836ef9, 0 9px 0 4px #1b0f2b, 0 0 70px 24px #836ef9aa; }
+.siege-title-chog img { display: block; width: min(72vw, 330px, calc(100dvh - 574px)); min-width: 160px; aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 0 0 0 4px #836ef9, 0 9px 0 4px #1b0f2b, 0 0 70px 24px #836ef9aa; }
 .siege-title-chog figcaption { width: fit-content; margin: 14px auto 0; padding: 3px 14px; border: 2px solid var(--ink); border-radius: 999px; background: #241632; color: #ffe1a8; font-size: 17px; white-space: nowrap; }
 .siege-modal .siege-title .siege-title-play { min-width: 270px; min-height: 58px; padding: 12px 30px; font-size: 1.45rem; animation: siege-pulse 2s ease-in-out infinite; }
 /* Secondary actions: small icon tiles, labelled underneath the icon. */
@@ -319,19 +322,32 @@
 .siege-title-more .sticker img, .siege-title-more .sticker svg { width: 28px; height: 28px; }
 .siege-title-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 22px; }
 .siege-title-links .siege-text-button { display: inline-flex; align-items: center; margin: 0; min-height: 36px; font-size: 16px; }
+/* Powered by: each logo on its brand's own ground, cream for Chog and Monad, black for vibe/vibe and Robinhood Chain (whose guidelines allow white on black only, no effects on the logo, and clear space the width of its "R", 10 px at 20 px tall).
+   So the float, the shine (behind the logo) and the hover glow all belong to the plate, never the image. The plates stay level: Robinhood's logo must not rotate.
+   The Chog's height budget makes room for it: 574 px above (one row on desktop, two on a portrait phone), 182 px in the landscape grid. */
+.siege-powered { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: -6px; }
+.siege-powered a { position: relative; isolation: isolate; overflow: hidden; display: flex; align-items: center; box-sizing: border-box; height: 44px; padding: 0 10px; border: 2px solid #120d1a; border-radius: 14px 10px 14px 10px; background: #000; box-shadow: 0 3px 0 #120d1a; animation: siege-powered-float 3.6s ease-in-out calc(var(--i) * -.9s) infinite; transition: transform .15s, box-shadow .15s; }
+.siege-powered .siege-powered-light { background: #fdf7d3; }
+.siege-powered img { display: block; }
+.siege-powered a::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(105deg, transparent 30%, #ffffff70 50%, transparent 70%); translate: -100% 0; animation: siege-powered-shine 5s ease-in-out calc(1s + var(--i) * .25s) infinite both; }
+.siege-powered a:is(:hover, :focus-visible) { transform: translateY(-3px); box-shadow: 0 6px 0 #120d1a, 0 0 12px 2px #836ef9; }
+.siege-powered a:focus-visible { outline: 3px solid #ff8a3d; outline-offset: 2px; }
+@keyframes siege-powered-float { 50% { translate: 0 -3px; } }
+@keyframes siege-powered-shine { 0%, 70% { translate: -100% 0; } to { translate: 100% 0; } }
+.siege-powered--still a, .siege-powered--still a::before { animation: none; }
 @keyframes siege-bob { 50% { translate: 0 -8px; } }
 @keyframes siege-pulse { 50% { scale: 1.03; } }
 /* Landscape phones (844 x 390, 740 x 360): one line of wordmark, the Chog as tall as the rest allows, and the play row with the links on its left and the tiles on its right. Nothing scrolls. */
 @media (orientation: landscape) and (max-height: 500px) {
   .siege-modal--title { padding: 6px 12px; max-height: calc(100dvh - var(--siege-safe-top) - var(--siege-safe-bottom) - 8px); }
-  .siege-title { display: grid; grid-template-columns: 1fr auto 1fr; grid-template-areas: 'mark mark mark' 'chog chog chog' 'links play more'; align-items: center; gap: 4px 12px; }
+  .siege-title { display: grid; grid-template-columns: 1fr auto 1fr; grid-template-areas: 'mark mark mark' 'chog chog chog' 'links play more' 'powered powered powered'; align-items: center; gap: 4px 12px; }
   .siege-title-mark { grid-area: mark; flex-direction: row; justify-content: center; gap: 14px; }
   .siege-wordmark { width: 96px; }
   .siege-title h1 { margin: 0; font-size: 34px; }
   .siege-title-mark p { display: none; }
   .siege-title-chog { grid-area: chog; justify-self: center; margin-bottom: 6px; }
   /* The same safe-area insets the dialog's max-height subtracts (a notched phone's home bar), or the title would scroll there. */
-  .siege-title-chog img { width: calc(100dvh - 134px - var(--siege-safe-top) - var(--siege-safe-bottom)); min-width: 0; }
+  .siege-title-chog img { width: calc(100dvh - 182px - var(--siege-safe-top) - var(--siege-safe-bottom)); min-width: 0; }
   /* The caption becomes a tag on the portrait's corner, so it costs no height. */
   .siege-title-chog figcaption { position: absolute; left: calc(100% - 22px); bottom: 16px; margin: 0; rotate: -5deg; font-size: 15px; }
   /* The play row (links, play, tiles) fits a notched mini's 620 px between its side insets. */
@@ -342,8 +358,9 @@
   .siege-title-links { grid-area: links; justify-self: end; flex-direction: column; align-items: flex-end; }
   /* Two stacked 26 px links stay inside the 52 px play row. */
   .siege-title-links .siege-text-button { min-height: 26px; padding: 0 2px; font-size: 14px; white-space: nowrap; }
+  .siege-powered { grid-area: powered; margin-top: 0; }
 }
-@media (prefers-reduced-motion: reduce) { .siege-title-chog, .siege-modal .siege-title .siege-title-play { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .siege-title-chog, .siege-modal .siege-title .siege-title-play, .siege-powered a, .siege-powered a::before { animation: none; } .siege-powered a { transition: none; } .siege-powered a:is(:hover, :focus-visible) { transform: none; } }
 
 /* Level cards are night tablets. Each is one button: a pumpkin NIGHT header, the map in a thin frame with the level's last legend boss on its corner, star sockets, and a green PLAY that sinks while the tablet is held. */
 .siege-levels { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 18px 14px; padding: 8px 4px 14px; }
