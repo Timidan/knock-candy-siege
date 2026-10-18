@@ -124,7 +124,6 @@ const POWERED: [string, string, string, number, boolean][] = [
   ['Chog', 'https://www.chog.xyz', 'chog.png', 28, true],
   ['Monad', 'https://www.monad.xyz', 'monad.svg', 20, true],
   ['vibe/vibe', `https://testnet.vibevibe.fun/token/${CANDY_TOKEN}`, 'vibevibe.svg', 30, false],
-  ['Robinhood Chain', 'https://docs.robinhood.com/chain/connecting/', 'robinhood-chain.svg', 20, false],
 ]
 // The win fanfare: earned stars start slamming in at these times (ms; siege.css uses the same delays) and land IMPACT ms later.
 const SLAMS = [300, 650, 1000], IMPACT = 200
