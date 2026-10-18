@@ -295,8 +295,9 @@
   .siege-feedback-rating { margin-bottom: 4px; }
   .siege-feedback-rating button { min-height: 40px; font-size: 32px; }
   .siege-modal .siege-feedback-foot { margin: 4px 0 8px; }
-  /* Kept slim so the share button below still peeks into view. */
+  /* Kept slim so the share button below still peeks into view, with the challenge button beside it. */
   .siege-modal--result .siege-feedback-open { margin: 0 auto; min-height: 36px; }
+  .siege-modal--result .siege-share-row { gap: 6px 8px; }
   .siege-modal .siege-feedback-thanks { margin: 2px auto 0; }
 }
 
@@ -323,12 +324,19 @@
 .siege-cotd strong { font: 400 17px/1.1 var(--font-display); letter-spacing: .02em; color: #ffd23f; }
 .siege-cotd small { font-size: 15px; line-height: 1.2; color: #e8d5ee; }
 .siege-modal .siege-cotd .sticker { grid-column: 1 / -1; min-height: 40px; padding: 6px 14px; font-size: 15px; }
+.siege-challenge { grid-column: 3; grid-row: 1; justify-self: start; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 280px; padding: 10px 12px 12px; border: 3px solid var(--ink); border-radius: 12px 18px 12px 18px; background: #2a1d38f0; box-shadow: 0 5px 0 #120d1a; text-align: left; }
+.siege-challenge .siege-eyebrow { color: #ff9a3d; line-height: 1.2; }
+.siege-modal .siege-challenge p { margin: 0; font-size: 17px; line-height: 1.25; }
+.siege-challenge small { font-size: 14px; line-height: 1.2; color: #ffd477; }
+.siege-modal .siege-challenge .sticker { min-height: 40px; padding: 6px 16px; font-size: 15px; }
+.siege-modal .siege-challenge-sent { margin: 4px auto 0; font-size: 15px; color: #ffe0a5; overflow-wrap: anywhere; }
 /* A narrow portrait screen stacks the row under tonight's Chog, and Chog of the Day becomes a slim chip. */
 @media (max-width: 520px) {
   .siege-title-stage { grid-template-columns: 1fr; gap: 14px; }
   .siege-title-stage > * { grid-column: 1; justify-self: center; }
   .siege-title-stage > .siege-title-chog { grid-row: 1; }
   .siege-cotd { grid-row: 2; grid-template-columns: auto 1fr auto; max-width: none; }
+  .siege-challenge { grid-row: 3; max-width: none; }
   .siege-cotd img { grid-row: auto; width: 40px; height: 40px; }
   .siege-cotd small { display: none; }
   .siege-modal .siege-cotd .sticker { grid-column: auto; }
@@ -374,6 +382,11 @@
   .siege-cotd strong { font-size: 14px; }
   .siege-cotd small { font-size: 13px; }
   .siege-modal .siege-cotd .sticker { min-height: 34px; padding: 4px 10px; font-size: 13px; }
+  .siege-challenge { max-width: 250px; padding: 6px 8px 8px; gap: 3px; }
+  .siege-challenge .siege-eyebrow { font-size: 10px; }
+  .siege-modal .siege-challenge p { font-size: 14px; }
+  .siege-challenge small { font-size: 12px; }
+  .siege-modal .siege-challenge .sticker { min-height: 34px; padding: 4px 12px; font-size: 13px; }
   /* The same safe-area insets the dialog's max-height subtracts (a notched phone's home bar), or the title would scroll there. */
   .siege-title-chog img { width: calc(100dvh - 182px - var(--siege-safe-top) - var(--siege-safe-bottom)); min-width: 0; }
   /* The caption becomes a tag on the portrait's corner, so it costs no height. */

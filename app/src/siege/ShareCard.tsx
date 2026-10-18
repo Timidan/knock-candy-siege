@@ -7,16 +7,36 @@ import { reducedMotion } from './data/save'
 import { thumb } from '../images'
 import type { Kit } from './data/kits'
 import type { Outcome } from './SiegeScene'
-import { LEVELS } from './data/level1'
-import { NIGHTS } from './data/endless'
+import { LEVELS, ENDLESS_LEVEL } from './data/level1'
+import { NIGHTS, DAILY_LEVEL } from './data/endless'
 import { heroPainter, loadPreviewHeads } from './hero/HeroPreview'
 
 export const gameLink = () => 'https://knock.timidan.xyz'
-export function shareText(result: Outcome, id: number) {
-  const score = result.score.toLocaleString('en-US'), stars = `${'★'.repeat(result.stars)}${'☆'.repeat(3 - result.stars)}`
-  if (result.mode === 'endless') return `I held out to wave ${result.wave} in Candy Siege Endless with Chog #${id}: ${result.kills} Chogs stopped, ${score} points. Can you beat it? ${gameLink()}`
-  if (result.mode === 'daily') return `Daily #${result.daily} in Candy Siege (${LEVELS[result.level - 1].name}, ${NIGHTS[result.theme].name}) with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${gameLink()}`
-  return `I ${result.won ? 'held' : 'took on'} ${LEVELS[result.level - 1].name} in Candy Siege with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${gameLink()}`
+// A friend's challenge, carried in a shared link: the night (1-6, DAILY_LEVEL or ENDLESS_LEVEL), their Chog, score and stars, plus the Daily's
+// number or a story night's run seed. Nothing in it is verified, so the game calls the score "theirs" and never saves or reports it.
+export type Challenge = { level: number; hero: number; score: number; stars: number; day: number; seed?: number }
+export function challengeLink(result: Outcome, id: number, seed?: number) {
+  const params = new URLSearchParams({ vs: result.mode === 'level' ? String(result.level) : result.mode, chog: String(id), score: String(result.score) })
+  if (result.mode !== 'endless') params.set('stars', String(result.stars))
+  if (result.mode === 'daily') params.set('day', String(result.daily))
+  if (result.mode === 'level' && seed !== undefined) params.set('seed', String(seed >>> 0))
+  return `${gameLink()}/?${params}`
+}
+// Strict: each value a plain integer in range and the night a known one. Anything else and the link is quietly ignored (null).
+export function readChallenge(search: string): Challenge | null {
+  const query = new URLSearchParams(search), vs = query.get('vs') ?? ''
+  const int = (key: string, max: number, min = 0) => { const value = query.get(key) ?? ''; return /^\d{1,10}$/.test(value) && +value >= min && +value <= max ? +value : NaN }
+  const level = vs === 'daily' ? DAILY_LEVEL : vs === 'endless' ? ENDLESS_LEVEL : /^[1-6]$/.test(vs) ? +vs : NaN
+  const hero = int('chog', 1969, 1), score = int('score', 9_999_999), stars = level === ENDLESS_LEVEL ? 0 : int('stars', 3), day = level === DAILY_LEVEL ? int('day', 99_999, 1) : 0
+  const seed = level <= 6 && query.has('seed') ? int('seed', 4_294_967_295) : undefined
+  return [level, hero, score, stars, day, seed ?? 0].some(Number.isNaN) ? null : { level, hero, score, stars, day, ...(seed === undefined ? {} : { seed }) }
+}
+// Every shared result is a challenge: the text ends with its challenge link.
+export function shareText(result: Outcome, id: number, seed?: number) {
+  const score = result.score.toLocaleString('en-US'), stars = `${'★'.repeat(result.stars)}${'☆'.repeat(3 - result.stars)}`, link = challengeLink(result, id, seed)
+  if (result.mode === 'endless') return `I held out to wave ${result.wave} in Candy Siege Endless with Chog #${id}: ${result.kills} Chogs stopped, ${score} points. Can you beat it? ${link}`
+  if (result.mode === 'daily') return `Daily #${result.daily} in Candy Siege (${LEVELS[result.level - 1].name}, ${NIGHTS[result.theme].name}) with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${link}`
+  return `I ${result.won ? 'held' : 'took on'} ${LEVELS[result.level - 1].name} in Candy Siege with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${link}`
 }
 const NIGHT = '#1B0F2B', DUSK = '#2E1A47', MONAD = '#836EF9', PUMPKIN = '#FF7A00', SLIME = '#22C55E', GOLD = '#FFD23F'
 // A star, or with four points and a thin waist, a sparkle.
@@ -114,9 +134,10 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
 
 // `bosses` is the scene's runStats().bossesDefeated; only its last entry's name reaches the effect, so a fresh array each render can't redraw the card.
 // children sit on the share button's line (the result card's feedback link), so the card stays short on a landscape phone.
-export function ShareCard({ assets, kit, costume, result, bosses, featured = false, children }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[]; featured?: boolean; children?: ReactNode }) {
-  const [file, setFile] = useState<File | null>(null), [url, setUrl] = useState(''), [open, setOpen] = useState(false), [status, setStatus] = useState(''), [attempt, setAttempt] = useState(0)
-  const text = shareText(result, kit.id), link = gameLink(), boss = result.won ? bossName(assets, bosses?.at(-1)) : ''
+// seed: the run's seed, which a story night's challenge link carries. back: this run answered a friend's challenge.
+export function ShareCard({ assets, kit, costume, result, bosses, featured = false, seed, back = false, children }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[]; featured?: boolean; seed?: number; back?: boolean; children?: ReactNode }) {
+  const [file, setFile] = useState<File | null>(null), [url, setUrl] = useState(''), [open, setOpen] = useState(false), [status, setStatus] = useState(''), [attempt, setAttempt] = useState(0), [sent, setSent] = useState('')
+  const text = shareText(result, kit.id, seed), link = challengeLink(result, kit.id, seed), boss = result.won ? bossName(assets, bosses?.at(-1)) : ''
   useEffect(() => {
     let active = true, objectUrl = ''
     setFile(null); setStatus('')
@@ -135,6 +156,14 @@ export function ShareCard({ assets, kit, costume, result, bosses, featured = fal
     }
     setOpen(true)
   }
+  // The challenge alone, without the image: the system share sheet where there is one, else the text and link on the clipboard.
+  const challenge = async () => {
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Candy Siege', text: text.replace(` ${link}`, ''), url: link }); return }
+      catch (reason) { if ((reason as Error).name === 'AbortError') return }
+    }
+    try { await navigator.clipboard.writeText(text); setSent('Challenge copied. Send it to a friend!') } catch { setSent(`Copy your challenge link: ${link}`) }
+  }
   const intents = {
     X: `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
     Telegram: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text.replace(` ${link}`, ''))}`,
@@ -145,7 +174,8 @@ export function ShareCard({ assets, kit, costume, result, bosses, featured = fal
   const panel = useRef<HTMLElement>(null)
   useEffect(() => { if (open) panel.current?.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' }) }, [open])
   return <div className="siege-sharing">
-    <div className="siege-share-row"><Sticker tone="gold" sound="ui-confirm" disabled={!file} onClick={() => void share()}>{file ? 'Share your night ↗' : 'Making share card…'}</Sticker>{children}</div>
+    <div className="siege-share-row"><Sticker tone="gold" sound="ui-confirm" disabled={!file} onClick={() => void share()}>{file ? 'Share your night ↗' : 'Making share card…'}</Sticker><Sticker sound="ui-confirm" onClick={() => void challenge()}>{back ? 'Challenge back ↗' : 'Challenge a friend ↗'}</Sticker>{children}</div>
+    {sent && <p className="siege-challenge-sent" role="status">{sent}</p>}
     {status && <p role="status">{status}{!file && <button className="siege-text-button" onClick={() => setAttempt(n => n + 1)}>Retry image</button>}</p>}
     {open && file && <section ref={panel} className="siege-share-panel" aria-label="Share your result">
       <img src={url} alt={`Candy Siege result: Chog #${kit.id}, ${result.stars} stars, ${result.score} points`} />
