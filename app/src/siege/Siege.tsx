@@ -532,7 +532,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     if (closing) return
     if (menu === 'settings' || menu === 'book' || menu === 'shop') { playUi('ui-close'); setMenu(returnMenu) }
     else if (menu === 'pause' || menu === 'intro') resume()
-    else if (menu === 'street') { startToken.current++; pendingRun.current = null; setStreetRead(null); setMenu(run ? 'pause' : 'hero') }
+    // Backing out of a challenge on a night still locked here returns to the title's banner, not a hero picker that can't start it.
+    else if (menu === 'street') { startToken.current++; pendingRun.current = null; setStreetRead(null); setMenu(run ? 'pause' : isOpen(saveRef.current, level) ? 'hero' : 'title') }
     else if (menu === 'hero') { if (inviteCode || partyAbort.current) leaveLevel(); else setMenu('levels') }
     else if (menu === 'levels') setMenu('title')
     else if (menu === 'result' || menu === 'party' || menu === 'party-error') leaveLevel()
