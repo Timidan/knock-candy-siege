@@ -150,8 +150,21 @@
 .siege-sharing .sticker { color: #35253d; }
 .siege-share-panel { margin-top: 20px; padding: 14px; background: #261b32; border: 1px solid #8d699c; border-radius: 14px; }
 .siege-share-panel > img { width: min(100%, 270px); height: auto; border-radius: 6px; }
-.siege-share-panel textarea { width: 100%; min-height: 98px; padding: 12px; font: 17px var(--font-hand); background: #f5e4cf; color: #35253d; border-radius: 7px; }
+.siege-share-panel textarea, .siege-feedback textarea { width: 100%; min-height: 98px; padding: 12px; font: 17px var(--font-hand); background: #f5e4cf; color: #35253d; border-radius: 7px; }
 .siege-share-panel small { display: block; color: #d8bfdd; font-size: 15px; line-height: 1.4; }
+/* Feedback: a dialog over the result card, with stars like the card's. */
+.siege-modal--feedback { width: min(600px, calc(100vw - 36px)); }
+/* Side padding keeps the title clear of the close button in the corner. */
+.siege-modal--feedback h2 { font-size: clamp(24px, 3vw, 36px); margin-bottom: 8px; padding: 0 28px; }
+.siege-feedback { display: block; }
+.siege-feedback textarea { display: block; resize: none; }
+.siege-feedback-rating { display: flex; justify-content: center; gap: 2px; margin-bottom: 10px; }
+.siege-feedback-rating button { min-width: 48px; min-height: 48px; padding: 0; background: none; border: 0; color: #8d7399; font: 40px/1 system-ui, sans-serif; text-shadow: 2px 3px 0 #201628; cursor: pointer; }
+.siege-feedback-rating .is-lit { color: #ffd477; }
+.siege-feedback-rating button:focus-visible { outline: 3px solid #ffd477; outline-offset: 2px; border-radius: 8px; }
+.siege-modal .siege-feedback-foot { display: flex; justify-content: space-between; gap: 12px; max-width: none; margin: 6px 0 14px; font-size: 15px; color: #d5bbdb; text-align: left; }
+.siege-modal .siege-feedback-error { font-size: 16px; margin: 0 auto 12px; color: #ffc4a3; }
+.siege-modal .siege-feedback-thanks { font-size: 17px; color: #ffe0a5; margin: 12px auto 0; }
 .siege-shop button:focus-visible, .siege-dance-select select:focus-visible, .siege-sharing a:focus-visible { outline: 3px solid #ffd477; outline-offset: 4px; }
 @keyframes siege-result-in { from { opacity: 0; transform: translateX(50px); } to { opacity: 1; transform: none; } }
 @media (max-width: 740px) {
@@ -272,6 +285,14 @@
   .siege-modal--result .siege-result-stats b { font-size: 24px; }
   .siege-modal--result .row { margin: 6px 0 4px; }
   .siege-modal--result .sticker { min-height: 44px; padding: 10px 14px; font-size: 15px; }
+  .siege-modal--feedback { padding: 10px 18px 12px; }
+  .siege-modal--feedback h2 { font-size: 24px; margin: 2px 0; }
+  .siege-feedback-rating { margin-bottom: 4px; }
+  .siege-feedback-rating button { min-height: 40px; font-size: 32px; }
+  .siege-modal .siege-feedback-foot { margin: 4px 0 8px; }
+  /* Kept slim so the share button below still peeks into view. */
+  .siege-modal--result .siege-feedback-open { margin: 0 auto; min-height: 36px; }
+  .siege-modal .siege-feedback-thanks { margin: 2px auto 0; }
 }
 
 /* Title: the wordmark on top, tonight's Chog front and centre in a Monad glow, the big play button right under it, then small tiles and links. The dialog itself is see-through over the lightly dimmed map. */

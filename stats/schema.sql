@@ -36,3 +36,18 @@ CREATE TABLE IF NOT EXISTS salts (
   day TEXT PRIMARY KEY,
   salt TEXT NOT NULL
 );
+
+-- Feedback from the result card. No route reads it; the owner queries it with wrangler (docs/DEVELOPMENT.md).
+-- level is 1-6, endless, daily or party-<level>; pid is null when the player turned stats off. The Worker also creates it on first use.
+CREATE TABLE IF NOT EXISTS feedback (
+  id INTEGER PRIMARY KEY,
+  at TEXT NOT NULL,
+  level TEXT NOT NULL,
+  won INTEGER NOT NULL,
+  stars INTEGER NOT NULL,
+  hero INTEGER NOT NULL,
+  device TEXT,
+  rating INTEGER,
+  text TEXT NOT NULL,
+  pid TEXT
+);

@@ -59,6 +59,10 @@ npm run dev
 
 **What the stats collect:** each browser gets a random id. When the game opens, it also sends the referring site's name (the host only, like `x.com`, or `direct`) and the device type (phone, tablet or desktop). No wallet, IP address or full URL is stored; a salted IP hash is kept for one day to stop spam. Players can opt out in Settings, and automated browsers never send. Co-op runs aren't counted.
 
+**Feedback:** the result card's optional form stores the rating, the text and the run's context (level, win, stars, Chog number, device), plus the browser id only when stats sharing is on. No public route returns it, and each network can send 5 notes a day, one every 30 seconds.
+
+**Reading feedback:** from `stats/`, run `npx wrangler d1 execute siege-stats --remote --command "SELECT at, level, won, stars, hero, device, rating, text FROM feedback ORDER BY id DESC LIMIT 50"`. `level` is `1` to `6`, `endless`, `daily`, or `party-<level>` for Porch Party.
+
 ## On-chain pieces
 
 The shop and $KNOCK are on **Robinhood Chain Testnet**. $KNOCK is a testnet token with no real value, and **nothing in the game pays out**. Playing never earns $KNOCK, because a score from a browser can be faked. On Monad the game only reads; it never writes.

@@ -1,4 +1,5 @@
 // Siege Stats: anonymous play counters for Knock: Candy Siege. Browsers POST /event; the public page reads GET /stats.
+// POST /feedback stores a player's note from the result card. No route ever reads it back; the owner reads D1 directly.
 const PID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
 const NAME = /^[a-z0-9-]{1,32}$/, HOST = /^[a-z0-9.-]{1,40}$/, DEVICES = ['phone', 'tablet', 'desktop']
 // Players who started a level, referring sites and devices are counted from this UTC day; nothing earlier is estimated.
@@ -8,6 +9,8 @@ const TYPES = ['session', 'run_start', 'run_end', 'grant', 'purchase']
 const LIMIT = { ip: 120, pid: 60, newPids: 30 }
 // No level holds more than ~520 enemies, so a run is scaled down to 5,000 kills in total.
 const MAX_BODY = 4096, MAX_NAMES = 60, MAX_KILLS = 3000, MAX_RUN_KILLS = 5000, MAX_SECONDS = 7200
+// Feedback: at most 500 characters, and per IP 5 notes a UTC day and 1 every 30 seconds.
+const MAX_FEEDBACK = 500, FEEDBACK_PER_DAY = 5
 const allowedOrigin = origin => /^https:\/\/([a-z0-9-]+\.)?knock-ej6\.pages\.dev$/.test(origin) ||
   origin === 'https://knock.timidan.xyz' || /^http:\/\/localhost(?::\d+)?$/.test(origin)
 const count = (value, max) => typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(0, Math.floor(value))) : 0
@@ -47,6 +50,22 @@ function clean(body) {
     Object.assign(event, { quit, won, stars: won ? count(body.stars, 3) : 0, durationS: count(body.durationS, MAX_SECONDS), kills: Object.fromEntries(kills), bosses })
   }
   return event
+}
+
+// Returns an error message, or the note to store. The text is what the player typed; the rest is the game's context.
+function cleanFeedback(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return 'JSON object required'
+  // Control characters other than new lines are dropped: the owner reads feedback in a terminal.
+  const text = typeof body.text === 'string' ? body.text.replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f]/g, '').trim() : ''
+  if (!text) return 'Feedback text required'
+  if (text.length > MAX_FEEDBACK) return `Feedback is limited to ${MAX_FEEDBACK} characters`
+  const rating = body.rating ?? null
+  if (rating !== null && !(Number.isInteger(rating) && rating >= 1 && rating <= 5)) return 'Rating must be a whole number from 1 to 5'
+  if (typeof body.level !== 'string' || !NAME.test(body.level)) return 'Invalid level'
+  if (!Number.isInteger(body.hero) || body.hero < 1 || body.hero > 1969) return 'Invalid hero'
+  const won = body.won === true
+  return { text, rating, level: body.level, hero: body.hero, won, stars: won ? count(body.stars, 3) : 0,
+    device: DEVICES.includes(body.device) ? body.device : null, pid: typeof body.pid === 'string' && PID.test(body.pid) ? body.pid : null }
 }
 
 // One statement adds every {name: n} pair to a tally kind, so an event is a handful of statements however many kinds it carries.
@@ -180,7 +199,7 @@ export default {
     if (origin && !allowedOrigin(origin)) return reply({ error: 'Origin not allowed' }, 403)
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })
     const path = new URL(request.url).pathname
-    const route = request.method === 'GET' && path === '/stats' ? 'stats' : request.method === 'POST' && path === '/event' ? 'event' : ''
+    const route = request.method === 'GET' && path === '/stats' ? 'stats' : request.method === 'POST' && (path === '/event' || path === '/feedback') ? path.slice(1) : ''
     if (!route) return reply({ error: 'Not found' }, 404)
     const ip = request.headers.get('CF-Connecting-IP')
     try {
@@ -203,7 +222,7 @@ export default {
       if (text === null) return reply({ error: 'Body too large' }, 413)
       let body
       try { body = JSON.parse(text) } catch { return reply({ error: 'Invalid JSON' }, 400) }
-      const event = clean(body)
+      const event = route === 'feedback' ? cleanFeedback(body) : clean(body)
       if (typeof event === 'string') return reply({ error: event }, 400)
       if (!ip) return reply({ error: 'Client IP unavailable' }, 503)
       const day = utcDay(), hour = new Date().toISOString().slice(0, 13)
@@ -211,12 +230,25 @@ export default {
       // Read every limit first, so a rejected event writes nothing. Events racing past a limit together can overshoot it
       // by a few; the limiter above bounds how many can race.
       const hits = (bucket, key) => env.DB.prepare('SELECT n FROM hits WHERE bucket = ? AND key = ?').bind(bucket, key)
+      const bump = (bucket, key) => env.DB.prepare('INSERT INTO hits (bucket, key, n) VALUES (?, ?, 1) ON CONFLICT (bucket, key) DO UPDATE SET n = n + 1').bind(bucket, key)
+      if (route === 'feedback') {
+        // Counted apart from the stats limits. The 30-second bucket (2026-10-18T09:30:30) sorts before the next day, so saltFor's cleanup deletes it too.
+        const key = `feedback:${ipHash}`, slot = new Date(Math.floor(Date.now() / 30_000) * 30_000).toISOString().slice(0, 19)
+        const [today, recent] = (await env.DB.batch([hits(day, key), hits(slot, key)])).map(result => result.results[0]?.n ?? 0)
+        if (today >= FEEDBACK_PER_DAY) return reply({ error: 'That’s today’s feedback limit. Thank you!' }, 429)
+        if (recent) return reply({ error: 'Please wait 30 seconds before sending more feedback.' }, 429)
+        await env.DB.batch([bump(day, key), bump(slot, key),
+          // Created here so the Worker works before schema.sql is re-applied; a no-op once the table exists.
+          env.DB.prepare('CREATE TABLE IF NOT EXISTS feedback (id INTEGER PRIMARY KEY, at TEXT NOT NULL, level TEXT NOT NULL, won INTEGER NOT NULL, stars INTEGER NOT NULL, hero INTEGER NOT NULL, device TEXT, rating INTEGER, text TEXT NOT NULL, pid TEXT)'),
+          env.DB.prepare('INSERT INTO feedback (at, level, won, stars, hero, device, rating, text, pid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            .bind(new Date().toISOString(), event.level, +event.won, event.stars, event.hero, event.device, event.rating, event.text, event.pid)])
+        return new Response(null, { status: 204, headers })
+      }
       const [byIp, byPid, newIds, seen] = (await env.DB.batch([hits(hour, `ip:${ipHash}`), hits(hour, `pid:${event.pid}`), hits(day, `new:${ipHash}`),
         env.DB.prepare('SELECT 1 AS n FROM players WHERE pid = ?').bind(event.pid)])).map(result => result.results[0]?.n ?? 0)
       if (byIp >= LIMIT.ip) return reply({ error: 'Too many events from this network' }, 429)
       if (byPid >= LIMIT.pid) return reply({ error: 'Too many events from this browser' }, 429)
       if (!seen && newIds >= LIMIT.newPids) return reply({ error: 'Too many new players from this network today' }, 429)
-      const bump = (bucket, key) => env.DB.prepare('INSERT INTO hits (bucket, key, n) VALUES (?, ?, 1) ON CONFLICT (bucket, key) DO UPDATE SET n = n + 1').bind(bucket, key)
       await env.DB.batch([bump(hour, `ip:${ipHash}`), bump(hour, `pid:${event.pid}`), ...(seen ? [] : [bump(day, `new:${ipHash}`)]), ...writes(env.DB, event, day)])
       return new Response(null, { status: 204, headers })
     } catch {

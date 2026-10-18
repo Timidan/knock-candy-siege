@@ -9,6 +9,7 @@ One Worker and one D1 database (`siege-stats`) that count anonymous play for the
 | Route | Request | Response |
 | --- | --- | --- |
 | `POST /event` | JSON `{pid, type, ...}`, at most 4 KB, any content type (the game sends `text/plain`, so no preflight) | `204`; `400` invalid, `413` too large, `429` rate limit, `503` D1 unavailable |
+| `POST /feedback` | JSON `{text, rating, level, won, stars, hero, device, pid}`: text 1–500 characters, rating 1–5 or null, `pid` sent only when stats are on | `204`; `400` invalid, `429` after 5 notes per IP per UTC day or within 30 seconds of the last. Stored in the `feedback` table; no route reads it |
 | `GET /stats` | none | the aggregates below, `Cache-Control: public, max-age=30`; `429` rate limit |
 
 Event types (`pid` is a lowercase v4 UUID made in the browser):

@@ -1,6 +1,7 @@
 // Anonymous play stats for the public /stats page: a random id per browser, plus on opening the game the referring
 // site's host name and the device type. No wallet, no IP, no full URL.
 // Off when VITE_STATS_URL is unset or the player turns it off in Settings. Fire-and-forget: it never throws or waits.
+import { timeoutSignal } from '../abort'
 export const STATS_URL = (import.meta.env.VITE_STATS_URL || '').replace(/\/$/, '')
 const PID_KEY = 'knock-stats-pid', OFF_KEY = 'knock-stats-off'
 let optedOut = false, memoryPid = ''
@@ -41,6 +42,15 @@ export function track(type: 'session' | 'run_start' | 'run_end' | 'grant' | 'pur
     const visit = type === 'session' ? { ref: referrer(), device: device() } : {}
     void fetch(`${STATS_URL}/event`, { method: 'POST', keepalive: true, body: JSON.stringify({ ...data, ...visit, pid: pid(), type }) }).catch(() => {})
   } catch { /* Stats never interrupt play. */ }
+}
+// A note from the result card. Sending it is the player's own choice, so it goes even with stats off, but then without the browser id.
+// Rejects with a message to show: the Worker's own for bad input or a rate limit, otherwise a plain one.
+export type FeedbackNote = { level: string; won: boolean; stars: number; hero: number; rating: number | null; text: string }
+export async function sendFeedback(note: FeedbackNote) {
+  const failed = 'Your feedback didn’t send. Check your connection and try again.'
+  const response = await fetch(`${STATS_URL}/feedback`, { method: 'POST', signal: timeoutSignal(15_000),
+    body: JSON.stringify({ ...note, device: device(), pid: statsEnabled() ? pid() : undefined }) }).catch(() => { throw new Error(failed) })
+  if (!response.ok) throw new Error(response.status < 500 && (await response.json().catch(() => null))?.error || failed)
 }
 
 const slug = (value: unknown) => String(value).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32)

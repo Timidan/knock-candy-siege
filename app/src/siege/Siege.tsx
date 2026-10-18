@@ -38,6 +38,7 @@ import { thumb } from '../images'
 import { reopenShop } from './shopChain'
 import { SHOP_ITEMS, canDance } from './data/shop'
 import { ShareCard } from './ShareCard'
+import { Feedback } from './Feedback'
 import { haptic, setHaptics } from './haptics'
 import { STATS_URL, setStatsEnabled, statsEnabled, track, trackRunEnd } from './telemetry'
 import type { RunEnd } from './telemetry'
@@ -214,6 +215,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const [lockNote, setLockNote] = useState<{ text: string; at: number } | null>(null)
   useEffect(() => { if (!lockNote) return; const timer = setTimeout(() => setLockNote(null), 2400); return () => clearTimeout(timer) }, [lockNote])
   const [opened, setOpened] = useState(0)
+  // The result card's feedback dialog, open over the card, and whether this result's note was sent.
+  const [feedback, setFeedback] = useState<'' | 'open' | 'sent'>('')
   const [icons, setIcons] = useState<AssetPack['atlases'][number]>()
   // The daily challenge: the UTC date picks the level and the night's modifier.
   const daily = dailyInfo(), mapLevel = level === DAILY_LEVEL ? daily.level : level, dailyOpen = isOpen(save, DAILY_LEVEL)
@@ -343,7 +346,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       onReady: () => { setReady(true); if (run.coop) { lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; return }; if (!started) { started = true; track('run_start', info) } },
       onEnd: result => {
         endRun({ ...result, quit: false })
-        setOutcome(result); setDefeatTip(result.won ? '' : counterTip(result, world)); setMenu('result'); setOpened(0)
+        setOutcome(result); setDefeatTip(result.won ? '' : counterTip(result, world)); setMenu('result'); setOpened(0); setFeedback('')
         if (run.coop) return
         const now = saveRef.current
         // Each mode keeps its own best: stars and score per level, the best endless wave, and the best score of each daily.
@@ -636,12 +639,17 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.party ? 'Team score' : outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span><span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span><span><b>{outcome.heroLevel}</b> hero level</span></div>
         <div className="row">{outcome.party ? <Sticker tone="orange" onClick={() => leaveLevel()}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Level select</Sticker></div>
+        {STATS_URL && (feedback === 'sent' ? <p className="siege-feedback-thanks" role="status">Thanks! The porch heard you.</p> : <button className="siege-text-button siege-feedback-open" onClick={() => { setFeedback('open'); playUi('ui-open') }}>Send feedback</button>)}
         {run && !run.coop && <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} />}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
       {menu === 'shop' && !assets && (failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry}><Sticker sound="ui-back" onClick={() => setMenu(returnMenu)}>← Back</Sticker></RetryPanel> : <StageLabel stage="candy" />)}
       {saveWarning && <p className="siege-save-warning" role="status">This browser couldn’t save progress. Your current game is still safe.</p>}
       {onBack && <button className="siege-text-button" onClick={onBack}>← Back to Knock</button>}
+    </Modal>}
+    {/* A sibling of the result card's dialog, not a child: it opens on top without replaying the card's fanfare, and its Escape stays its own. */}
+    {feedback === 'open' && run && outcome && <Modal label="Send feedback" className="siege-modal--feedback" onEscape={() => setFeedback('')}>
+      <Feedback context={{ level: run.coop ? `party-${run.level}` : run.mode === 'level' ? String(run.level) : run.mode, won: outcome.won, stars: outcome.stars, hero: run.id }} onSent={() => setFeedback('sent')} />
     </Modal>}
   </div>
 }
