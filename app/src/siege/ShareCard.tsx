@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Sticker, playUi } from '../ui'
 import type { AssetPack } from './assets'
 import { loadImage } from './assets'
@@ -107,7 +108,8 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
 }
 
 // `bosses` is the scene's runStats().bossesDefeated; only its last entry's name reaches the effect, so a fresh array each render can't redraw the card.
-export function ShareCard({ assets, kit, costume, result, bosses }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[] }) {
+// children sit on the share button's line (the result card's feedback link), so the card stays short on a landscape phone.
+export function ShareCard({ assets, kit, costume, result, bosses, children }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[]; children?: ReactNode }) {
   const [file, setFile] = useState<File | null>(null), [url, setUrl] = useState(''), [open, setOpen] = useState(false), [status, setStatus] = useState(''), [attempt, setAttempt] = useState(0)
   const text = shareText(result, kit.id), link = gameLink(), boss = result.won ? bossName(assets, bosses?.at(-1)) : ''
   useEffect(() => {
@@ -138,7 +140,7 @@ export function ShareCard({ assets, kit, costume, result, bosses }: { assets: As
   const panel = useRef<HTMLElement>(null)
   useEffect(() => { if (open) panel.current?.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' }) }, [open])
   return <div className="siege-sharing">
-    <Sticker tone="gold" sound="ui-confirm" disabled={!file} onClick={() => void share()}>{file ? 'Share your night ↗' : 'Making share card…'}</Sticker>
+    <div className="siege-share-row"><Sticker tone="gold" sound="ui-confirm" disabled={!file} onClick={() => void share()}>{file ? 'Share your night ↗' : 'Making share card…'}</Sticker>{children}</div>
     {status && <p role="status">{status}{!file && <button className="siege-text-button" onClick={() => setAttempt(n => n + 1)}>Retry image</button>}</p>}
     {open && file && <section ref={panel} className="siege-share-panel" aria-label="Share your result">
       <img src={url} alt={`Candy Siege result: Chog #${kit.id}, ${result.stars} stars, ${result.score} points`} />

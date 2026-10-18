@@ -157,6 +157,8 @@
 /* Side padding keeps the title clear of the close button in the corner. */
 .siege-modal--feedback h2 { font-size: clamp(24px, 3vw, 36px); margin-bottom: 8px; padding: 0 28px; }
 .siege-feedback { display: block; }
+.siege-share-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 18px; }
+.siege-share-row .siege-feedback-thanks { margin: 0; }
 .siege-feedback textarea { display: block; resize: none; }
 .siege-feedback-rating { display: flex; justify-content: center; gap: 2px; margin-bottom: 10px; }
 .siege-feedback-rating button { min-width: 48px; min-height: 48px; padding: 0; background: none; border: 0; color: #8d7399; font: 40px/1 system-ui, sans-serif; text-shadow: 2px 3px 0 #201628; cursor: pointer; }
