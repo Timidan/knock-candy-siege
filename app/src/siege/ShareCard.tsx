@@ -32,7 +32,8 @@ function accolade(result: Outcome, boss: string) {
   return result.won && boss ? `BOSS SLAYER · ${boss.toUpperCase()}` : result.won && result.jars === 20 ? 'PERFECT DEFENSE · ALL 20 JARS SAVED' : `${result.kills.toLocaleString('en-US')} ${result.kills === 1 ? 'CHOG' : 'CHOGS'} STOPPED`
 }
 // A trophy for the NFT: the Chog cheers out of a Monad-purple burst on the right, the result sits on the left. Defeats get a quieter card.
-export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome, boss = '') {
+// featured: the run's Chog was that day's Chog of the Day, which adds a gold badge under the accolade.
+export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome, boss = '', featured = false) {
   const [portrait, heads] = await Promise.all([loadImage(thumb(kit.id, true)), loadPreviewHeads(), document.fonts.ready])
   const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350
   const ctx = canvas.getContext('2d')!
@@ -91,13 +92,17 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   text('POINTS', 74, 708, 38, '#d7c1e3', 'Patrick Hand')
   // The pill's colour names the accolade: Monad purple for a boss slayer, slime green for a perfect porch, pumpkin otherwise.
   const award = accolade(result, boss), [face, lip] = !proud ? [DUSK, '#140a22'] : result.won && boss ? [MONAD, '#5438dc'] : result.won && result.jars === 20 ? [SLIME, '#15803d'] : [PUMPKIN, '#b84e00']
-  ctx.font = '28px "Luckiest Guy", sans-serif'
-  const aw = Math.min(ctx.measureText(award).width + 100, 560)
-  ctx.lineWidth = 5; ctx.strokeStyle = NIGHT
-  ctx.beginPath(); ctx.roundRect(70, 762, aw, 66, 33); ctx.fillStyle = lip; ctx.fill(); ctx.stroke()
-  ctx.beginPath(); ctx.roundRect(70, 754, aw, 66, 33); ctx.fillStyle = face; ctx.fill(); ctx.stroke()
-  star(ctx, 110, 786, 19); ctx.fillStyle = proud ? NIGHT : '#d7c1e3'; ctx.fill()
-  text(award, 142, 798, 28, proud ? NIGHT : '#eadff2', 'Luckiest Guy', aw - 100)
+  const pill = (label: string, y: number, face: string, lip: string, ink: string, mark: string) => {
+    ctx.font = '28px "Luckiest Guy", sans-serif'
+    const w = Math.min(ctx.measureText(label).width + 100, 560)
+    ctx.lineWidth = 5; ctx.strokeStyle = NIGHT
+    ctx.beginPath(); ctx.roundRect(70, y + 8, w, 66, 33); ctx.fillStyle = lip; ctx.fill(); ctx.stroke()
+    ctx.beginPath(); ctx.roundRect(70, y, w, 66, 33); ctx.fillStyle = face; ctx.fill(); ctx.stroke()
+    star(ctx, 110, y + 32, 19); ctx.fillStyle = mark; ctx.fill()
+    text(label, 142, y + 44, 28, ink, 'Luckiest Guy', w - 100)
+  }
+  pill(award, 754, face, lip, proud ? NIGHT : '#eadff2', proud ? NIGHT : '#d7c1e3')
+  if (featured) pill('CHOG OF THE DAY', 852, GOLD, '#c48a0c', NIGHT, NIGHT)
   // Footer: the original NFT stays identifiable beside its number.
   ctx.fillStyle = '#12091fdd'; ctx.strokeStyle = frame; ctx.lineWidth = 4; ctx.beginPath(); ctx.roundRect(52, 1186, 976, 112, 30); ctx.fill(); ctx.stroke()
   ctx.save(); ctx.beginPath(); ctx.arc(116, 1242, 42, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(portrait, 74, 1200, 84, 84); ctx.restore()
@@ -109,19 +114,19 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
 
 // `bosses` is the scene's runStats().bossesDefeated; only its last entry's name reaches the effect, so a fresh array each render can't redraw the card.
 // children sit on the share button's line (the result card's feedback link), so the card stays short on a landscape phone.
-export function ShareCard({ assets, kit, costume, result, bosses, children }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[]; children?: ReactNode }) {
+export function ShareCard({ assets, kit, costume, result, bosses, featured = false, children }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[]; featured?: boolean; children?: ReactNode }) {
   const [file, setFile] = useState<File | null>(null), [url, setUrl] = useState(''), [open, setOpen] = useState(false), [status, setStatus] = useState(''), [attempt, setAttempt] = useState(0)
   const text = shareText(result, kit.id), link = gameLink(), boss = result.won ? bossName(assets, bosses?.at(-1)) : ''
   useEffect(() => {
     let active = true, objectUrl = ''
     setFile(null); setStatus('')
     // Drawing the card blocks the main thread for a moment (a 1200 × 1200 pixel scan), so wait until the result fanfare has landed.
-    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, result, boss).then(blob => {
+    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, result, boss, featured).then(blob => {
       if (!active) return
       const file = new File([blob], `candy-siege-chog-${kit.id}.png`, { type: 'image/png' }); objectUrl = URL.createObjectURL(file); setFile(file); setUrl(objectUrl)
     }).catch(() => { if (active) setStatus('Could not make the share image. Check your connection and try again.') }), attempt ? 0 : 1400)
     return () => { active = false; clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [assets, kit.id, costume, result, boss, attempt])
+  }, [assets, kit.id, costume, result, boss, featured, attempt])
   const share = async () => {
     if (!file) return
     if (navigator.canShare?.({ files: [file] }) && navigator.share) {

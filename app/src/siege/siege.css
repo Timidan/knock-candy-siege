@@ -315,6 +315,24 @@
 /* The Monad glow is a shadow, not a pseudo-element, so it never makes the dialog scroll. */
 .siege-title-chog img { display: block; width: min(72vw, 330px, calc(100dvh - 574px)); min-width: 160px; aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 0 0 0 4px #836ef9, 0 9px 0 4px #1b0f2b, 0 0 70px 24px #836ef9aa; }
 .siege-title-chog figcaption { width: fit-content; margin: 14px auto 0; padding: 3px 14px; border: 2px solid var(--ink); border-radius: 999px; background: #241632; color: #ffe1a8; font-size: 17px; white-space: nowrap; }
+/* The middle row: Chog of the Day on the left, tonight's Chog still centred, a friend's challenge on the right. The side columns cost no height. */
+.siege-title-stage { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 22px; width: 100%; }
+.siege-title-stage > .siege-title-chog { grid-column: 2; grid-row: 1; }
+.siege-cotd { grid-column: 1; grid-row: 1; justify-self: end; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 4px 10px; max-width: 270px; padding: 10px 12px 12px; border: 3px solid var(--ink); border-radius: 18px 12px 18px 12px; background: #2a1d38f0; box-shadow: 0 5px 0 #120d1a; text-align: left; }
+.siege-cotd img { grid-row: span 2; width: 64px; height: 64px; border: 3px solid var(--ink); border-radius: 14px 8px 14px 8px; background: #261a35; box-shadow: 0 0 0 3px #ffd23f; }
+.siege-cotd strong { font: 400 17px/1.1 var(--font-display); letter-spacing: .02em; color: #ffd23f; }
+.siege-cotd small { font-size: 15px; line-height: 1.2; color: #e8d5ee; }
+.siege-modal .siege-cotd .sticker { grid-column: 1 / -1; min-height: 40px; padding: 6px 14px; font-size: 15px; }
+/* A narrow portrait screen stacks the row under tonight's Chog, and Chog of the Day becomes a slim chip. */
+@media (max-width: 520px) {
+  .siege-title-stage { grid-template-columns: 1fr; gap: 14px; }
+  .siege-title-stage > * { grid-column: 1; justify-self: center; }
+  .siege-title-stage > .siege-title-chog { grid-row: 1; }
+  .siege-cotd { grid-row: 2; grid-template-columns: auto 1fr auto; max-width: none; }
+  .siege-cotd img { grid-row: auto; width: 40px; height: 40px; }
+  .siege-cotd small { display: none; }
+  .siege-modal .siege-cotd .sticker { grid-column: auto; }
+}
 .siege-modal .siege-title .siege-title-play { min-width: 270px; min-height: 58px; padding: 12px 30px; font-size: 1.45rem; animation: siege-pulse 2s ease-in-out infinite; }
 /* The play button, or one-tap Play's loading line in its place. */
 .siege-title-go { display: flex; justify-content: center; }
@@ -349,7 +367,13 @@
   .siege-wordmark { width: 96px; }
   .siege-title h1 { margin: 0; font-size: 34px; }
   .siege-title-mark p { display: none; }
-  .siege-title-chog { grid-area: chog; justify-self: center; margin-bottom: 6px; }
+  .siege-title-stage { grid-area: chog; gap: 12px; }
+  .siege-title-chog { justify-self: center; margin-bottom: 6px; }
+  .siege-cotd { max-width: 250px; padding: 6px 8px 8px; gap: 2px 8px; }
+  .siege-cotd img { width: 48px; height: 48px; }
+  .siege-cotd strong { font-size: 14px; }
+  .siege-cotd small { font-size: 13px; }
+  .siege-modal .siege-cotd .sticker { min-height: 34px; padding: 4px 10px; font-size: 13px; }
   /* The same safe-area insets the dialog's max-height subtracts (a notched phone's home bar), or the title would scroll there. */
   .siege-title-chog img { width: calc(100dvh - 182px - var(--siege-safe-top) - var(--siege-safe-bottom)); min-width: 0; }
   /* The caption becomes a tag on the portrait's corner, so it costs no height. */

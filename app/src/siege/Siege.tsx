@@ -161,6 +161,15 @@ function CountUp({ value, ms }: { value: number; ms: number }) {
   }, [value, ms])
   return <strong>{shown.toLocaleString()}</strong>
 }
+// The title's Chog of the Day card: its portrait, its kit in a few words, and one tap to play it (Night 1 on a first visit, else the hero picker).
+function ChogOfDay({ id, assets, onPlay }: { id: number; assets: AssetPack | null; onPlay: () => void }) {
+  const kit = assets && resolveKit(assets.kits, assets.traits, assets.chogs, id)
+  return <section className="siege-cotd" aria-label={`Chog of the Day: Chog #${id}`}>
+    <img src={thumb(id, true)} alt="" /><strong>Chog of the Day #{id}</strong>
+    {kit && <small>{(['weapon', 'special', 'ultimate'] as const).map(slot => assets.kits.slots[slot][kit[slot]]?.name).filter(Boolean).join(' · ')}</small>}
+    <Sticker tone="gold" sound="ui-confirm" onClick={onPlay}>Play as #{id}</Sticker>
+  </section>
+}
 // A defeat names one counter from the existing copy: of the threats called so far, the one stopped least (kills against spawns).
 const COUNTERS: [EnemyKind, string][] = [['ghost', 'A lantern for ghosts.'], ['pumpkin', 'TP for pumpkins.']]
 function counterTip(result: Outcome, world: SiegeScene) {
@@ -229,6 +238,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const [icons, setIcons] = useState<AssetPack['atlases'][number]>()
   // The daily challenge: the UTC date picks the level and the night's modifier.
   const daily = dailyInfo(), mapLevel = level === DAILY_LEVEL ? daily.level : level, dailyOpen = isOpen(save, DAILY_LEVEL)
+  // Chog of the Day: the same featured Chog for everyone on a UTC date, drawn from the Daily's date seed (salted, so it isn't the Daily run's first draw).
+  const chogOfDay = Number(randomHero(seededRandom(daily.seed ^ 0xc06)))
   const mode: Mode = level === ENDLESS_LEVEL ? 'endless' : level === DAILY_LEVEL ? 'daily' : 'level'
   const levelName = (id: number) => id === DAILY_LEVEL ? `Daily #${daily.number}` : LEVELS[id - 1].name
   const [ready, setReady] = useState(false)
@@ -533,7 +544,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       {menu === 'title' && <div className={`siege-title${firstVisit ? ' siege-title--first' : ''}`}>
         <header className="siege-title-mark"><img className="siege-wordmark" src="/art/ui/logo.svg" alt="Knock" /><h1>Candy <span>Siege</span></h1><p>The whole neighbourhood wants your candy.</p></header>
         {/* Tonight's hero, the same Chog the hero picker opens on. */}
-        {valid && <figure className="siege-title-chog"><img src={thumb(Number(hero), true)} alt="" /><figcaption>Chog #{Number(hero)} · on porch duty</figcaption></figure>}
+        <div className="siege-title-stage">
+          <ChogOfDay id={chogOfDay} assets={assets} onPlay={() => { mobileFullscreen(); setHero(String(chogOfDay)); if (firstVisit) { setLevel(1); setQuick(true) } else { setLevel(currentNight); setMenu('hero') } }} />
+          {valid && <figure className="siege-title-chog"><img src={thumb(Number(hero), true)} alt="" /><figcaption>Chog #{Number(hero)} · on porch duty</figcaption></figure>}
+        </div>
         {/* A first visit plays at once: Night 1 with tonight's hero, loading in the button's place. "Choose night & Chog" keeps the full flow. */}
         <div className="siege-title-go">{quick || starting ? (failed && failed !== 'lanterns' ? <RetryPanel stage={failed} onRetry={retry} /> : <StageLabel stage={!assets ? 'candy' : starting ? 'lanterns' : loading} />)
           : <Sticker tone="orange" className="siege-title-play" data-initial-focus="" onClick={() => { mobileFullscreen(); if (firstVisit) { setLevel(1); setQuick(true) } else setMenu('levels') }}>Hold the porch →</Sticker>}</div>
@@ -663,7 +677,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <div className="row">{outcome.party ? <Sticker tone="orange" onClick={() => leaveLevel()}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => toPicker(nextLevel)}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Level select</Sticker></div>
         {/* After the tutorial night (often a random guest Chog from one-tap Play), point at the hero picker. */}
         {run?.tutorial && !outcome.party && <button className="siege-text-button" onClick={() => toPicker(nextLevel || run.level)}>Every Chog plays differently: pick yours →</button>}
-        {run && !run.coop ? <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated}>{feedbackLink}</ShareCard> : feedbackLink}
+        {run && !run.coop ? <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} featured={run.id === chogOfDay}>{feedbackLink}</ShareCard> : feedbackLink}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}
       {menu === 'shop' && !assets && (failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry}><Sticker sound="ui-back" onClick={() => setMenu(returnMenu)}>← Back</Sticker></RetryPanel> : <StageLabel stage="candy" />)}
