@@ -13,7 +13,7 @@ import { haptic } from './haptics'
 import type { AssetPack } from './assets'
 import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
-import { LEVELS, TUTORIAL } from './data/level1'
+import { LEVELS, TUTORIAL, TIPS } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
 import { endlessWave, endlessHealth, endlessScore, shuffledKinds } from './data/endless'
 import { NIGHTS } from './data/endless'
@@ -779,7 +779,8 @@ export class SiegeScene extends Phaser.Scene {
     this.waveAlive[wave] = (this.waveAlive[wave] ?? 0) + 1
     const fresh = !this.discovered.has(`enemy/${kind}`)
     this.discover([`enemy/${kind}`, ...mods.map(m => `mod/${m}`)])
-    if (fresh && !this.focus.active && !this.options.coop) { this.setPaused(true); this.options.onIntro(kind) }
+    // The tutorial run's first wave meets its treaters without a card, as when the tutorial spanned that wave: only build and call-wave stop play.
+    if (fresh && !this.focus.active && !this.options.coop && !(this.options.tutorial && wave === 0)) { this.setPaused(true); this.options.onIntro(kind) }
     const modifier = MODIFIERS.find(rule => mods.includes(rule.name))
     if (modifier) this.hud.ruleMoment('trait', enemy, `mod/${modifier.name}`, `${modifier.name.toUpperCase()} · ${modifier.enemy}`)
     return true
@@ -906,14 +907,13 @@ export class SiegeScene extends Phaser.Scene {
       if (this.countdown <= 0) this.callWave()
     }
     for (let w = 0; w < this.wave; w++) if (!this.rewarded.has(w) && !this.waveAlive[w] && !this.schedule.some(s => s.wave === w)) {
-      const bonus = this.waveAt(w)!.bonus
-      this.rewarded.add(w); this.income(bonus); this.hud.toast(`Wave cleared! +${Math.round(bonus * this.candyScale)} candy`)
+      const bonus = this.waveAt(w)!.bonus, tip = this.options.tutorial ? TIPS[w] : undefined
+      this.rewarded.add(w); this.income(bonus); this.hud.toast(`Wave cleared! +${Math.round(bonus * this.candyScale)} candy${tip ? `\nTip: ${tip}` : ''}`, tip ? 7 : undefined)
       if (w + 1 < this.waveCount) this.sfx('wave-clear')
     }
     for (const key of ['rain', 'boo'] as const) this.spellCooldown[key] = Math.max(0, this.spellCooldown[key] - dt)
     this.missTime = Math.max(0, this.missTime - dt)
-    // Keep the rain lesson targets alive until the player casts; an upgraded Egg Stand would pick them off.
-    if (this.tutorialStep !== 4) { this.updateTowers(dt); this.heroes.forEach(hero => hero.update(dt)) }
+    this.updateTowers(dt); this.heroes.forEach(hero => hero.update(dt))
     this.updateLights()
     this.crowns.length = 0
     for (const enemy of this.enemies) if (enemy.active && enemy.mods.includes('crown')) this.crowns.push(enemy)
@@ -1370,12 +1370,11 @@ export class SiegeScene extends Phaser.Scene {
     this.candy -= cost; tower.spent += cost; if (tower.spec) tower.rank++; else tower.level++; tower.pop = .4
     this.art.set(tower.image, this.towerFrame(tower.kind, tower.level, tower.spec))
     if (tower.kind === 'patch') this.guardsFor(tower)
-    this.effect('fx/levelup/0', tower.x, tower.y - 70, .8, 1.5); this.sfx('upgrade', tower); this.tutorial('upgrade'); this.cancel(); this.hud.toast(tower.spec ? `${SPECIALISATIONS[tower.spec].name} · Rank ${tower.rank}` : `${TOWERS[tower.kind].name} · Level ${tower.level}`); this.hud.refresh()
+    this.effect('fx/levelup/0', tower.x, tower.y - 70, .8, 1.5); this.sfx('upgrade', tower); this.cancel(); this.hud.toast(tower.spec ? `${SPECIALISATIONS[tower.spec].name} · Rank ${tower.rank}` : `${TOWERS[tower.kind].name} · Level ${tower.level}`); this.hud.refresh()
   }
   private sell(padIndex: number) {
     const tower = this.towers[padIndex]
     if (this.paused || this.ended || !tower) return
-    if (this.tutorialStep < 3) { this.hud.toast('Keep your first tower for the tutorial.'); return }
     this.candy += Math.floor(tower.spent * .7); tower.image.destroy(); for (const guard of tower.guards) guard.image.destroy(); this.towers[padIndex] = null
     this.sfx('sell', tower); this.cancel(); this.hud.toast(`Tower sold · +${Math.floor(tower.spent * .7)} candy`); this.hud.refresh()
   }
@@ -1411,7 +1410,7 @@ export class SiegeScene extends Phaser.Scene {
     }
     this.effect(kind === 'rain' ? 'fx/candy-rain/0' : 'fx/boo/0', x, y - 30, 1, spell.radius / 45)
     this.sfx(kind === 'rain' ? 'spell-rain' : 'spell-boo', { x, y })
-    if (kind === 'rain') { this.shake(.005); this.tutorial('rain'); for (let i = 0; i < (this.settings.lite ? 6 : 12); i++) this.effect('fx/coin', x + (this.visualRandom() - .5) * 280, y - 200, .5 + this.visualRandom() * .4, .25, 'jar', x + (this.visualRandom() - .5) * 220, y + 40) }
+    if (kind === 'rain') { this.shake(.005); for (let i = 0; i < (this.settings.lite ? 6 : 12); i++) this.effect('fx/coin', x + (this.visualRandom() - .5) * 280, y - 200, .5 + this.visualRandom() * .4, .25, 'jar', x + (this.visualRandom() - .5) * 220, y + 40) }
     this.cancel(); this.hud.refresh()
   }
   private placeTrap(kind: TrapKind, x: number, y: number) {
@@ -1421,7 +1420,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.traps.length >= LIMITS.traps) { this.hud.toast('The path is full of surprises already.'); return }
     this.stock[kind]--
     this.traps.push({ x: spot.x, y: spot.y, kind, life: config.duration, armed: false, image: this.art.image(spot.x, spot.y, `trap/${kind}/0`).setDepth(7).setDisplaySize(100, 75) })
-    this.effect('fx/poof/0', spot.x, spot.y, .4); this.sfx('trap-set', spot); this.tutorial('trap'); this.cancel(); this.hud.refresh()
+    this.effect('fx/poof/0', spot.x, spot.y, .4); this.sfx('trap-set', spot); this.cancel(); this.hud.refresh()
   }
   private updateTraps(dt: number) {
     for (let i = this.traps.length - 1; i >= 0; i--) {
@@ -1472,11 +1471,11 @@ export class SiegeScene extends Phaser.Scene {
     this.cancel(); this.heroSelected = true; this.hud.toast(`Your Chog · Tap the ground to move${this.localHero.labels ? `\n${this.localHero.labels}` : ''}`)
   }
   private moveHero(pointer: Point, hero = this.localHero) {
-    if (this.tutorialStep < 2 || hero.hp <= 0) return
+    if (hero.hp <= 0) return
     this.cancel()
     hero.rig.cancelDance()
     hero.target = { x: Phaser.Math.Clamp(pointer.x, 60, 1850), y: Phaser.Math.Clamp(pointer.y, 180, 885) }
-    this.effect('hero/ring', pointer.x, pointer.y, .55, .8); if (hero === this.localHero) this.sfx('move', pointer); this.tutorial('move')
+    this.effect('hero/ring', pointer.x, pointer.y, .55, .8); if (hero === this.localHero) this.sfx('move', pointer)
   }
   private worldUp(input: Phaser.Input.Pointer) {
     this.holdAt = null
@@ -1488,7 +1487,7 @@ export class SiegeScene extends Phaser.Scene {
     }
   }
   cancel() { this.hud?.releasePresses(); this.buildPage = 0; this.mode = null; this.selected = -1; this.previewTower = null; this.previewSpec = null; this.heroSelected = false; this.dragStart = null; this.emoteOpen = false; this.preview?.setVisible(false); this.hud?.radial(); this.hud?.emotes(); this.hud?.closePreview(); this.hud?.closeSupplies() }
-  toggleEmotes() { if (this.paused || this.ended) return; const open = !this.emoteOpen; this.cancel(); this.emoteOpen = open; this.hud.radial(); this.hud.emotes(); if (this.emoteOpen) this.tutorial('emote') }
+  toggleEmotes() { if (this.paused || this.ended) return; const open = !this.emoteOpen; this.cancel(); this.emoteOpen = open; this.hud.radial(); this.hud.emotes() }
   private chooseEmote(name: string, hero = this.localHero) {
     if (hero.hp <= 0) return
     const dance = name === 'signature' ? hero.kit.emote : name
@@ -1507,7 +1506,8 @@ export class SiegeScene extends Phaser.Scene {
     if (this.tutorialStep === TUTORIAL.length) { this.options.onTutorial(); this.hud.toast('You’re ready. Keep those jars safe!'); this.emote('gg', this.hero.x, this.hero.y - 150) }
     this.hud.refresh()
   }
-  skipTutorial() { this.tutorialStep = TUTORIAL.length; this.cancel(); this.options.onTutorial(); this.hud.refresh(); this.focus.draw() }
+  // A skip also ends the run's tips (TIPS): the player said they know the ropes.
+  skipTutorial() { this.tutorialStep = TUTORIAL.length; this.options.tutorial = false; this.cancel(); this.options.onTutorial(); this.hud.refresh(); this.focus.draw() }
   pauseGame() { if (!this.ended) { this.setPaused(true); this.options.onPause() } }
   setPaused(paused: boolean) { if (this.options.coop) return; if (this.restoring && !paused) return; if (paused) this.hud?.releasePresses(); this.paused = paused; this.tweens.timeScale = paused ? 0 : 1; this.holdAt = null; this.dragStart = null; this.options.sfx.pause(paused) }
   towerFrame(kind: TowerKind, level: number, spec: Specialisation | null = null) { if (spec) return `tower/${kind}/${spec}`; return `${this.settings.gold && this.options.owned.includes(21) && ['egg', 'tp', 'lantern', 'patch'].includes(kind) ? 'skin/gold/' : ''}tower/${kind}/${level}` }

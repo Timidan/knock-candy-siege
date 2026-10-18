@@ -683,7 +683,7 @@ export class Hud {
     const step = TUTORIAL[s.tutorialStep]
     if (step) {
       const copy = s.tutorialStep === 0 ? (s.selected !== 0 ? step.text : s.previewTower === 'egg' ? 'Tap again to build' : 'Tap Egg Stand') : `${step.title}\n${step.text}`
-      this.tutorialCard.setVisible(true); this.tutorialText.setText(`${s.tutorialStep + 1}/7  ${copy}`)
+      this.tutorialCard.setVisible(true); this.tutorialText.setText(`${s.tutorialStep + 1}/${TUTORIAL.length}  ${copy}`)
     }
     else if (this.tutorialCard.visible && this.tutorialCard.alpha === 1) this.close(this.tutorialCard)
     for (const item of this.radialButtons) { this.enabled(item.button, s.candy >= item.cost && (!item.kind || !s.towerLock(item.kind))); this.afford(item.button, s.candy >= item.cost) }
@@ -965,15 +965,8 @@ export class Hud {
       const pad = this.scene.pads[0]
       return { x: pad.x, y: pad.y - (this.scene.towers[0] ? 80 : 0), radius: 85, world: true }
     }
-    const s = this.scene
-    if (target === 'trap' && s.mode === 'pumpkin') return { ...s.nearestPath(620, 630), radius: 65, world: true }
-    if (target === 'rain' && s.mode === 'rain') {
-      const crowd = s.enemies.find(e => e.active && e.x > 110 && e.x < 1800) ?? s.nearestPath(380, 550)
-      return { x: crowd.x, y: crowd.y, radius: 110, world: true }
-    }
-    const b = target === 'wave' ? this.calls.find(b => b.root.visible) : target === 'trap' ? this.trapButtons.pumpkin : target === 'rain' ? this.rain : target === 'emote' ? this.emoteButton : target === 'hero' && !s.heroSelected ? this.portrait : null
+    const b = target === 'wave' ? this.calls.find(b => b.root.visible) : null
     if (b) { const p = b.root.getWorldTransformMatrix(); return { x: p.tx, y: p.ty, radius: b.size / 2 + 6, world: false } }
-    if (target === 'hero') return { x: Math.min(1800, s.localHero.x + 160), y: Math.min(875, s.localHero.y), radius: 65, world: true }
     return null
   }
   animate(time: number, dt = 1 / 60) {

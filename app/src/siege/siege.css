@@ -316,6 +316,10 @@
 .siege-title-chog img { display: block; width: min(72vw, 330px, calc(100dvh - 574px)); min-width: 160px; aspect-ratio: 1; border: 5px solid var(--ink); border-radius: 28px 12px 30px 14px; background: #261a35; box-shadow: 0 0 0 4px #836ef9, 0 9px 0 4px #1b0f2b, 0 0 70px 24px #836ef9aa; }
 .siege-title-chog figcaption { width: fit-content; margin: 14px auto 0; padding: 3px 14px; border: 2px solid var(--ink); border-radius: 999px; background: #241632; color: #ffe1a8; font-size: 17px; white-space: nowrap; }
 .siege-modal .siege-title .siege-title-play { min-width: 270px; min-height: 58px; padding: 12px 30px; font-size: 1.45rem; animation: siege-pulse 2s ease-in-out infinite; }
+/* The play button, or one-tap Play's loading line in its place. */
+.siege-title-go { display: flex; justify-content: center; }
+.siege-modal .siege-title-go p.siege-stage-label { min-height: 58px; margin: 0; padding: 0 24px; border: 3px solid var(--ink); border-radius: 16px 12px 16px 12px; background: #2a1d38f0; font-size: 19px; }
+.siege-modal .siege-title-go p.siege-retry { margin: 0; }
 /* Secondary actions: small icon tiles, labelled underneath the icon. */
 .siege-title-more { display: flex; justify-content: center; gap: 10px; }
 .siege-modal .siege-title-more .sticker { --tilt: 0deg; flex-direction: column; gap: 2px; min-width: 64px; min-height: 0; padding: 5px 8px 4px; border-radius: 16px 12px 16px 12px; font-size: 13px; }
@@ -351,7 +355,11 @@
   /* The caption becomes a tag on the portrait's corner, so it costs no height. */
   .siege-title-chog figcaption { position: absolute; left: calc(100% - 22px); bottom: 16px; margin: 0; rotate: -5deg; font-size: 15px; }
   /* The play row (links, play, tiles) fits a notched mini's 620 px between its side insets. */
-  .siege-modal .siege-title .siege-title-play { grid-area: play; min-width: 220px; min-height: 52px; padding: 10px 20px; font-size: 1.15rem; }
+  .siege-modal .siege-title .siege-title-play { min-width: 220px; min-height: 52px; padding: 10px 20px; font-size: 1.15rem; }
+  .siege-title-go { grid-area: play; }
+  .siege-modal .siege-title-go p.siege-stage-label { min-height: 52px; font-size: 16px; }
+  /* A first visit's third link ("Choose night & Chog") costs the portrait its 26 px. */
+  .siege-title--first .siege-title-chog img { width: calc(100dvh - 208px - var(--siege-safe-top) - var(--siege-safe-bottom)); }
   .siege-title-more { grid-area: more; justify-self: start; gap: 6px; }
   .siege-modal .siege-title-more .sticker { min-width: 50px; padding: 4px 4px 3px; font-size: 11px; }
   .siege-title-more .sticker img, .siege-title-more .sticker svg { width: 24px; height: 24px; }

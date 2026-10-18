@@ -211,9 +211,11 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const pendingRun = useRef<Run | null>(null), startToken = useRef(0)
   const accountNow = useRef(activeWallet.account); accountNow.current = activeWallet.account
   const [starting, setStarting] = useState(false)
+  // One-tap Play: the title is loading the hero and level art for a run that starts without level select or the hero picker.
+  const [quick, setQuick] = useState(false)
   // The menu where a $CHOG perk read failed: it shows a Retry / Continue note until the menu changes.
   const [perksFailed, setPerksFailed] = useState<Menu>(null)
-  useEffect(() => setPerksFailed(null), [menu])
+  useEffect(() => { setPerksFailed(null); setQuick(false) }, [menu])
   useEffect(() => { startToken.current++; pendingRun.current = null; setStarting(false); setStreetRead(null); setPerksFailed(null); setMenu(m => m === 'street' ? 'hero' : m) }, [activeWallet.account, activeWallet.sandbox])
   useEffect(() => () => { startToken.current++; clearTimeout(closeTimer.current) }, [])
   const [outcome, setOutcome] = useState<Outcome | null>(null), [defeatTip, setDefeatTip] = useState('')
@@ -231,6 +233,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const levelName = (id: number) => id === DAILY_LEVEL ? `Daily #${daily.number}` : LEVELS[id - 1].name
   const [ready, setReady] = useState(false)
   const valid = /^\d+$/.test(hero) && Number(hero) >= 1 && Number(hero) <= 1969
+  // A first visit: nothing played or learned yet, so the title's main button goes straight into Night 1.
+  const firstVisit = !save.tutorial && !Object.keys(save.stars).length && !Object.keys(save.scores).length
+  // The highest open story night: where a returning player's hero picker opens from the title or the level map.
+  const currentNight = LEVELS.filter(item => !item.endless && isOpen(save, item.id)).at(-1)?.id ?? 1
   const [holder, setHolder] = useState<{ account: string | null; id: number; sandbox: boolean; home: boolean; chog: boolean } | null>(null)
   const [tryingHolder, setTryingHolder] = useState(false), [holderError, setHolderError] = useState('')
   const holderCurrent = holder?.account === activeWallet.account && holder?.id === Number(hero) && holder?.sandbox === activeWallet.sandbox
@@ -267,7 +273,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const costume = SHOP_ITEMS.some(i => i.kind === 'costume' && i.key === save.costume && shop.owned.includes(i.id)) ? save.costume : ''
   const victoryDance = kit && assets && canDance(save.victoryDance, kit.emote, shop.owned, assets.dances) ? save.victoryDance : 'gg'
   const [previewDance, setPreviewDance] = useState('idle')
-  const pickingHero = menu === 'hero'
+  const pickingHero = menu === 'hero' || quick
   const canFullscreen = document.fullscreenEnabled && typeof document.documentElement.requestFullscreen === 'function'
   const fullscreen = async () => {
     if (!shell.current) return
@@ -421,7 +427,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const feedbackLink = STATS_URL ? (feedback === 'sent' ? <p className="siege-feedback-thanks" role="status">Thanks! The porch heard you.</p> : <button className="siege-text-button siege-feedback-open" onClick={() => { setFeedback('open'); playUi('ui-open') }}>Send feedback</button>) : null
   // A win short of UNLOCK_STARS names what the next night needs.
   const starsShort = outcome?.won && !outcome.party && run?.mode === 'level' && LEVELS[run.level]?.waves.length && !isOpen(save, run.level + 1) ? run.level + 1 : 0
-  const nextNight = () => { if (!run) return; const id = run.id; leaveLevel(); setLevel(nextLevel); setHero(String(id)); setMenu('hero') }
+  // From the result card to a night's hero picker, keeping the hero and costume.
+  const toPicker = (night: number) => { if (!run) return; const id = run.id; leaveLevel(); setLevel(night); setHero(String(id)); setMenu('hero') }
   // A locked tablet shakes and says which night opens it; an open one leads to the hero picker.
   const pick = (id: number, card: HTMLElement) => {
     if (isOpen(save, id)) { setLevel(id); setMenu('hero'); return }
@@ -493,6 +500,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     pendingRun.current = { ...next, home: ownedHero, street: result.bonuses }
     setStreetRead(result); setMenu('street')
   }
+  // One-tap Play starts once its hero and level art are ready; start() still reads the $CHOG perks.
+  useEffect(() => { if (quick && prepared?.id === Number(hero)) { setQuick(false); void start() } }, [quick, prepared, hero])
   const subMenu = (next: Menu) => { setReturnMenu(menu); setMenu(next) }
   const escape = () => {
     if (closing) return
@@ -521,13 +530,16 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       </aside>}
       {displayNotice && <p role="status">{displayNotice}</p>}
       {perksFailed === menu && pendingRun.current && <p className="siege-perks-failed" role="alert">Couldn’t check your $CHOG perks.<Sticker disabled={starting} onClick={() => void start(pendingRun.current?.tutorial)}>Retry</Sticker><Sticker tone="orange" sound="ui-confirm" onClick={() => { const next = pendingRun.current; setPerksFailed(null); if (next) launchRun(next) }}>Continue</Sticker></p>}
-      {menu === 'title' && <div className="siege-title">
+      {menu === 'title' && <div className={`siege-title${firstVisit ? ' siege-title--first' : ''}`}>
         <header className="siege-title-mark"><img className="siege-wordmark" src="/art/ui/logo.svg" alt="Knock" /><h1>Candy <span>Siege</span></h1><p>The whole neighbourhood wants your candy.</p></header>
         {/* Tonight's hero, the same Chog the hero picker opens on. */}
         {valid && <figure className="siege-title-chog"><img src={thumb(Number(hero), true)} alt="" /><figcaption>Chog #{Number(hero)} · on porch duty</figcaption></figure>}
-        <Sticker tone="orange" className="siege-title-play" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Hold the porch →</Sticker>
+        {/* A first visit plays at once: Night 1 with tonight's hero, loading in the button's place. "Choose night & Chog" keeps the full flow. */}
+        <div className="siege-title-go">{quick || starting ? (failed && failed !== 'lanterns' ? <RetryPanel stage={failed} onRetry={retry} /> : <StageLabel stage={!assets ? 'candy' : starting ? 'lanterns' : loading} />)
+          : <Sticker tone="orange" className="siege-title-play" data-initial-focus="" onClick={() => { mobileFullscreen(); if (firstVisit) { setLevel(1); setQuick(true) } else setMenu('levels') }}>Hold the porch →</Sticker>}</div>
         <nav className="siege-title-more" aria-label="More"><Sticker tone="purple" icon="coin-pile" sound="ui-open" onClick={() => subMenu('shop')}>Shop</Sticker><Sticker tone="purple" icon="ghost-sheet" aria-label="Field guide" sound="ui-open" onClick={() => subMenu('book')}>Guide</Sticker><Sticker tone="purple" sound="ui-open" onClick={() => subMenu('settings')}>{GEAR}Settings</Sticker></nav>
         <div className="siege-title-links">
+          {firstVisit && <button className="siege-text-button" onClick={() => { mobileFullscreen(); setMenu('levels') }}>Choose night & Chog</button>}
           {bank.enabled && (!activeWallet.account || bank.claim?.state === 'none') && <button className="siege-text-button" onClick={() => subMenu('shop')}>Starter grant · 300 $KNOCK</button>}
           {STATS_URL && <a className="siege-text-button" href="/stats">Live stats</a>}
         </div>
@@ -544,7 +556,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
             <span className="siege-level-night">{icons ? <AtlasSprite atlas={icons} name={NIGHTS[daily.theme].icon} size={24} /> : '☾'} Daily #{daily.number}</span><span className="siege-level-map" style={{ backgroundImage: `${dailyOpen ? '' : DIM}url(/siege/levels/level${daily.level}.webp)` }}>{!dailyOpen && PADLOCK}</span><strong>{NIGHTS[daily.theme].name}</strong><small>{LEVELS[daily.level - 1].name} · {save.daily[daily.day] ? `best today ${save.daily[daily.day].toLocaleString()}` : NIGHTS[daily.theme].text}</small>{dailyOpen ? <span className="siege-level-play">Play</span> : <span className="siege-level-lock">{unlockHint(DAILY_LEVEL)}</span>}
           </Sticker>
         </div>
-        <div className="siege-levels-foot"><Sticker sound="ui-back" onClick={() => setMenu('title')}>← Back</Sticker><p className="siege-hint">3 stars: 18–20 jars · 2 stars: 10–17 · 1 star: 1–9</p></div>
+        <div className="siege-levels-foot"><Sticker sound="ui-back" onClick={() => setMenu('title')}>← Back</Sticker>{Object.keys(save.scores).length === 1 && <button className="siege-text-button" onClick={() => { setLevel(currentNight); setMenu('hero') }}>Every Chog plays differently: pick yours →</button>}<p className="siege-hint">3 stars: 18–20 jars · 2 stars: 10–17 · 1 star: 1–9</p></div>
         {/* The locked tablet's toast floats over the dialog's bottom edge, in view however far the tablets have scrolled. */}
         <div className="siege-lock-toast" role="status">{lockNote && <span key={lockNote.at}>{lockNote.text}</span>}</div>
       </>}
@@ -648,7 +660,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.won ? <>{outcome.jars} jars saved. {opened ? <b className="siege-unlocked" style={{ animationDelay: `${SLAMS[Math.max(1, outcome.stars) - 1] + IMPACT + 150}ms` }}><img src="/art/icons/key.svg" alt="" />Night {String(opened).padStart(2, '0')} unlocked!</b> : starsShort ? `Win with ${UNLOCK_STARS}★ to unlock Night ${String(starsShort).padStart(2, '0')}.` : 'The porch is yours.'}</> : defeatTip}</p>
         <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.party ? 'Team score' : outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span><span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span><span><b>{outcome.heroLevel}</b> hero level</span></div>
-        <div className="row">{outcome.party ? <Sticker tone="orange" onClick={() => leaveLevel()}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={nextNight}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Level select</Sticker></div>
+        <div className="row">{outcome.party ? <Sticker tone="orange" onClick={() => leaveLevel()}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => toPicker(nextLevel)}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Level select</Sticker></div>
+        {/* After the tutorial night (often a random guest Chog from one-tap Play), point at the hero picker. */}
+        {run?.tutorial && !outcome.party && <button className="siege-text-button" onClick={() => toPicker(nextLevel || run.level)}>Every Chog plays differently: pick yours →</button>}
         {run && !run.coop ? <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated}>{feedbackLink}</ShareCard> : feedbackLink}
       </div>}
       {menu === 'shop' && assets && <Shop assets={assets} kit={kit ?? resolveKit(assets.kits, assets.traits, assets.chogs, 1)} shop={shop} wallet={activeWallet} bank={bank} inLevel={!!run} onBack={() => setMenu(returnMenu)} />}

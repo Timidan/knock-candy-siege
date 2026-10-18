@@ -32,16 +32,14 @@ export const LEVEL1: LevelConfig = {
     { name: 'One last treat', bonus: 50, countdown: 20, groups: [{ type: 'treater', count: 15, interval: .7 }, { type: 'ghost', count: 8, interval: 1.2, delay: 2 }, { type: 'pumpkin', count: 8, interval: 1.7, delay: 5 }, { type: 'bat', count: 36, interval: .3, delay: 5 }] },
   ],
 }
-export type TutorialAction = 'build' | 'wave' | 'upgrade' | 'trap' | 'rain' | 'move' | 'emote'
+export type TutorialAction = 'build' | 'wave'
+// Only the first tower and the first wave wait for the player; the rest of the lessons arrive as TIPS while the night plays on.
 export const TUTORIAL: { action: TutorialAction; title: string; text: string; target: string }[] = [
   { action: 'build', title: '', text: 'Tap the glowing pad', target: 'pad' },
   { action: 'wave', title: 'Here comes the neighbourhood', text: 'Tap the path entrance to preview. Tap it again to call the wave.', target: 'wave' },
-  { action: 'upgrade', title: 'Give it a little more oomph', text: 'Tap your Egg Stand, then the upgrade icon.', target: 'pad' },
-  { action: 'trap', title: 'A surprise underfoot', text: 'Drag the Pumpkin Trap from the bottom right onto the path.', target: 'trap' },
-  { action: 'rain', title: 'Make it rain candy', text: 'Tap the Candy Rain icon, then tap a crowd on the path.', target: 'rain' },
-  { action: 'move', title: 'Your Chog. Your move.', text: 'Tap your hero portrait, then tap the ground near the path.', target: 'hero' },
-  { action: 'emote', title: 'A little mischief', text: 'Tap the LOL bubble beside your portrait, then pick an emote.', target: 'emote' },
 ]
+// In a tutorial run (not skipped), each of the first waves cleared adds one tip to its toast. Nothing waits for them.
+export const TIPS = ['Tap your Egg Stand, then the upgrade icon.', 'Drag the Pumpkin Trap from the bottom right onto the path.', 'Tap Candy Rain, then tap a crowd on the path.', 'Tap your hero portrait, then tap the ground to move.', 'Tap the LOL bubble beside your portrait to emote.']
 
 // Reject a partial art export; the playable fallback remains intact until the map is valid.
 export function readGeometry(value: unknown): LevelGeometry | null {

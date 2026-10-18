@@ -25,16 +25,10 @@ export class TutorialFocus {
   }
   get active() { return !this.scene.ended && this.scene.tutorialStep < TUTORIAL.length }
   get target() { return this.active ? this.scene.hud.tutorialTarget(TUTORIAL[this.scene.tutorialStep].target) : null }
-  get gatheringCrowd() { return this.scene.tutorialStep === 4 && this.scene.enemies.filter(e => e.active && e.x > 110 && e.x < 1800).length < 2 }
-  get waiting() {
-    // Let the actual first wave enter the road before asking the player to bomb a crowd.
-    if (this.gatheringCrowd) return false
-    return this.active && this.scene.time.now >= this.resumeUntil
-  }
+  get waiting() { return this.active && this.scene.time.now >= this.resumeUntil }
   acted() { this.resumeUntil = this.scene.time.now + 350 }
   permits(point: Point, world: boolean) {
     const target = this.target
-    if (this.gatheringCrowd && this.scene.mode === 'rain') return false
     return !this.active || !!target && target.world === world && Math.hypot(point.x - target.x, point.y - target.y) <= target.radius
   }
   input(point: Point, world: boolean) {
