@@ -330,13 +330,13 @@
 .siege-challenge small { font-size: 14px; line-height: 1.2; color: #ffd477; }
 .siege-modal .siege-challenge .sticker { min-height: 40px; padding: 6px 16px; font-size: 15px; }
 .siege-modal .siege-challenge-sent { margin: 4px auto 0; font-size: 15px; color: #ffe0a5; overflow-wrap: anywhere; }
-/* A narrow portrait screen stacks the row under tonight's Chog, and Chog of the Day becomes a slim chip. */
+/* A narrow portrait screen stacks the row: a challenge first (its button in view), then tonight's Chog, a little smaller to make room, then Chog of the Day as a slim chip. */
 @media (max-width: 520px) {
-  .siege-title-stage { grid-template-columns: 1fr; gap: 14px; }
-  .siege-title-stage > * { grid-column: 1; justify-self: center; }
-  .siege-title-stage > .siege-title-chog { grid-row: 1; }
-  .siege-cotd { grid-row: 2; grid-template-columns: auto 1fr auto; max-width: none; }
-  .siege-challenge { grid-row: 3; max-width: none; }
+  .siege-title-stage { grid-template-columns: 1fr; gap: 12px; }
+  .siege-title-stage > .siege-title-chog { grid-column: 1; grid-row: auto; order: -1; justify-self: center; }
+  .siege-title-chog img { width: min(72vw, 330px, calc(100dvh - 648px)); }
+  .siege-cotd { grid-column: 1; grid-row: auto; justify-self: stretch; grid-template-columns: auto 1fr auto; max-width: none; }
+  .siege-challenge { grid-column: 1; grid-row: auto; order: -2; justify-self: stretch; max-width: none; }
   .siege-cotd img { grid-row: auto; width: 40px; height: 40px; }
   .siege-cotd small { display: none; }
   .siege-modal .siege-cotd .sticker { grid-column: auto; }
