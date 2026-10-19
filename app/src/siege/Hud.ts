@@ -508,7 +508,7 @@ export class Hud {
   private showTip(b: Button) {
     const v = this.scene.view, m = b.root.getWorldTransformMatrix()
     this.tipText.setText(b.tip!())
-    const w = this.tipText.width, h = this.tipText.height, gap = b.size / 2 + h / 2 + 8
+    const w = this.tipText.width, h = this.tipText.height, gap = b.size / 2 * m.scaleX + h / 2 + 8
     this.tipCaps[0].setDisplaySize(h, h).setPosition(-w / 2, 0); this.tipCaps[1].setDisplaySize(h, h).setPosition(w / 2, 0)
     // Controls in the top half get their tip below, the rest above; it stays inside the view.
     const y = m.ty < (v.top + v.bottom) / 2 ? m.ty + gap : m.ty - gap
