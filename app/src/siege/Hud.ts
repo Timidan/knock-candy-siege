@@ -20,6 +20,9 @@ const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
 // icons and numbers at .85 so they stay readable.
 const REST = .85, PLATE = .75
+// Docked panel scale per viewport class. On a 16:9 phone one unit is 375/1080 CSS px, so a 132-unit button draws at
+// about 39 px and the 136-unit hit floor in button() stays at 40 px (136 × .85 × 375/1080).
+const PHONE = .85, LARGE = .75
 // Prices use the candy counter's own gold, and turn red while unaffordable.
 const PRICE = '#FFD23F', SHORT = '#FF8A8A'
 const candyFormat = new Intl.NumberFormat('en-US')
@@ -167,8 +170,6 @@ export class Hud {
     const bottom = this.bottom = scene.add.container(0, 0).setDepth(3000)
     this.topRight = scene.add.container(0, 0).setDepth(3000)
     this.bottomRight = scene.add.container(0, 0).setDepth(3000)
-    bottom.add(hudPlate(scene, 640, 330, '#836EF9').setPosition(12, 746))
-    this.bottomRight.add(hudPlate(scene, 478, 330, '#FF7A00').setPosition(1392, 746))
     this.supplies = scene.add.container(0, 0).setDepth(3210).setVisible(false)
     this.entrances = scene.add.container(0, 0).setDepth(3000)
     this.bossLetterbox = scene.add.container(0, 0).setDepth(3325).setVisible(false)
@@ -199,7 +200,7 @@ export class Hud {
     this.candyPlate = plate(scene, -20, 37, 198, 3, 1.5, 0xffd23f, .35).setAlpha(PLATE)
     this.candyRoot.add([this.candyPlate, scene.art.image(0, 0, 'ui/candy').setDisplaySize(56, 56).setAlpha(REST)])
     this.candy = scene.add.bitmapText(46, 0, 'siege-digits', '', 44).setOrigin(0, .5).setTint(0xffd23f).setAlpha(REST); this.candyRoot.add(this.candy)
-    if (scene.options.coop) { this.partnerCandy = this.text(307, 134, '', 24, hex(PARTNER)).setOrigin(0, .5).setStroke('#241b30', 4); top.add(this.partnerCandy) }
+    if (scene.options.coop) { this.partnerCandy = this.text(307, 134, '', 28, hex(PARTNER)).setOrigin(0, .5).setStroke('#241b30', 4); top.add(this.partnerCandy) }
     top.add(scene.art.image(497, 81, 'mod/skull').setDisplaySize(42, 42).setAlpha(REST))
     top.add(this.text(577, 57, 'WAVE', 27).setOrigin(.5).setAlpha(REST))
     this.wave = this.text(577, 100, '', 40).setOrigin(.5).setResolution(2).setAlpha(REST); top.add(this.wave)
@@ -222,7 +223,7 @@ export class Hud {
       this.speed.root.setVisible(false); pause.icon.setVisible(false); pause.label.setText('LEAVE').setFontSize(28)
       const partner = scene.heroes[1 - scene.options.coop.client.player], ref = scene.heads.head(partner.kit.id)
       const face = scene.add.image(1696, 70, ref.key, ref.frame).setDisplaySize(60, 75)
-      this.partner = this.text(1696, 124, '', 23).setOrigin(.5)
+      this.partner = this.text(1696, 124, '', 27).setOrigin(.5)
       this.topRight.add([face, this.partner])
     }
     this.portrait = this.button(bottom, 100, 984, `hero/frame/${scene.localSelection.home ? 'home' : 'guest'}`, 152, () => scene.selectHero(), false, false, '#FFD23F')
@@ -348,13 +349,16 @@ export class Hud {
   }
   layout() {
     const s = this.scene, v = s.view, centre = (v.left + v.right) / 2
-    this.top.setPosition(v.left, v.top)
+    // One scale for every docked panel, per viewport class: landscape phones (the shell's max-height: 500px) and larger screens.
+    // Each panel shrinks towards its own corner.
+    const k = s.scale.displaySize.height <= 500 ? PHONE : LARGE
+    this.top.setPosition(v.left, v.top).setScale(k)
     this.perkRoot.setPosition(centre - 460, v.top + 268)
     this.alarm.setDisplaySize(v.width, v.height)
-    this.topRight.setPosition(v.right - 1920, v.top)
-    this.bottom.setPosition(v.left, v.bottom - 1080 - 24)
-    this.bottomRight.setPosition(v.right - 1920, v.bottom - 1080 - 24)
-    this.supplies.setPosition(v.right - 560, v.bottom - 280)
+    this.topRight.setPosition(v.right - 1920 * k, v.top).setScale(k)
+    this.bottom.setPosition(v.left, v.bottom - 1104 * k).setScale(k)
+    this.bottomRight.setPosition(v.right - 1920 * k, v.bottom - 1104 * k).setScale(k)
+    this.supplies.setPosition(v.right - 560 * k, v.bottom - 280 * k).setScale(k)
     this.tutorialCard.setPosition(Math.min(v.right - 624, Math.max(v.left + 624, centre + 160)), v.top + 333)
     this.talentCard.setPosition(centre, v.top + 315)
     this.statsText.setPosition(centre, v.top + 24).setFontSize(26).setWordWrapWidth(Math.max(340, v.right - v.left - 1110))
@@ -504,7 +508,7 @@ export class Hud {
   private showTip(b: Button) {
     const v = this.scene.view, m = b.root.getWorldTransformMatrix()
     this.tipText.setText(b.tip!())
-    const w = this.tipText.width, h = this.tipText.height, gap = b.size / 2 + h / 2 + 8
+    const w = this.tipText.width, h = this.tipText.height, gap = b.size / 2 * m.scaleX + h / 2 + 8
     this.tipCaps[0].setDisplaySize(h, h).setPosition(-w / 2, 0); this.tipCaps[1].setDisplaySize(h, h).setPosition(w / 2, 0)
     // Controls in the top half get their tip below, the rest above; it stays inside the view.
     const y = m.ty < (v.top + v.bottom) / 2 ? m.ty + gap : m.ty - gap
@@ -520,7 +524,7 @@ export class Hud {
     for (const b of this.buttons) {
       if (!b.root.visible || !b.root.parentContainer?.visible) continue
       const p = b.root.getWorldTransformMatrix()
-      if (Math.hypot(p.tx - x, p.ty - y) < b.size / 2 + radius) return true
+      if (Math.hypot(p.tx - x, p.ty - y) < b.size / 2 * p.scaleX + radius) return true
     }
     return false
   }
@@ -544,7 +548,7 @@ export class Hud {
     const label = this.text(0, 0, '', 40, slot ? '#35253d' : '#fff5d6').setResolution(2).setOrigin(.5).setAlign('center')
     const face = (slot ? s.art.image(0, 0, 'ui/radial-slot') : hudDisc(s, size, accent)).setDisplaySize(size, size)
     front.add([face, icon, sweep, label]); root.add([glow, lip, front]); parent.add(root)
-    const hitSize = Math.max(120, size)
+    const hitSize = Math.max(136, size) // see PHONE
     root.setSize(hitSize, hitSize).setInteractive(new Phaser.Geom.Circle(hitSize / 2, hitSize / 2, hitSize / 2), Phaser.Geom.Circle.Contains)
     const b: Button = { root, face, front, lip, icon, label, sweep, glow, size, enabled: true }
     this.buttons.add(b); root.once('destroy', () => this.buttons.delete(b))
