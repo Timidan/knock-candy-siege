@@ -135,7 +135,7 @@ Traps and supplies don't cost candy. You get 5 of each per level (in Porch Party
 
 Every enemy wears a costume with a real Chog's face, and that Chog's traits can add modifiers (see [Enemy modifiers](#enemy-modifiers)). The first time you meet a new kind, a card introduces it.
 
-Health below is the base value. Each night multiplies it: ×1.25 on Rosie Row, ×2.3 on Lemon Lane, ×1.1 on Mint Mews, ×1.05 on Mon Manor, ×2.9 on Radioactive Ridge and ×1.1 on Rare Row (each map's layout already makes some nights harder). Each wave adds another 4%, and bosses have 1.5× on top of that. Candy for a kill rises by the same multiplier (bosses' 1.5× aside), so a tougher enemy pays in proportion.
+Health below is the base value. Each night multiplies it: ×1.25 on Rosie Row, ×1.95 on Lemon Lane, ×1.1 on Mint Mews, ×1.05 on Mon Manor, ×2.9 on Radioactive Ridge and ×1.1 on Rare Row (each map's layout already makes some nights harder). Each wave adds another 4%, and bosses have 1.5× on top of that. Candy for a kill rises by the same multiplier (bosses' 1.5× aside), so a tougher enemy pays in proportion.
 
 | Enemy | Health | Jars it steals | What it does | How to beat it |
 |---|---|---|---|---|

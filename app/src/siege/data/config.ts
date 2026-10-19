@@ -101,7 +101,7 @@ export const STARTING_CANDY = 250
 // Difficulty, in one place. Story nights (and the Daily, which plays them) multiply enemy health by the night,
 // plus a share per wave; bosses take BOSS_HEALTH on top. Endless starts from ENDLESS_HEALTH and keeps its per-wave climb.
 // The nights' maps differ a lot (Ridge's boosted pads, Manor's portals), so each night has its own measured value.
-export const NIGHT_HEALTH = [1.25, 2.3, 1.1, 1.05, 2.9, 1.1]
+export const NIGHT_HEALTH = [1.25, 1.95, 1.1, 1.05, 2.9, 1.1]
 export const WAVE_HEALTH = .04
 export const BOSS_HEALTH = 1.5
 export const ENDLESS_HEALTH = 1.25
