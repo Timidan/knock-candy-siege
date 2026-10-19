@@ -538,7 +538,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       enterParty(client, controller); setPartyStatus('You’re in! Pick your Chog to join.'); setPicking(true)
     } catch (error) { if (!controller.signal.aborted) { setPartyError(plainInvite(error instanceof Error ? error.message : 'Could not open the room.')); setMenu('party-error') } }
   }
-  useEffect(() => { if (inviteCode) void joinParty() }, [])
+  // Deferred a task so a dev StrictMode remount cancels the first attempt before it claims the seat.
+  useEffect(() => { if (!inviteCode) return; const timer = setTimeout(() => void joinParty()); return () => clearTimeout(timer) }, [])
   // The friend's Join: the same ownership rule as the host's, then the Chog goes to the room.
   const pickChog = async () => {
     const client = partyClient.current
