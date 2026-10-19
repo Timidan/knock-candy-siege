@@ -103,11 +103,12 @@ export class Hero {
     if (this.kit.trinket === 'snack-bag') { this.scene.jars = Math.min(20, this.scene.jars + 1); this.scene.number(1, this.x, this.y - 140, 0xa4f6a4); this.scene.hud.toast('Snack Bag · +1 jar'); this.scene.options.sfx.play('jars-back') }
     if (this.kit.skin === 'multi') { this.waveBuff = ['power', 'haste', 'guard'][Math.floor(this.scene.random() * 3)]; this.scene.hud.toast(`Multi Colored · ${this.waveBuff} this wave`) }
   }
-  killIncome(amount: number) {
+  // Co-op shares pass exact: the scene rounds each player's running total, never each kill.
+  killIncome(amount: number, exact = false) {
     let result = amount * (this.kit.passive === 'money-mouth' ? this.has('passive') ? 1.25 : 1.15 : 1)
     const lucky = (this.kit.headgear === 'degen-luck' ? this.has('headgear') ? .2 : .1 : 0) + (this.kit.skin === 'jade' ? .08 : 0)
     if (this.scene.random() < lucky) { result *= 2; this.scene.number(Math.round(result), this.x, this.y - 140, 0xffd36b) }
-    return Math.round(result)
+    return exact ? result : Math.round(result)
   }
   onKill(enemy: Enemy) {
     this.addCharge(2)

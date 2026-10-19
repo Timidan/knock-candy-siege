@@ -107,6 +107,6 @@ Each player must bring a Chog their wallet owns, so this test uses the holder de
 
 1. **Browser A:** do steps 1 and 2, then tap **Try as a holder**. When your Chog appears, tap **Porch Party · play together**, then **Copy invite**.
 2. **Browser B:** use a second browser, a private window or a phone, so it gets its own guest wallet. Open the invite link, tap **Try as a holder**, then **Join Porch Party →**.
-3. The level starts once both Chogs have loaded, with no tutorial. Each player moves their own hero and uses its own special, ultimate and talents. Candy, towers, traps, spells and jars are shared. Your partner's Chog, level and health show at the top right.
+3. The level starts once both Chogs have loaded, with no tutorial. Each player moves their own hero and uses its own special, ultimate and talents. Each player has their own candy and towers; kill candy, wave bonuses and early-call candy are split evenly, and the jars, traps and spells are shared. Your partner's Chog, level and health show at the top right.
 
 The two holder demos use two of the sandbox's five tries per network per hour. A room that hasn't started closes after 10 minutes.

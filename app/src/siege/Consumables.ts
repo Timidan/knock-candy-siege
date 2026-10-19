@@ -4,12 +4,12 @@ import { CONSUMABLES, ENEMIES } from './data/config'
 import type { ConsumableKind, Point } from './data/config'
 import { distanceSq } from './world'
 
-export type PlacedItem = Point & { kind: ConsumableKind; life: number; pulse: number; hp: number; image: Phaser.GameObjects.Image }
+export type PlacedItem = Point & { kind: ConsumableKind; life: number; pulse: number; hp: number; owner?: number; image: Phaser.GameObjects.Image }
 export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y: number, hero = s.hero) {
-  const c = CONSUMABLES[kind], spot = s.nearestPath(x, y)
+  const c = CONSUMABLES[kind], spot = s.nearestPath(x, y), mine = hero === s.localHero // co-op: only the sender sees their refusals
   if (s.itemCooldown[kind] > 0 || s.stock[kind] <= 0) return
-  if (spot.gap > 90 || x < 50 || x > 1820 || y < 150 || y > 915) { s.hud.toast('Aim beside the road. One is used only on a valid target.'); return }
-  if (s.items.length >= 8) { s.hud.toast('Let a few supplies finish first.'); return }
+  if (spot.gap > 90 || x < 50 || x > 1820 || y < 150 || y > 915) { if (mine) s.hud.toast('Aim beside the road. One is used only on a valid target.'); return }
+  if (s.items.length >= 8) { if (mine) s.hud.toast('Let a few supplies finish first.'); return }
   s.stock[kind]--; s.itemCooldown[kind] = c.cooldown; s.discover([`item/${kind}`])
   // Road blockers snap onto it; the decoy stands just beside it, drawing marchers off to one side.
   const at = kind === 'candy-cane' ? spot : kind === 'scarecrow' ? { x: spot.x, y: spot.y + (spot.y > 820 ? -52 : 52) } : { x, y }
@@ -30,7 +30,8 @@ export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y:
     s.items.push({ x: at.x, y: at.y, kind, life: c.duration, pulse: 0, hp: 240, image: s.art.image(at.x, at.y, `item/${kind}/world`).setOrigin(.5, kind === 'scarecrow' ? 1 : .5).setDepth(kind === 'scarecrow' ? at.y : 7) })
     s.effect(`item/${kind}/fx/0`, at.x, at.y - 20, .7, 1.5); s.sfx(`item-${kind}`, at)
   }
-  s.cancel(); s.hud.refresh()
+  if (!s.options.coop) s.cancel() // co-op closes the menu at the tap
+  s.hud.refresh()
 }
 export function updateConsumables(s: SiegeScene, dt: number) {
   for (const kind of Object.keys(CONSUMABLES) as ConsumableKind[]) s.itemCooldown[kind] = Math.max(0, s.itemCooldown[kind] - dt)

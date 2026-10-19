@@ -98,6 +98,9 @@ export const TARGETING: Targeting[] = ['first', 'last', 'strong', 'close']
 export const LIMITS = { enemies: 96, towers: 12, projectiles: 128, effects: 96, numbers: 40, traps: 12 }
 export const starsFor = (jars: number) => jars >= 18 ? 3 : jars >= 10 ? 2 : jars > 0 ? 1 : 0
 export const STARTING_CANDY = 250
+// Each co-op player's own starting candy, before their own perks. With 175 each (350 for the pair), the co-op bots' wins
+// and jars lost stayed closest to the old shared pot of 250; 250 each made nights 4–6 clearly easier.
+export const COOP_STARTING_CANDY = 175
 // Difficulty, in one place. Story nights (and the Daily, which plays them) multiply enemy health by the night,
 // plus a share per wave; bosses take BOSS_HEALTH on top. Endless starts from ENDLESS_HEALTH and keeps its per-wave climb.
 // The nights' maps differ a lot (Ridge's boosted pads, Manor's portals), so each night has its own measured value.
