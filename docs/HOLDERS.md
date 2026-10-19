@@ -7,7 +7,7 @@ Play at https://knock.timidan.xyz, on a phone held sideways or in a desktop brow
 ## The basics
 
 - **Jars are your lives.** You start each level with 20. An enemy that reaches the porch steals one or more. At 0 jars you lose.
-- **Candy is your money.** You start with 250. You earn it from each enemy you stop, from a bonus for each wave you clear, and from calling waves early. You spend it on towers and upgrades during the level; traps and supplies come as a stock of 5 each per level. If you tap something you can't afford, the game says how much more candy you need.
+- **Candy is your money.** You start with 250. You earn it from each enemy you stop (tougher enemies pay more), from a bonus for each wave you clear, and from calling waves early. You spend it on towers and upgrades during the level; traps and supplies come as a stock of 5 each per level. If you tap something you can't afford, the game says how much more candy you need.
 - **Stars:** survive every wave to win. 18 to 20 jars left earns 3 stars, 10 to 17 earns 2, and 1 to 9 earns 1.
 - **Waves:** the first wave starts when you call it. After that, each wave calls itself when its countdown ends. You can call it early for extra candy: half a candy for each second left on the countdown, rounded up.
 - **Where to start:** Rosie Row, marked "Start here", is always open. Each later level unlocks when you win the one before, and a Rosie Row win also unlocks Endless and the Daily. A locked level shows a padlock and the level to beat, and the win that unlocks a level says so, for example "Night 02 unlocked!". Levels you have already played stay unlocked. Your first Rosie Row is a 7-step tutorial, and you can skip it. To replay it, tap **Play with the tutorial again** in the hero picker.
@@ -135,7 +135,7 @@ Traps and supplies don't cost candy. You get 5 of each per level (in Porch Party
 
 Every enemy wears a costume with a real Chog's face, and that Chog's traits can add modifiers (see [Enemy modifiers](#enemy-modifiers)). The first time you meet a new kind, a card introduces it.
 
-Health below is the base value. Each night multiplies it: ×1.25 on Rosie Row, ×1.85 on Lemon Lane, ×1.1 on Mint Mews, ×1.05 on Mon Manor, ×2.3 on Radioactive Ridge and ×1.2 on Rare Row (each map's layout already makes some nights harder). Each wave adds another 4%, and bosses have 1.5× on top of that.
+Health below is the base value. Each night multiplies it: ×1.25 on Rosie Row, ×2.3 on Lemon Lane, ×1.1 on Mint Mews, ×1.05 on Mon Manor, ×2.9 on Radioactive Ridge and ×1.1 on Rare Row (each map's layout already makes some nights harder). Each wave adds another 4%, and bosses have 1.5× on top of that. Candy for a kill rises by the same multiplier (bosses' 1.5× aside), so a tougher enemy pays in proportion.
 
 | Enemy | Health | Jars it steals | What it does | How to beat it |
 |---|---|---|---|---|
@@ -318,7 +318,7 @@ Two players, two Chogs, one porch: you defend a story level together.
     - **Costume Night:** ground enemy types are shuffled (bats stay bats);
   - your best score for each day is saved, for the last 30 days.
 - **Endless, on Town Square:**
-  - the waves never stop: enemy health starts at ×1.25 and rises about 8% each wave;
+  - the waves never stop: enemy health starts at ×1.25 and rises about 8% each wave, and candy for a kill rises with it;
   - a new road opens every 10 waves, up to four;
   - every tenth wave is a Witching Hour with a boss, rotating through all 10 legends and the Great Pumpkin;
   - all six map props work here, on longer cooldowns, except the bridge, which keeps its 50-second cycle;

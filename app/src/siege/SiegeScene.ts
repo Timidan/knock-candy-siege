@@ -11,7 +11,7 @@ import { ShapePool, circle, plate, curbedMap } from './renderShapes'
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
-import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
+import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
 import { LEVELS, TUTORIAL, TIPS } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
@@ -140,6 +140,7 @@ export class SiegeScene extends Phaser.Scene {
     return this.plans[i] = shuffle ? { ...base, groups: base.groups.map(group => ({ ...group, type: shuffle[group.type] ?? group.type })) } : base
   }
   healthScale(wave: number) { return this.level.endless ? endlessHealth(wave) : (NIGHT_HEALTH[this.level.id - 1] ?? 1) * (1 + WAVE_HEALTH * wave) }
+  killCandyScale(wave: number) { return 1 + KILL_CANDY_HEALTH * (this.healthScale(wave) - 1) }
   routeFor(e: Enemy): Route { return e.route ?? (e.path >= this.routes.length ? e.path === this.routes.length + this.flyRoutes.length ? this.detour! : this.flyRoutes[e.path - this.routes.length] : this.routes[e.path]) }
   roadFor(kind: EnemyKind, path: number) { const sw = this.options.assets.geometry.switch; return this.bridgeUp && !ENEMIES[kind].flying && path === sw?.path ? this.routes.length + this.flyRoutes.length : this.entrancePath(kind, path) }
   enemies: Enemy[] = []
@@ -762,7 +763,7 @@ export class SiegeScene extends Phaser.Scene {
     if (!enemy) return false
     const id = entry.chogId ?? 1 + Math.floor(this.random() * 1969), traits = traitsFor(this.options.assets.traits, id), mods = modifiersFor(traits), config = ENEMIES[kind]
     const multiplier = 1 + eliteBonus(traits) * .5, health = this.healthScale(wave), wild = entry.edge === undefined ? undefined : this.wildRoute(entry.edge, kind, wave)
-    Object.assign(enemy, { active: true, generation: enemy.generation + 1, wave, kind, id, mods, path: wild ? -1 : route ?? this.roadFor(kind, path), route: wild, boss: undefined, distance, returning: 0, casting: 0, poisonStacks: 0, speed: config.speed * (mods.includes('wind') ? 1.2 : 1) * this.speedScale, hp: config.hp * multiplier * health, maxHp: config.hp * multiplier * health, candy: entry.risen ? 0 : Math.round(config.candy * multiplier * (mods.includes('rich') ? 2 : 1) * (this.level.endless ? 1 + wave * .02 : 1)), jars: Math.max(config.jars, mods.includes('hungry') ? 2 : 1), age: 0, hit: 0, attack: .5, skill: 4 + this.random() * 2, lucky: false, revived: false, armour: false, visible: kind !== 'ghost', slowPower: .5, heroDot: false, sigCooldown: 0, shield: 0, gold: 0, lit: true })
+    Object.assign(enemy, { active: true, generation: enemy.generation + 1, wave, kind, id, mods, path: wild ? -1 : route ?? this.roadFor(kind, path), route: wild, boss: undefined, distance, returning: 0, casting: 0, poisonStacks: 0, speed: config.speed * (mods.includes('wind') ? 1.2 : 1) * this.speedScale, hp: config.hp * multiplier * health, maxHp: config.hp * multiplier * health, candy: entry.risen ? 0 : Math.round(config.candy * multiplier * (mods.includes('rich') ? 2 : 1)), jars: Math.max(config.jars, mods.includes('hungry') ? 2 : 1), age: 0, hit: 0, attack: .5, skill: 4 + this.random() * 2, lucky: false, revived: false, armour: false, visible: kind !== 'ghost', slowPower: .5, heroDot: false, sigCooldown: 0, shield: 0, gold: 0, lit: true })
     for (const key of Object.keys(enemy.status) as Status[]) enemy.status[key] = 0
     this.art.set(enemy.art.body, `enemy/${kind}/walk/0`)
     const ref = this.heads.window(id)
@@ -1283,7 +1284,7 @@ export class SiegeScene extends Phaser.Scene {
       if (e.mods.includes('lucky') && !e.lucky) { e.lucky = true; e.hp = 1; this.effect('fx/levelup/0', e.x, e.y - 50, .5); this.sfx('enemy-lucky', e); return true }
       if (e.mods.includes('skull') && !e.revived) { e.revived = true; e.hp = e.maxHp * .4; this.status(e, 'stun', .7); this.effect('fx/poof/0', e.x, e.y - 50, .6); this.sfx('enemy-revive', e); return true }
       const candyBefore = this.candy
-      this.kills++; this.income(Math.max(...this.heroes.map(hero => hero.killIncome(e.candy))) * (this.options.street.chog ? 1.1 : 1))
+      this.kills++; this.income(Math.max(...this.heroes.map(hero => hero.killIncome(e.candy * this.killCandyScale(e.wave)))) * (this.options.street.chog ? 1.1 : 1))
       this.rewardFeedback(this.candy - candyBefore, e)
       this.heroes.forEach(hero => hero.onKill(e))
       this.killsByKind[e.kind] = (this.killsByKind[e.kind] ?? 0) + 1

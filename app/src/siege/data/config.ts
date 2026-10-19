@@ -101,10 +101,13 @@ export const STARTING_CANDY = 250
 // Difficulty, in one place. Story nights (and the Daily, which plays them) multiply enemy health by the night,
 // plus a share per wave; bosses take BOSS_HEALTH on top. Endless starts from ENDLESS_HEALTH and keeps its per-wave climb.
 // The nights' maps differ a lot (Ridge's boosted pads, Manor's portals), so each night has its own measured value.
-export const NIGHT_HEALTH = [1.25, 1.85, 1.1, 1.05, 2.3, 1.2]
+export const NIGHT_HEALTH = [1.25, 2.3, 1.1, 1.05, 2.9, 1.1]
 export const WAVE_HEALTH = .04
 export const BOSS_HEALTH = 1.5
 export const ENDLESS_HEALTH = 1.25
+// Kill candy follows that health: an enemy pays its candy times 1 + KILL_CANDY_HEALTH × (health multiplier − 1),
+// so tougher nights, waves and Endless rounds pay more per kill (1 = in full proportion).
+export const KILL_CANDY_HEALTH = 1
 export const EARLY_CALL_CANDY_PER_SECOND = .5
 
 export const SPECIALISATIONS = {
