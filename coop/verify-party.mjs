@@ -4,10 +4,11 @@ import { homedir } from 'node:os'
 import assert from 'node:assert/strict'
 
 const require = createRequire(import.meta.url)
-const { chromium } = require('/home/timidan/Desktop/murmur/node_modules/playwright-core')
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/home/timidan/Desktop/murmur/node_modules/playwright-core')
 const { parseAbi, decodeFunctionData, encodeFunctionResult } = require('../app/node_modules/viem')
 const aggregate = parseAbi(['function aggregate3((address target, bool allowFailure, bytes callData)[] calls) payable returns ((bool success, bytes returnData)[] returnData)'])
-const evidence = `${homedir()}/.cache/knock-coop/evidence/phase2`
+const evidence = process.env.EVIDENCE || `${homedir()}/.cache/knock-coop/evidence/phase2`
+const SITE = process.env.SITE || 'http://localhost:5200', PLAY_MS = Number(process.env.PLAY_MS ?? 60000), TAG = process.env.TAG || 'run'
 await mkdir(evidence, { recursive: true })
 const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome-stable', headless: true, args: ['--use-angle=gl', '--ignore-gpu-blocklist', '--enable-gpu'] })
 const pages = [], errors = [], modes = process.argv.slice(2).length ? process.argv.slice(2) : ['finish', 'desync', 'disconnect']
@@ -18,13 +19,15 @@ try {
     const account = `0x${String(player + 1).repeat(40)}`, id = player + 1
     const context = await browser.newContext({ viewport: benchmark || player ? { width: 844, height: 390 } : { width: 1280, height: 720 }, deviceScaleFactor: benchmark ? 3 : 1, reducedMotion: !benchmark && player ? 'reduce' : 'no-preference' })
     const page = await context.newPage(); pages.push(page)
-    const latency = Number(process.env.PARTY_RTT_MS ?? 0) / 2
-    if (latency) await page.routeWebSocket(/\/rooms\/.*\/ws/, socket => {
-      const server = socket.connectToServer()
-      socket.onMessage(message => setTimeout(() => server.send(message), latency))
-      server.onMessage(message => setTimeout(() => socket.send(message), latency))
-      socket.onClose((code, reason) => setTimeout(() => server.close({ code, reason }), latency))
-      server.onClose((code, reason) => setTimeout(() => socket.close({ code, reason }), latency))
+    // PARTY_RTT_MS ± PARTY_JITTER_MS, split evenly each way. Each direction keeps its order, as TCP does: a late frame holds back the ones behind it.
+    const latency = Number(process.env.PARTY_RTT_MS ?? 0) / 2, jitter = Number(process.env.PARTY_JITTER_MS ?? 0) / 2
+    const lane = () => { let due = 0; return send => { due = Math.max(due, Date.now() + latency + (Math.random() * 2 - 1) * jitter); setTimeout(send, due - Date.now()) } }
+    if (latency || jitter) await page.routeWebSocket(/\/rooms\/.*\/ws/, socket => {
+      const server = socket.connectToServer(), up = lane(), down = lane()
+      socket.onMessage(message => up(() => server.send(message)))
+      server.onMessage(message => down(() => socket.send(message)))
+      socket.onClose((code, reason) => up(() => server.close({ code, reason })))
+      server.onClose((code, reason) => down(() => socket.close({ code, reason })))
     })
     page.on('pageerror', error => errors.push({ player, message: error.message }))
     // Read-only NFT/holder fixtures; no signing, transactions, grants or chain mutations.
@@ -60,7 +63,8 @@ try {
     await page.waitForFunction(() => document.querySelector('.siege-portrait--home'), null, { timeout: 45000 })
   }
   async function room(mode) {
-    await pages[0].goto('http://localhost:5200/?siegeStats')
+    const [host, friend] = pages
+    await pages[0].goto(`${SITE}/?siegeStats`)
     await pages[0].getByRole('button', { name: /Hold the porch/ }).click({ force: true })
     await pages[0].getByRole('button', { name: mode === 'crowd60' ? /^Rare Row/ : /^Rosie Row/ }).click()
     await choose(pages[0], 1)
@@ -69,9 +73,35 @@ try {
     const invite = await pages[0].locator('.siege-party-link input').inputValue(), code = new URL(invite).searchParams.get('room')
     assert.match(invite, /^https:\/\/knock\.timidan\.xyz\/\?room=[A-Z2-9]+$/)
     await pages[0].screenshot({ path: `${evidence}/${mode}-lobby.png` })
-    await pages[1].goto(`http://localhost:5200/?room=${code}&siegeStats`)
-    await choose(pages[1], 2)
-    await pages[1].getByRole('button', { name: 'Join Porch Party →' }).click()
+    // The invite seats the friend before any Chog: the lobby names the host's party, and the picker opens over it.
+    const seat = async () => {
+      await friend.goto(`${SITE}/?room=${code}&siegeStats`)
+      await friend.getByRole('heading', { name: 'Pick your Chog' }).waitFor({ timeout: 45000 })
+      await friend.getByRole('heading', { name: 'Chog #1’s Porch Party' }).waitFor()
+      await friend.getByText('You · choosing…').waitFor()
+      await host.getByText('Your friend is here, picking a Chog').waitFor({ timeout: 15000 })
+    }
+    await seat()
+    if (mode === modes[0]) {
+      // Closing the picker keeps the seat. Leaving frees it for the same invite, and the host keeps the room.
+      for (const size of [{ width: 844, height: 390 }, { width: 1280, height: 720 }]) {
+        await friend.setViewportSize(size); await friend.waitForTimeout(500)
+        await friend.screenshot({ path: `${evidence}/friend-picker-${size.width}.png` })
+        await friend.keyboard.press('Escape'); await friend.getByRole('button', { name: 'Pick your Chog' }).waitFor(); await friend.waitForTimeout(300)
+        await friend.screenshot({ path: `${evidence}/friend-lobby-${size.width}.png` })
+        await friend.getByRole('button', { name: 'Pick your Chog' }).click(); await friend.getByRole('heading', { name: 'Pick your Chog' }).waitFor()
+      }
+      await friend.setViewportSize({ width: 844, height: 390 })
+      await host.screenshot({ path: `${evidence}/host-friend-here.png` })
+      await friend.keyboard.press('Escape'); await friend.getByRole('button', { name: 'Leave room' }).click()
+      await host.getByText('Your friend left. The invite link still works.').waitFor({ timeout: 15000 })
+      await host.getByText('Waiting for a friend').waitFor()
+      await seat()
+      console.log(mode, 'friend backed out and rejoined through the same invite')
+    }
+    await friend.getByRole('button', { name: 'Use connected wallet' }).click()
+    await friend.getByText('Your Chog #2').waitFor({ timeout: 45000 })
+    await friend.getByRole('button', { name: 'Join the party →' }).click()
     await Promise.all(pages.map(page => page.waitForFunction(() => window.__siege?.net?.state === 'running', null, { timeout: 90000 })))
     const initial = await Promise.all(pages.map(page => page.evaluate(() => {
       const s = window.__siege, gl = s.game.renderer.gl, ext = gl?.getExtension('WEBGL_debug_renderer_info')
@@ -80,6 +110,16 @@ try {
       s.options.coop.client.send = message => { if (message.type === 'input') pending.set(message.tick, performance.now()); send(message) }
       s.options.coop.client.subscribe(message => { if (['disconnected', 'error', 'desync'].includes(message.type)) window.partyEvents.push(message); if (message.type === 'input' && message.player === s.options.coop.client.player && pending.has(message.tick)) { window.partyRtt.push(performance.now() - pending.get(message.tick)); pending.delete(message.tick) } })
       s.net.options.onHash = (tick, hash) => window.partyHashes.push({ tick, hash })
+      // Tap to action: an accepted command until the simulation applies it for this player. A stall: a due turn that cannot run.
+      const net = s.net, local = s.options.coop.client.player, queued = [], enqueue = net.enqueue.bind(net), apply = net.simulation.command, advance = net.advance.bind(net)
+      window.partyTaps = []; window.partyStall = { ms: 0, count: 0, since: 0 }; window.partyTick0 = net.tick
+      net.enqueue = command => { const ok = enqueue(command); if (ok) queued.push(performance.now()); return ok }
+      net.simulation.command = (player, command) => { if (player === local && queued.length) window.partyTaps.push(performance.now() - queued.shift()); apply(player, command) }
+      net.advance = () => {
+        const ok = advance(), now = performance.now(), stall = window.partyStall
+        if (ok && stall.since) { stall.ms += now - stall.since; stall.count += now - stall.since > 50; stall.since = 0 } else if (!ok && net.state === 'running' && !stall.since) stall.since = now
+        return ok
+      }
       return { relay: new URL(s.options.coop.client.socket.url).origin, ids: s.heroes.map(hero => hero.kit.id), local: s.localHero.kit.id, delay: s.net.delay, rtt: s.options.coop.client.rtt, talents: s.heroes.map(hero => hero.talentLevels), gpu: ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL), webdriver: navigator.webdriver }
     })))
     assert.deepEqual(initial.map(r => r.ids), [[1, 2], [1, 2]]); assert.deepEqual(initial.map(r => r.local), [1, 2])
@@ -91,6 +131,25 @@ try {
     return { tick: s.net.tick, verified: s.net.verifiedTick, status: s.net.state, detail: s.net.detail, seconds: s.clock, wave: s.wave, jars: s.jars, candy: s.candy, kills: s.kills, talents: s.heroes.map(h => h.talentLevels), ended: s.ended, result: s.coopResult, hashes: window.partyHashes, rtt: window.partyRtt, elapsedMs: performance.now() - window.partyStart, snapshot: JSON.stringify(s.net.simulation.snapshot(), (_key, value) => value instanceof Set ? [...value] : value) }
   })
   for (const mode of modes) {
+    if (mode === 'errors') {
+      // A dead invite, then the host leaving while the friend picks: both end on a plain note, not a broken lobby.
+      await pages[1].goto(`${SITE}/?room=AAAAAAAAAA&siegeStats`)
+      await pages[1].getByRole('heading', { name: /This invite is no longer available/ }).waitFor({ timeout: 45000 })
+      await pages[1].screenshot({ path: `${evidence}/error-dead-invite.png` })
+      await pages[0].goto(`${SITE}/?siegeStats`)
+      await pages[0].getByRole('button', { name: /Hold the porch/ }).click({ force: true })
+      await pages[0].getByRole('button', { name: /^Rosie Row/ }).click()
+      await choose(pages[0], 1)
+      await pages[0].getByRole('button', { name: 'Porch Party · play together' }).click()
+      const invite = await pages[0].locator('.siege-party-link input').inputValue({ timeout: 45000 })
+      await pages[1].goto(`${new URL(invite).search.replace('?', `${SITE}/?`)}&siegeStats`)
+      await pages[1].getByRole('heading', { name: 'Pick your Chog' }).waitFor({ timeout: 45000 })
+      await pages[0].getByRole('button', { name: 'Leave room' }).click()
+      await pages[1].getByRole('heading', { name: /Your friend closed this Porch Party/ }).waitFor({ timeout: 15000 })
+      await pages[1].screenshot({ path: `${evidence}/error-host-left.png` })
+      console.log('PASS: dead invite and host-left notes')
+      continue
+    }
     const initial = await room(mode)
     if (mode === 'finish') {
       // Host picks manually while the partner lets the first card auto-pick after 450 turns.
@@ -140,6 +199,38 @@ try {
       await pages[0].waitForTimeout(2000)
       await Promise.all(pages.map((page, i) => page.screenshot({ path: `${evidence}/result-${i}.png` })))
       console.log('PASS: two Chogs finish Rosie Row, every checkpoint and final state match')
+    } else if (mode === 'play') {
+      // About a minute of both players building, upgrading, moving and sending waves through the scene's command path.
+      const started = Date.now()
+      for (let round = 0; Date.now() - started < PLAY_MS; round++) {
+        const step = await Promise.all(pages.map((page, player) => page.evaluate(({ player, round }) => {
+          const s = window.__siege
+          if (s.net.state !== 'running' || s.ended) return { state: s.net.state, ended: s.ended, detail: s.net.detail }
+          if (s.localHero.choices) s.command({ type: 'talent', index: player })
+          else if (!s.talentWaiting) {
+            const mine = s.pads.map((_, pad) => pad).filter(pad => pad % 2 === player), empty = mine.find(pad => !s.towers[pad])
+            if (empty !== undefined) s.command({ type: 'build', pad: empty, kind: ['egg', 'lantern', 'tp', 'lantern'][empty % 4] })
+            else s.command({ type: 'upgrade', pad: mine[round % mine.length] })
+            s.command({ type: 'move', x: player ? 1150 : 900, y: round % 2 ? 600 : 700 })
+            if (!s.wave && player === 0 && s.towers.filter(Boolean).length >= 2) s.command({ type: 'wave' })
+          }
+          return { state: s.net.state, tick: s.net.tick, wave: s.wave, jars: s.jars }
+        }, { player, round })))
+        assert.ok(step.every(r => r.state === 'running'), JSON.stringify(step))
+        if (round % 15 === 0) console.log('play', Math.round((Date.now() - started) / 1000), 's', JSON.stringify(step))
+        await pages[0].waitForTimeout(1000)
+      }
+      await pages[0].waitForTimeout(1500)
+      const final = await Promise.all(pages.map(page => page.evaluate(() => { const s = window.__siege, stall = { ...window.partyStall }; if (stall.since) stall.ms += performance.now() - stall.since; return { state: s.net.state, tick: s.net.tick, ticks: s.net.tick - window.partyTick0, verified: s.net.verifiedTick, delay: s.net.delay, rttMax: s.options.coop.client.rtt, hashes: window.partyHashes, taps: window.partyTaps, stall, events: window.partyEvents, elapsedMs: performance.now() - window.partyStart } })))
+      const common = Math.min(...final.map(f => f.hashes.length)), at = (xs, q) => Math.round([...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))])
+      const summary = { tag: TAG, injected: { rttMs: Number(process.env.PARTY_RTT_MS ?? 0), jitterMs: Number(process.env.PARTY_JITTER_MS ?? 0) }, delayTicks: final.map(f => f.delay), delayMs: final.map(f => Math.round(f.delay * 1000 / 45)), rttMax: final.map(f => Math.round(f.rttMax)),
+        tapToActionMs: final.map(f => ({ n: f.taps.length, median: at(f.taps, .5), p90: at(f.taps, .9), max: at(f.taps, 1) })), stalls: final.map(f => ({ over50ms: f.stall.count, ms: Math.round(f.stall.ms), fraction: +(f.stall.ms / f.elapsedMs).toFixed(4) })),
+        turnsPerSecond: final.map(f => +(f.ticks / (f.elapsedMs / 1000)).toFixed(2)), checkpointsCompared: common, checkpointsMatch: JSON.stringify(final[0].hashes.slice(0, common)) === JSON.stringify(final[1].hashes.slice(0, common)) }
+      await writeFile(`${evidence}/play-${TAG}.json`, JSON.stringify({ summary, initial, final }, null, 2))
+      console.log('summary', JSON.stringify(summary))
+      assert.ok(final.every(f => f.state === 'running' && !f.events.length), 'both clients still running, no relay stop events')
+      assert.ok(common >= 5 && summary.checkpointsMatch, 'checkpoints match')
+      console.log('PASS: a minute of Porch Party in sync')
     } else if (mode === 'crowd60') {
       // Performance fixture only: the same durable crowd is installed at turn 600 on both peers.
       await Promise.all(pages.map(page => page.evaluate(() => {

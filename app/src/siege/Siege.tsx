@@ -1,6 +1,6 @@
 import { createRoom, RoomClient } from './net/RoomClient'
 import type { CoopSession } from './net/session'
-import type { HeroSelection, Roster } from './net/protocol'
+import type { HeroSelection, Player, Roster } from './net/protocol'
 import { prepareParty } from './net/prepare'
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
@@ -207,8 +207,11 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const [saveWarning, setSaveWarning] = useState(false)
   const [shareStats, setShareStats] = useState(statsEnabled)
   const [inviteCode, setInviteCode] = useState(() => new URLSearchParams(location.search).get('room')?.toUpperCase() ?? '')
-  const [menu, setMenu] = useState<Menu>(() => new URLSearchParams(location.search).has('room') ? 'hero' : reopenShop() ? 'shop' : 'title')
-  const [party, setParty] = useState<{ code: string; players: Roster } | null>(null)
+  // An invite opens straight into the Porch Party lobby; the friend picks a Chog there.
+  const [menu, setMenu] = useState<Menu>(() => new URLSearchParams(location.search).has('room') ? 'party' : reopenShop() ? 'shop' : 'title')
+  const [party, setParty] = useState<{ code: string; players: Roster; joined: [boolean, boolean]; player: Player } | null>(null)
+  // The friend's Chog picker, a small dialog over the lobby.
+  const [picking, setPicking] = useState(false)
   const [partyStatus, setPartyStatus] = useState(''), [partyError, setPartyError] = useState('')
   const partyClient = useRef<RoomClient | null>(null), lobbyUnsubscribe = useRef<(() => void) | null>(null)
   const partyAbort = useRef<AbortController | null>(null)
@@ -224,6 +227,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const [streetRead, setStreetRead] = useState<StreetRead | null>(null)
   const pendingRun = useRef<Run | null>(null), startToken = useRef(0)
   const accountNow = useRef(activeWallet.account); accountNow.current = activeWallet.account
+  const assetsNow = useRef(assets); assetsNow.current = assets
   const [starting, setStarting] = useState(false)
   // One-tap Play: the title is loading the hero and level art for a run that starts without level select or the hero picker.
   // From a challenge banner it carries the rival (none for an expired Daily), and the night may be one still locked here.
@@ -263,14 +267,16 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   const hasChog = holderCurrent && !!holder?.chog
   const myChogs = activeWallet.sandboxId !== null && activeWallet.sandbox ? [activeWallet.sandboxId] : activeWallet.choice === 'connected' ? wallet.ids : []
   useEffect(() => {
-    if (!valid || menu !== 'hero') return
+    if (!valid || menu !== 'hero' && !picking) return
     let active = true
     const account = activeWallet.account, sandbox = activeWallet.sandbox, id = Number(hero)
     void Promise.all([readHomeAdvantage(id, account, sandbox), readHolderBonuses(id, account, sandbox)]).then(([home, perks]) => {
       if (active) setHolder({ account, id, sandbox, home, chog: perks.bonuses.chog })
     })
     return () => { active = false }
-  }, [activeWallet.account, activeWallet.sandbox, hero, valid, menu])
+  }, [activeWallet.account, activeWallet.sandbox, hero, valid, menu, picking])
+  // The friend's picker starts on a Chog they own as soon as their wallet shows one.
+  useEffect(() => { if (picking && myChogs.length && !myChogs.includes(Number(hero))) setHero(String(myChogs[0])) }, [picking, myChogs.join(), hero])
   const tryHolder = async () => {
     if (tryingHolder) return
     const guest = activeWallet.useGuest()
@@ -439,7 +445,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     closeTimer.current = window.setTimeout(() => { flushSync(() => { setClosing(false); setMenu(null) }); after() }, 120)
   }
   const resume = () => { playUi('ui-close'); closeMenu(() => { scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() }) }
-  const leaveLevel = (keepInvite = false) => { startToken.current++; setStarting(false); partyAbort.current?.abort(); partyAbort.current = null; lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; partyClient.current?.close(); partyClient.current = null; setParty(null); setPartyStatus(''); setPartyError(''); if (!keepInvite) { setInviteCode(''); const url = new URL(location.href); url.searchParams.delete('room'); history.replaceState(null, '', url) } setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
+  const leaveLevel = (keepInvite = false) => { startToken.current++; setStarting(false); partyAbort.current?.abort(); partyAbort.current = null; lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; partyClient.current?.close(); partyClient.current = null; setParty(null); setPicking(false); setPartyStatus(''); setPartyError(''); if (!keepInvite) { setInviteCode(''); const url = new URL(location.href); url.searchParams.delete('room'); history.replaceState(null, '', url) } setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
   // Retry only the stage that failed: the base pack, the hero and level art, or the scene (a fresh run object rebuilds the game).
   const retry = () => { const stage = failed; setFailed(null); if (stage === 'candy') setLoadAttempt(n => n + 1); else if (stage === 'lanterns') setRun(r => r && { ...r }); else setPrepAttempt(n => n + 1) }
   // A story win with a playable level after it leads on to that night's hero picker, keeping the hero and costume.
@@ -463,44 +469,88 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     void sfx.current?.unlock(); sfx.current?.pause(false)
   }
   const plainInvite = (reason: string) => /^(Invalid room or build|Room unavailable or full|Room expired)$/.test(reason) ? 'This invite is no longer available. Ask your friend for a new one, or start your own Porch Party.' : reason === 'Could not connect to room' || reason === 'Room connection timed out' ? 'Couldn’t reach the Porch Party. Check your connection and try again.' : reason
+  // Porch Party needs a Chog you own, or the holder demo's. A string is the note to show instead.
+  const partySelection = async (): Promise<HeroSelection | string> => {
+    const account = activeWallet.account, id = Number(hero)
+    const [ownedHero, perks] = await Promise.all([readHomeAdvantage(id, account, activeWallet.sandbox), readHolderBonuses(id, account, activeWallet.sandbox)])
+    if (!ownedHero) return 'Porch Party needs a Chog you own. Pick one of yours, or tap Try as a holder.'
+    if (perks.status === 'unavailable') return 'Could not check your holder perks. Please try again.'
+    return { id, home: ownedHero, costume, owned: [...shop.owned], victoryDance, stars: { ...saveRef.current.stars }, street: perks.bonuses }
+  }
+  // Host and friend both land here once seated: the lobby follows the roster, and both Chogs load once both are picked.
+  // Only leaving (the abort) ends it; a wallet change while the friend picks must not.
+  const enterParty = (client: RoomClient, controller: AbortController) => {
+    partyClient.current = client; setLevel(client.room.level); setMenu('party')
+    let preparing = false, friendHere = false
+    const show = () => {
+      setParty({ code: client.room.code, players: client.roster, joined: client.joined, player: client.player })
+      if (client.player === 0 && !client.roster[1]) setPartyStatus(client.joined[1] ? 'Your friend is here, picking a Chog' : friendHere ? 'Your friend left. The invite link still works.' : 'Waiting for your friend…')
+      friendHere = client.joined[1]
+    }
+    const prepare = async () => {
+      const base = assetsNow.current
+      if (preparing || !base || !client.roster.every(Boolean)) return
+      preparing = true; setPartyStatus('Preparing both Chogs…')
+      const players = client.roster as [HeroSelection, HeroSelection]
+      try {
+        const pack = await prepareParty(base, players, client.room.level, controller.signal)
+        if (controller.signal.aborted) return
+        const first = players[0], street = { candy: Math.max(...players.map(p => p.street.candy)), trap: players.some(p => p.street.trap), chog: players.some(p => p.street.chog), crew: 0 as const }
+        launchRun({ id: first.id, home: first.home, costume: first.costume, victoryDance: first.victoryDance, stars: first.stars, owned: [...new Set(players.flatMap(p => p.owned))], street, assets: pack, level: client.room.level, mode: 'level', daily: null, seed: client.room.seed, serial: Date.now(), tutorial: false,
+          coop: { client, players, onStatus: setPartyStatus, onError: message => { setPartyError(message); setMenu('party-error') } } })
+      } catch (error) { if (!controller.signal.aborted) { setPartyError(error instanceof Error ? error.message : 'Could not prepare the room.'); setMenu('party-error'); client.close() } }
+    }
+    show()
+    lobbyUnsubscribe.current = client.subscribe(message => {
+      if (message.type === 'roster') { show(); void prepare() }
+      if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') {
+        // A seat's own lost connection is not the friend leaving.
+        controller.abort(); setPartyError(message.type === 'desync' ? 'Out of sync: restart together' : message.type === 'error' ? plainInvite(message.reason) : !message.reason.startsWith('Partner') ? 'Lost the connection to the Porch Party. Check your connection and try again.' : client.player ? 'Your friend closed this Porch Party. Ask them for a new invite, or start your own.' : 'Your friend left the Porch Party.'); setMenu('party-error')
+      }
+    })
+    void prepare()
+  }
+  // The host's Porch Party: the Chog is checked before any room exists, so a note stays on the hero picker.
   const startParty = async () => {
-    if (starting || !assets || !valid || mode !== 'level' || (!inviteCode && !isOpen(saveRef.current, level))) return
+    if (starting || !assets || !valid || mode !== 'level' || !isOpen(saveRef.current, level)) return
     setStarting(true); setPartyError('')
     const token = ++startToken.current, controller = new AbortController()
     partyAbort.current?.abort(); partyAbort.current = controller
     try {
-      const account = activeWallet.account, id = Number(hero)
-      const [ownedHero, perks] = await Promise.all([readHomeAdvantage(id, account, activeWallet.sandbox), readHolderBonuses(id, account, activeWallet.sandbox)])
+      const selection = await partySelection()
       if (token !== startToken.current || controller.signal.aborted) return
-      // Checked before any room exists, so the note stays on the hero picker and an invite is kept.
-      if (!ownedHero || perks.status === 'unavailable') { setPartyError(!ownedHero ? 'Porch Party needs a Chog you own. Pick one of yours, or tap Try as a holder.' : 'Could not check your holder perks. Please try again.'); return }
-      const selection: HeroSelection = { id, home: ownedHero, costume, owned: [...shop.owned], victoryDance, stars: { ...saveRef.current.stars }, street: perks.bonuses }
-      const ticket = inviteCode ? null : await createRoom(COOP_RELAY, __COOP_BUILD__, level, controller.signal)
-      const client = await RoomClient.connect(COOP_RELAY, ticket?.room.code ?? inviteCode, __COOP_BUILD__, selection, ticket?.hostToken)
+      if (typeof selection === 'string') { setPartyError(selection); return }
+      const ticket = await createRoom(COOP_RELAY, __COOP_BUILD__, level, controller.signal)
+      const client = await RoomClient.connect(COOP_RELAY, ticket.room.code, __COOP_BUILD__, ticket.hostToken)
       if (token !== startToken.current || controller.signal.aborted) { client.close(); return }
-      partyClient.current = client; setLevel(client.room.level); setParty({ code: client.room.code, players: client.roster }); setMenu('party'); setPartyStatus('Waiting for your partner…')
-      let preparing = false
-      const prepare = async () => {
-        if (preparing || !client.roster.every(Boolean)) return
-        preparing = true; setPartyStatus('Preparing both Chogs…')
-        const players = client.roster as [HeroSelection, HeroSelection]
-        try {
-          const pack = await prepareParty(assets, players, client.room.level, controller.signal)
-          if (controller.signal.aborted || token !== startToken.current) return
-          const first = players[0], street = { candy: Math.max(...players.map(p => p.street.candy)), trap: players.some(p => p.street.trap), chog: players.some(p => p.street.chog), crew: 0 as const }
-          launchRun({ id: first.id, home: first.home, costume: first.costume, victoryDance: first.victoryDance, stars: first.stars, owned: [...new Set(players.flatMap(p => p.owned))], street, assets: pack, level: client.room.level, mode: 'level', daily: null, seed: client.room.seed, serial: Date.now(), tutorial: false,
-            coop: { client, players, onStatus: setPartyStatus, onError: message => { setPartyError(message); setMenu('party-error') } } })
-        } catch (error) { if (!controller.signal.aborted) { setPartyError(error instanceof Error ? error.message : 'Could not prepare the room.'); setMenu('party-error'); client.close() } }
-      }
-      lobbyUnsubscribe.current = client.subscribe(message => {
-        if (message.type === 'roster') { setParty({ code: client.room.code, players: message.players }); void prepare() }
-        if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') {
-          controller.abort(); setPartyError(message.type === 'desync' ? 'Out of sync: restart together' : message.type === 'disconnected' ? 'Partner disconnected' : plainInvite(message.reason)); setMenu('party-error')
-        }
-      })
-      void prepare()
+      client.pick(selection); enterParty(client, controller)
     } catch (error) { if (!controller.signal.aborted) { setPartyError(plainInvite(error instanceof Error ? error.message : 'Could not open the room.')); setMenu('party-error') } }
     finally { if (token === startToken.current) setStarting(false) }
+  }
+  // A friend's invite takes a seat at once, with no Chog yet; the picker opens over the lobby.
+  const joinParty = async () => {
+    const controller = new AbortController()
+    partyAbort.current?.abort(); partyAbort.current = controller
+    setMenu('party'); setParty(null); setPartyError(''); setPartyStatus('Knocking on your friend’s door…')
+    try {
+      const client = await RoomClient.connect(COOP_RELAY, inviteCode, __COOP_BUILD__)
+      if (controller.signal.aborted) { client.close(); return }
+      enterParty(client, controller); setPartyStatus('You’re in! Pick your Chog to join.'); setPicking(true)
+    } catch (error) { if (!controller.signal.aborted) { setPartyError(plainInvite(error instanceof Error ? error.message : 'Could not open the room.')); setMenu('party-error') } }
+  }
+  useEffect(() => { if (inviteCode) void joinParty() }, [])
+  // The friend's Join: the same ownership rule as the host's, then the Chog goes to the room.
+  const pickChog = async () => {
+    const client = partyClient.current
+    if (!client || starting) return
+    setStarting(true); setPartyError('')
+    const token = ++startToken.current
+    try {
+      const selection = await partySelection()
+      if (token !== startToken.current || client !== partyClient.current) return
+      if (typeof selection === 'string') { setPartyError(selection); return }
+      client.pick(selection); setPicking(false)
+    } finally { if (token === startToken.current) setStarting(false) }
   }
   // from: a start from the title (one-tap Play or a challenge), which may play a night still locked here and may answer a rival.
   const start = async (tutorial = level === 1 && !save.tutorial, from?: { rival?: Challenge }) => {
@@ -533,7 +583,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     else if (menu === 'pause' || menu === 'intro') resume()
     // Backing out of a challenge on a night still locked here returns to the title's banner, not a hero picker that can't start it.
     else if (menu === 'street') { startToken.current++; pendingRun.current = null; setStreetRead(null); setMenu(run ? 'pause' : isOpen(saveRef.current, level) ? 'hero' : 'title') }
-    else if (menu === 'hero') { if (inviteCode || partyAbort.current) leaveLevel(); else setMenu('levels') }
+    else if (menu === 'hero') { if (partyAbort.current) leaveLevel(); else setMenu('levels') }
     else if (menu === 'levels') setMenu('title')
     else if (menu === 'result' || menu === 'party' || menu === 'party-error') leaveLevel()
     else if (menu === 'party-leave') setMenu(null)
@@ -597,7 +647,6 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       </>}
       {menu === 'hero' && <>
         <span className="siege-eyebrow">{level === DAILY_LEVEL ? `${levelName(level).toUpperCase()} · ${LEVELS[daily.level - 1].name.toUpperCase()} · ${NIGHTS[daily.theme].name.toUpperCase()}` : level === ENDLESS_LEVEL ? 'ENDLESS · TOWN SQUARE' : `${levelName(level).toUpperCase()} · LEVEL ${level}`}</span><h2>Who’s on porch duty?</h2>
-        {inviteCode && <p className="siege-party-invite">Porch Party invite · join with a Chog you own, or tap Try as a holder for a demo Chog.</p>}
         <WalletChoice wallet={activeWallet} disabled={starting || tryingHolder || shop.busy} />
         <div className="siege-hero-pick">
           <div className={`siege-portrait ${home ? 'siege-portrait--home' : ''} ${kit?.legend ? 'siege-portrait--legend' : ''}`}>
@@ -621,10 +670,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
             {holderError && <p role="status">{holderError}</p>}
             {partyError && <p className="siege-perks-failed" role="alert">{partyError}</p>}
             {failed && failed !== 'lanterns' ? <RetryPanel stage={failed} onRetry={retry} /> : (!assets || (valid && !prepared)) && <StageLabel stage={assets ? loading : 'candy'} />}
-            <div className="row"><Sticker tone="orange" sound="ui-confirm" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero) || (!!inviteCode && !home)} onClick={() => inviteCode ? startParty() : start()}>{starting ? 'Checking your $CHOG perks…' : inviteCode ? 'Join Porch Party →' : 'Let’s make mischief →'}</Sticker><Sticker sound="ui-back" onClick={() => inviteCode || partyAbort.current ? leaveLevel(!!inviteCode) : setMenu('levels')}>← Back</Sticker></div>
-            {mode === 'level' && !inviteCode && <Sticker tone="purple" sound="ui-confirm" disabled={starting || tryingHolder || !valid || !prepared || !home} onClick={() => void startParty()}>{holderCurrent && !home ? 'Porch Party · needs your own Chog' : 'Porch Party · play together'}</Sticker>}
-            {mode === 'level' && !inviteCode && !home && <p className="siege-hint">Porch Party needs a Chog you own. Connect its wallet, or tap Try as a holder for a demo Chog.</p>}
-            {save.tutorial && level === 1 && !inviteCode && <button className="siege-text-button" onClick={() => { playUi('ui-confirm'); void start(true) }} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
+            <div className="row"><Sticker tone="orange" sound="ui-confirm" disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)} onClick={() => start()}>{starting ? 'Checking your $CHOG perks…' : 'Let’s make mischief →'}</Sticker><Sticker sound="ui-back" onClick={() => partyAbort.current ? leaveLevel() : setMenu('levels')}>← Back</Sticker></div>
+            {mode === 'level' && <Sticker tone="purple" sound="ui-confirm" disabled={starting || tryingHolder || !valid || !prepared || !home} onClick={() => void startParty()}>{holderCurrent && !home ? 'Porch Party · needs your own Chog' : 'Porch Party · play together'}</Sticker>}
+            {mode === 'level' && !home && <p className="siege-hint">Porch Party needs a Chog you own. Connect its wallet, or tap Try as a holder for a demo Chog.</p>}
+            {save.tutorial && level === 1 && <button className="siege-text-button" onClick={() => { playUi('ui-confirm'); void start(true) }} disabled={starting || tryingHolder || !valid || !prepared || prepared.id !== Number(hero)}>Play with the tutorial again</button>}
             <p>{home ? 'Home advantage: your own Chog starts one level higher and wears a gold frame.' : 'Borrow any Chog. Its real traits are your perks.'}</p>
             {activeWallet.choice === 'connected' && wallet.account && wallet.loading && <small>Checking your Chogs…</small>}
             {kit && assets && <div className="siege-kit">{(['weapon', 'special', 'ultimate', 'passive', 'headgear', 'trinket'] as const).map(slot => {
@@ -646,16 +695,18 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <Sticker tone="orange" sound="ui-confirm" onClick={() => { if (pendingRun.current) launchRun(pendingRun.current) }}>Defend the porch →</Sticker>
         <button className="siege-text-button" onClick={() => { playUi('ui-back'); escape() }}>← Back</button>
       </section>}
-      {menu === 'party' && party && <>
-        <span className="siege-eyebrow">TWO CHOGS · ONE PORCH</span><h2 tabIndex={-1} data-initial-focus>Porch Party</h2>
-        <p>{LEVELS[level - 1].name} · shared candy and jars</p>
-        <div className="siege-party-heroes">{party.players.map((player, slot) => <figure key={slot}>{player ? <><img src={thumb(player.id, true)} alt={`Chog #${player.id}`} /><figcaption>Chog #{player.id}</figcaption></> : <><span className="siege-party-empty">?</span><figcaption>Waiting for a friend</figcaption></>}</figure>)}</div>
+      {menu === 'party' && <>
+        <span className="siege-eyebrow">PORCH PARTY · NIGHT {String(level).padStart(2, '0')}</span>
+        <h2 tabIndex={-1} data-initial-focus>{party?.player === 1 && party.players[0] ? `Chog #${party.players[0].id}’s Porch Party` : 'Porch Party'}</h2>
+        <p>{LEVELS[level - 1].name} · Your own candy · shared jars</p>
+        {party && <div className="siege-party-heroes">{party.players.map((player, slot) => { const who = slot === party.player ? 'You' : slot ? 'Your friend' : 'Host'; return <figure key={slot}>{player ? <img src={thumb(player.id, true)} alt={`Chog #${player.id}`} /> : <span className="siege-party-empty">?</span>}<figcaption>{player ? `Chog #${player.id} · ${who}` : party.joined[slot] ? `${who} · choosing…` : 'Waiting for a friend'}</figcaption></figure> })}</div>}
         <p role="status">{partyStatus}</p>
-        <label className="siege-party-link">Invite a friend<input readOnly value={`https://knock.timidan.xyz/?room=${party.code}`} onFocus={event => event.target.select()} /></label>
-        <div className="row"><Sticker tone="orange" sound="ui-confirm" onClick={() => { void navigator.clipboard.writeText(`https://knock.timidan.xyz/?room=${party.code}`).then(() => setPartyStatus('Invite copied!')).catch(() => setPartyStatus('Select and copy the invite link above.')) }}>Copy invite</Sticker><Sticker sound="ui-back" onClick={() => leaveLevel()}>Leave room</Sticker></div>
-        <p className="siege-hint">Both players bring their own Chog. The game starts when both are ready.</p>
+        {party?.player === 0 && <label className="siege-party-link">Invite a friend<input readOnly value={`https://knock.timidan.xyz/?room=${party.code}`} onFocus={event => event.target.select()} /></label>}
+        <div className="row">{party?.player === 0 && <Sticker tone="orange" sound="ui-confirm" onClick={() => { void navigator.clipboard.writeText(`https://knock.timidan.xyz/?room=${party.code}`).then(() => setPartyStatus('Invite copied!')).catch(() => setPartyStatus('Select and copy the invite link above.')) }}>Copy invite</Sticker>}
+          {party?.player === 1 && !party.players[1] && <Sticker tone="orange" sound="ui-open" onClick={() => setPicking(true)}>Pick your Chog</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Leave room</Sticker></div>
+        <p className="siege-hint">Both players bring their own Chog. The game starts when both have picked.</p>
       </>}
-      {menu === 'party-error' && <><h2>{partyError || 'Could not continue this room'}</h2><div className="row">{inviteCode && <Sticker tone="orange" sound="ui-back" onClick={() => { leaveLevel(true); setMenu('hero') }}>Back to invite</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>{inviteCode ? 'Start my own party' : 'Return to menu'}</Sticker></div></>}
+      {menu === 'party-error' && <><h2>{partyError || 'Could not continue this room'}</h2><div className="row">{inviteCode && <Sticker tone="orange" sound="ui-confirm" onClick={() => { leaveLevel(true); void joinParty() }}>Try again</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>{inviteCode ? 'Start my own party' : 'Return to menu'}</Sticker></div></>}
       {menu === 'party-leave' && <><h2>Leave the porch?</h2><p>Your partner is still playing. Leaving ends this room.</p><div className="row"><Sticker tone="orange" sound="ui-close" onClick={() => setMenu(null)}>Keep playing</Sticker><Sticker sound="ui-back" onClick={() => leaveLevel()}>Leave room</Sticker></div></>}
       {menu === 'pause' && <>
         <span className="siege-eyebrow">EVERYONE, FREEZE.</span><h2>Candy break</h2><p>Your jars are safe while you’re here.</p>
@@ -708,6 +759,21 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     {/* A sibling of the result card's dialog, not a child: it opens on top without replaying the card's fanfare, and its Escape stays its own. */}
     {feedback === 'open' && run && outcome && <Modal label="Send feedback" className="siege-modal--feedback" onEscape={() => setFeedback('')}>
       <Feedback context={{ level: run.coop ? `party-${run.level}` : run.mode === 'level' ? String(run.level) : run.mode, won: outcome.won, stars: outcome.stars, hero: run.id }} onSent={() => setFeedback('sent')} />
+    </Modal>}
+    {/* The friend's Chog picker, over the lobby: only what Porch Party needs. Dances, costume and victory dance stay as saved. Closing it keeps the seat. */}
+    {menu === 'party' && picking && party && <Modal label="Pick your Chog" className="siege-modal--pick" onEscape={() => setPicking(false)}>
+      <span className="siege-eyebrow">{LEVELS[level - 1].name.toUpperCase()} · NIGHT {String(level).padStart(2, '0')}</span><h2>Pick your Chog</h2>
+      <p>Bring a Chog you own, or try a holder’s demo Chog. Your own candy · shared jars.</p>
+      <WalletChoice wallet={activeWallet} disabled={starting || tryingHolder} />
+      <figure className="siege-pick-chog">{home ? <img src={thumb(Number(hero), true)} alt="" /> : <span className="siege-party-empty">?</span>}<figcaption>{home ? `Your Chog #${Number(hero)}` : activeWallet.choice === 'connected' && wallet.account && wallet.loading ? 'Checking your Chogs…' : 'No Chog of yours yet'}</figcaption></figure>
+      <div className="row">
+        {activeWallet.account && <Sticker tone="gold" sound="ui-select" disabled={!myChogs.length || starting} onClick={() => { const index = myChogs.indexOf(Number(hero)); setHero(String(myChogs[(index + 1) % myChogs.length])) }}>My Chog</Sticker>}
+        <Sticker tone="gold" sound="ui-select" disabled={tryingHolder || starting} onClick={() => void tryHolder()}>{tryingHolder ? 'Preparing holder demo…' : 'Try as a holder'}</Sticker>
+      </div>
+      {holderError && <p role="status">{holderError}</p>}
+      {partyError && <p className="siege-perks-failed" role="alert">{partyError}</p>}
+      {!home && <p className="siege-hint">Porch Party needs a Chog you own. Connect its wallet, or tap Try as a holder for a demo Chog.</p>}
+      {assets ? <Sticker tone="orange" sound="ui-confirm" disabled={!home || starting || tryingHolder} onClick={() => void pickChog()}>{starting ? 'Checking your Chog…' : 'Join the party →'}</Sticker> : failed === 'candy' ? <RetryPanel stage="candy" onRetry={retry} /> : <StageLabel stage="candy" />}
     </Modal>}
   </div>
 }

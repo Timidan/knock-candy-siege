@@ -6,9 +6,9 @@ Two players defend one story level with their own Chogs, shared candy, towers, t
 
 ## Runtime
 
-- `src/worker.js`: one Durable Object per room, two claimed slots, ordered input relay, checkpoint comparison, expiry and terminal disconnect handling. Room creation reads at most 512 retained body bytes; native IP limits run before Durable Object lookup (5 creations and 30 upgrade attempts per minute).
-- `app/src/siege/net/protocol.ts`: protocol 3, 45 Hz, one checkpoint every 90 turns, at most 16 commands per packet.
-- `RoomClient.ts`: socket lifecycle and worker-driven heartbeat. After asset preparation, eight lobby probes select a fixed match delay: `ceil((2 * maximum RTT + 30 ms) * 45 / 1000)`, bounded to 6–45 ticks; the room agrees the larger peer value. The window does not change during play.
+- `src/worker.js`: one Durable Object per room, two claimed slots (a friend is seated before picking a Chog; leaving or timing out before the pick frees the seat and keeps the invite open), ordered input relay, checkpoint comparison, expiry and terminal disconnect handling. Room creation reads at most 512 retained body bytes; native IP limits run before Durable Object lookup (5 creations and 30 upgrade attempts per minute).
+- `app/src/siege/net/protocol.ts`: protocol 4 (`hello` takes a seat, `hero` sets the Chog until both are picked, `roster` lists picks and taken seats), 45 Hz, one checkpoint every 90 turns, at most 16 commands per packet.
+- `RoomClient.ts`: socket lifecycle and worker-driven heartbeat. After asset preparation, eight lobby probes select a fixed match delay: `ceil((mean RTT + 3σ) * 45 / 1000) + 1`, bounded to 6–45 ticks; the room agrees the larger peer value. One sender RTT is the window an input needs (both peers wait for the relay's copy, and the receiver's later start cancels its own downlink). The window does not change during play.
 - `Lockstep.ts`: both packets required, player 0 then player 1 ordering, no prediction or rollback. Checkpoint acknowledgements are pipelined with a two-checkpoint bound.
 - `clock.ts`: elapsed-time 45 Hz clock, independent of render RAF, bounded to three steps per wakeup; waiting does not accumulate catch-up debt.
 - `prepare.ts`, `session.ts`, `snapshot.ts`: both hero/boss assets before readiness; scene attachment and lifecycle; explicit gameplay-state projection and final checkpoint gating.
@@ -38,11 +38,12 @@ node app/node_modules/typescript/bin/tsc -p coop/tsconfig.json --noEmit
 node --experimental-strip-types app/scripts/rig-check.mts
 node coop/verify.mjs legacy replay desync disconnect
 node coop/verify-party.mjs finish desync disconnect
+node coop/verify-party.mjs play errors
 node coop/verify-party.mjs crowd60
 node coop/check-ingress.mjs
 ```
 
-For the controlled RTT run, start a separate local Wrangler relay (port 8796 was used) and run `COOP_RELAY=http://localhost:8796 node coop/verify.mjs pace`. Playwright delays every WebSocket frame 50 ms each way, including lobby probes. For a controlled full-game run, rebuild with `VITE_COOP_RELAY=http://localhost:8796 node coop/build.mjs` and use `PARTY_RTT_MS=100 node coop/verify-party.mjs finish desync disconnect` (or `crowd60`). This changes only the local QA endpoint; the source default remains the deployed Worker.
+For the controlled RTT run, start a separate local Wrangler relay (port 8796 was used) and run `COOP_RELAY=http://localhost:8796 node coop/verify.mjs pace`. Playwright delays every WebSocket frame 50 ms each way, including lobby probes. For a controlled full-game run, rebuild with `VITE_COOP_RELAY=http://localhost:8796 node coop/build.mjs` and use `PARTY_RTT_MS=100 node coop/verify-party.mjs finish desync disconnect` (or `crowd60`). This changes only the local QA endpoint; the source default remains the deployed Worker. `verify-party.mjs` also takes `SITE` (another local build), `PARTY_JITTER_MS` (uniform ± around `PARTY_RTT_MS`, order kept per direction), `PLAY_MS`, `EVIDENCE` and `PLAYWRIGHT_MODULE`; `play` reports the delay, tap-to-action times and stalls.
 
 The pacing test asserts under 5% measured stall time and 1,800 turns in less than 42.106 seconds.
 

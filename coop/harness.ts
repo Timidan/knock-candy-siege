@@ -32,7 +32,8 @@ const api = {
   create: (relay: string) => createRoom(relay, __COOP_BUILD__, 1),
   legacy: legacyReplay,
   async join(relay: string, code: string, hostToken: string | undefined, mode: Mode = 'replay') {
-    const client = await RoomClient.connect(relay, code, __COOP_BUILD__, hero, hostToken)
+    const client = await RoomClient.connect(relay, code, __COOP_BUILD__, hostToken)
+    client.pick(hero)
     const adapter = await singleHero(client.room.seed, client.player === 1)
     const hashes: { tick: number; hash: string; state: string }[] = []
     const applied: { tick: number; player: Player; command: CoopCommand }[] = []

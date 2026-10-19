@@ -16,6 +16,7 @@ export class RoomClient {
   player!: Player
   room!: RoomInfo
   roster: Roster = [null, null]
+  joined: [boolean, boolean] = [false, false]
   private socket: WebSocket
   private listeners = new Set<(message: ServerMessage) => void>()
   private heartbeat?: Worker
@@ -30,7 +31,8 @@ export class RoomClient {
   private terminal: ServerMessage | null = null
   private constructor(socket: WebSocket) { this.socket = socket }
 
-  static connect(relay: string, code: string, build: string, hero: HeroSelection, hostToken?: string): Promise<RoomClient> {
+  /** Takes a seat without a Chog; pick() sends it, so a friend can wait in the lobby while choosing. */
+  static connect(relay: string, code: string, build: string, hostToken?: string): Promise<RoomClient> {
     if (!ROOM_CODE.test(code) || !BUILD.test(build)) return Promise.reject(new Error('Invalid room or build'))
     const url = new URL(`/rooms/${code}/ws`, relay)
     url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -50,7 +52,7 @@ export class RoomClient {
           if (welcomed || message.version !== PROTOCOL || message.delay !== INPUT_DELAY || message.hashEvery !== HASH_EVERY || message.room.build !== build || message.room.code !== code) { reject(new Error('Room version differs. Reload both players.')); clearTimeout(timeout); client.close(); return }
           welcomed = true; clearTimeout(timeout)
           client.player = message.player; client.room = message.room
-          client.send({ type: 'hello', version: PROTOCOL, build, hero })
+          client.send({ type: 'hello', version: PROTOCOL, build })
           client.heartbeat = new Worker(new URL('./clock.worker.ts', import.meta.url), { type: 'module' })
           client.heartbeat.onmessage = () => {
             const now = performance.now()
@@ -60,7 +62,7 @@ export class RoomClient {
             else client.send({ type: 'ping', at: now })
           }
           resolve(client)
-        } else if (message.type === 'roster') client.roster = message.players
+        } else if (message.type === 'roster') { client.roster = message.players; client.joined = message.joined }
         else if (message.type === 'pong' && Number.isFinite(message.at)) {
           if (message.at >= client.sampleAfter && client.samples.length < 8) client.samples.push(performance.now() - message.at)
           client.tryReady()
@@ -79,6 +81,7 @@ export class RoomClient {
     if (this.terminal) listener(this.terminal)
     return () => { this.listeners.delete(listener) }
   }
+  pick(hero: HeroSelection) { this.send({ type: 'hero', hero }) }
   send(message: ClientMessage) {
     if (!this.closed && this.socket.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message))
   }
@@ -88,9 +91,12 @@ export class RoomClient {
   }
   private tryReady() {
     if (!this.readyHash || this.samples.length < 8 || this.closed) return
-    // Fixed for the entire match, agreed by the room from the slower peer's lobby samples.
-    // Leave one sampled RTT of headroom for relay/peer scheduling jitter.
-    const delay = Math.min(MAX_DELAY, Math.max(INPUT_DELAY, Math.ceil((this.rtt * 2 + 30) * TICK_RATE / 1000)))
+    // Tick T's input leaves at T - delay and both peers wait for the relay's copy, so the window is one sender RTT:
+    // a later start on the receiving side cancels its own downlink. Three standard deviations of the probes cover
+    // jitter; one more tick covers inputs leaving on tick boundaries. The room keeps the larger peer value all match.
+    const mean = this.samples.reduce((sum, rtt) => sum + rtt, 0) / this.samples.length
+    const sd = Math.sqrt(this.samples.reduce((sum, rtt) => sum + (rtt - mean) ** 2, 0) / this.samples.length)
+    const delay = Math.min(MAX_DELAY, Math.max(INPUT_DELAY, Math.ceil((mean + 3 * sd) * TICK_RATE / 1000) + 1))
     this.send({ type: 'ready', hash: this.readyHash, delay }); this.readyHash = ''
   }
   close() {

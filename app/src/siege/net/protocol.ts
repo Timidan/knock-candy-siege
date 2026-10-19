@@ -1,7 +1,7 @@
 import type { Command } from '../SiegeScene'
 import { CONSUMABLES, SPECIALISATIONS, SPELLS, TARGETING, TOWERS, TRAPS } from '../data/config'
 
-export const PROTOCOL = 3
+export const PROTOCOL = 4
 export const TICK_RATE = 45
 export const INPUT_DELAY = 6
 export const MAX_DELAY = 45
@@ -20,14 +20,16 @@ export type HeroSelection = {
 export type RoomInfo = { code: string; seed: number; level: number; build: string }
 export type Roster = [HeroSelection | null, HeroSelection | null]
 export type ClientMessage =
-  | { type: 'hello'; version: number; build: string; hero: HeroSelection }
+  | { type: 'hello'; version: number; build: string }
+  | { type: 'hero'; hero: HeroSelection }
   | { type: 'ready'; hash: string; delay: number }
   | { type: 'input'; tick: number; commands: CoopCommand[] }
   | { type: 'hash'; tick: number; hash: string }
   | { type: 'ping'; at: number }
 export type ServerMessage =
   | { type: 'welcome'; version: number; player: Player; room: RoomInfo; delay: number; hashEvery: number }
-  | { type: 'roster'; players: Roster }
+  // joined: the seat is taken. A joined seat with no Chog is still choosing.
+  | { type: 'roster'; players: Roster; joined: [boolean, boolean] }
   | { type: 'start'; delay: number }
   | { type: 'input'; player: Player; tick: number; commands: CoopCommand[] }
   | { type: 'verified'; tick: number; hash: string }
@@ -72,7 +74,8 @@ export function isCommand(value: unknown): value is CoopCommand {
 export function isClientMessage(value: unknown): value is ClientMessage {
   if (!record(value)) return false
   switch (value.type) {
-    case 'hello': return value.version === PROTOCOL && typeof value.build === 'string' && BUILD.test(value.build) && isHero(value.hero)
+    case 'hello': return value.version === PROTOCOL && typeof value.build === 'string' && BUILD.test(value.build)
+    case 'hero': return isHero(value.hero)
     case 'ready': return typeof value.hash === 'string' && HASH.test(value.hash) && integer(value.delay, INPUT_DELAY, MAX_DELAY)
     case 'input': return integer(value.tick, 0, 1_000_000) && Array.isArray(value.commands) && value.commands.length <= MAX_COMMANDS && value.commands.every(isCommand)
     case 'hash': return integer(value.tick, HASH_EVERY, 1_000_000) && value.tick % HASH_EVERY === 0 && typeof value.hash === 'string' && HASH.test(value.hash)

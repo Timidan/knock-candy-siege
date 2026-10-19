@@ -258,9 +258,9 @@
   .siege-modal--hero > .siege-eyebrow, .siege-modal--hero > h2 { display: inline-block; vertical-align: middle; }
   .siege-modal--hero > .siege-eyebrow { margin-right: 14px; font-size: 11px; }
   .siege-modal--hero > h2 { font-size: 22px; margin: 0; }
-  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet { margin: 4px 0 8px; padding: 3px 10px; gap: 2px 12px; }
-  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet .sticker { min-height: 34px; padding: 6px 10px; font-size: 13px; }
-  :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet p { font-size: 15px; }
+  :is(.siege-modal--hero, .siege-modal--shop, .siege-modal--pick) .siege-wallet { margin: 4px 0 8px; padding: 3px 10px; gap: 2px 12px; }
+  :is(.siege-modal--hero, .siege-modal--shop, .siege-modal--pick) .siege-wallet .sticker { min-height: 34px; padding: 6px 10px; font-size: 13px; }
+  :is(.siege-modal--hero, .siege-modal--shop, .siege-modal--pick) .siege-wallet p { font-size: 15px; }
   .siege-modal--hero .siege-wallet small, .siege-modal--hero .siege-wallet-sandbox br, .siege-modal--hero .siege-wallet-sandbox span { display: none; }
   .siege-modal--hero .siege-wallet-sandbox { flex-basis: auto; }
   :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet-account strong { display: inline; }
@@ -510,7 +510,20 @@
 .siege-party-link { display: grid; gap: 6px; margin: 16px 0; }
 .siege-party-link input { width: 100%; box-sizing: border-box; padding: 12px; color: #352342; background: #fff6df; border: 2px solid #352342; border-radius: 10px; font: inherit; }
 .siege-party-status { position: absolute; top: 17%; left: 50%; transform: translateX(-50%); padding: 8px 18px; border-radius: 12px; background: #241632dd; color: #fff1c6; z-index: 4; pointer-events: none; }
-.siege-party-invite { color: #795cc6; font-weight: bold; }
+.siege-modal--pick { width: min(560px, calc(100vw - 36px)); }
+.siege-pick-chog { margin: 4px 0 0; text-align: center; }
+.siege-pick-chog img, .siege-pick-chog .siege-party-empty { display: block; width: 96px; height: 96px; margin: 0 auto 6px; border-radius: 18px; border: 3px solid #352342; object-fit: cover; }
+/* The friend's picker on a landscape phone: Chog, its buttons and Join in view without scrolling. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .siege-modal--pick { padding: 10px 20px 12px; }
+  .siege-modal--pick > .siege-eyebrow, .siege-modal--pick > h2 { display: inline-block; vertical-align: middle; }
+  .siege-modal--pick > .siege-eyebrow { margin-right: 12px; font-size: 11px; }
+  .siege-modal--pick > h2 { font-size: 22px; margin: 0; }
+  .siege-modal--pick p { margin: 4px auto; font-size: 15px; }
+  .siege-modal--pick .row { margin: 6px 0 4px; }
+  .siege-pick-chog { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .siege-pick-chog img, .siege-pick-chog .siege-party-empty { width: 52px; height: 52px; margin: 0; font-size: 34px; }
+}
 .siege-modal--result:has(.siege-party-heroes) { padding-top: 16px; padding-bottom: 16px; }
 .siege-modal--result .siege-party-heroes { margin: 0 0 8px; gap: 24px; }
 .siege-modal--result .siege-party-heroes figure { display: flex; align-items: center; gap: 8px; }

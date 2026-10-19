@@ -70,18 +70,31 @@ export class PorchRoom {
       await this.ctx.storage.setAlarm(Date.now() + 15000)
       return json({ ok: true })
     }
-    if (!this.meta || this.meta.closed || this.meta.started || Date.now() - this.meta.created > LIFETIME) return json({ error: 'Room unavailable' }, 410)
-    // Two claimed slots plus at most two short-lived sockets waiting to claim.
-    if (this.ctx.getWebSockets().length >= 4) return json({ error: 'Room full' }, 409)
     const pair = new WebSocketPair(), [client, server] = Object.values(pair)
+    // Two claimed slots plus at most two short-lived sockets waiting to claim. A dead or full room still answers on the
+    // socket (not hibernatable, never seated): browsers hide a failed upgrade's status, and the friend should read why.
+    if (!this.meta || this.meta.closed || this.meta.started || Date.now() - this.meta.created > LIFETIME || this.ctx.getWebSockets().length >= 4) {
+      server.accept(); server.send(JSON.stringify({ type: 'error', reason: 'Room unavailable or full' })); server.close(1008, 'Room unavailable')
+      return new Response(null, { status: 101, webSocket: client })
+    }
     this.ctx.acceptWebSocket(server)
-    server.serializeAttachment({ player: null, lastSeen: Date.now(), nextTick: 0, hashTick: 0, hash: null, hero: null, ready: null, rateAt: Date.now(), rateCount: 0 })
+    server.serializeAttachment({ player: null, lastSeen: Date.now(), nextTick: 0, hashTick: 0, hash: null, hello: false, hero: null, ready: null, rateAt: Date.now(), rateCount: 0 })
     return new Response(null, { status: 101, webSocket: client })
   }
-  slots() {
+  slots(except) {
     const slots = [null, null]
-    for (const ws of this.ctx.getWebSockets()) { const state = ws.deserializeAttachment(); if (state?.player === 0 || state?.player === 1) slots[state.player] = { ws, state } }
+    for (const ws of this.ctx.getWebSockets()) { const state = ws !== except && ws.deserializeAttachment(); if (state?.player === 0 || state?.player === 1) slots[state.player] = { ws, state } }
     return slots
+  }
+  // A taken seat without a Chog is still choosing.
+  roster(except) {
+    const slots = this.slots(except), message = { type: 'roster', players: slots.map(slot => slot?.state.hero ?? null), joined: slots.map(Boolean) }
+    for (const slot of slots) if (slot) this.send(slot.ws, message)
+  }
+  // A friend who leaves or times out before picking a Chog frees the seat; the room and its invite stay open for the host.
+  free(ws) {
+    try { ws.serializeAttachment({ ...ws.deserializeAttachment(), player: null }); ws.close(1000, 'Seat freed') } catch { /* Already closed. */ }
+    this.roster(ws)
   }
   send(ws, data) { try { ws.send(JSON.stringify(data)) } catch { /* close/error event ends the room */ } }
   broadcast(data) { for (const slot of this.slots()) if (slot) this.send(slot.ws, data) }
@@ -110,16 +123,21 @@ export class PorchRoom {
       if (player === null || this.slots()[player] || this.meta.started) { this.reject(ws, 'Room unavailable or full'); return }
       state.player = player; ws.serializeAttachment(state)
       this.send(ws, { type: 'welcome', version: PROTOCOL, player, room: this.meta.room, delay: INPUT_DELAY, hashEvery: HASH_EVERY })
-      return
+      this.roster(); return
     }
     if (!isClientMessage(message)) { this.reject(ws, 'Invalid packet'); return }
     if (message.type === 'ping') { ws.serializeAttachment(state); this.send(ws, { type: 'pong', at: message.at }); return }
     if (message.type === 'hello') {
-      if (state.hero || this.meta.started || message.build !== this.meta.room.build) { this.reject(ws, 'Build differs or already joined'); return }
-      state.hero = message.hero; ws.serializeAttachment(state)
-      this.broadcast({ type: 'roster', players: this.slots().map(slot => slot?.state.hero ?? null) }); return
+      if (state.hello || this.meta.started || message.build !== this.meta.room.build) { this.reject(ws, 'Build differs or already joined'); return }
+      state.hello = true; ws.serializeAttachment(state); return
     }
     const slots = this.slots(), peer = slots[1 - state.player]
+    if (message.type === 'hero') {
+      if (!state.hello) { this.reject(ws, 'Say hello first'); return }
+      // Choices lock once both Chogs are picked: both peers are already loading them. A late change is ignored, not fatal.
+      if (state.hero && peer?.state.hero) { ws.serializeAttachment(state); return }
+      state.hero = message.hero; ws.serializeAttachment(state); this.roster(); return
+    }
     if (!state.hero || !peer?.state.hero) { this.reject(ws, 'Wait for both players'); return }
     if (message.type === 'ready') {
       if (this.meta.started || state.ready) { this.reject(ws, 'Already ready'); return }
@@ -147,6 +165,7 @@ export class PorchRoom {
   }
   async webSocketClose(ws, code, reason) {
     const state = ws.deserializeAttachment()
+    if (state?.player === 1 && !state.hero && this.meta && !this.meta.closed) { this.free(ws); return }
     const detail = code === 1000 && reason === 'Left room' ? 'Partner left' : `Partner connection closed (${code ?? 'unknown'}${reason ? `: ${reason.slice(0, 100)}` : ''})`
     if (state?.player === 0 || state?.player === 1) await this.end({ type: 'disconnected', player: state.player, reason: detail })
   }
@@ -158,7 +177,8 @@ export class PorchRoom {
     for (const ws of this.ctx.getWebSockets()) {
       const state = ws.deserializeAttachment()
       if (now - state.lastSeen > (state.player === null ? 10000 : 20000)) {
-        if (state.player === null) ws.close(1008, 'Claim timed out')
+        if (state.player === null) { try { ws.close(1008, 'Claim timed out') } catch { /* A freed seat may still be closing. */ } }
+        else if (state.player === 1 && !state.hero) this.free(ws)
         else { await this.end({ type: 'disconnected', player: state.player, reason: 'Partner timed out' }); return }
       }
     }
