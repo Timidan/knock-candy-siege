@@ -570,12 +570,12 @@ export class Hud {
     for (const b of this.buttons) if (b.pressed !== undefined && (pointerId === undefined || b.pressed === pointerId)) this.release(b)
   }
   private release(b: Button) {
-    b.pressed = undefined; b.front.y = b.glow.visible && b.queued ? 10 : 0; b.face.setDisplaySize(b.size, b.size); this.shade(b)
+    b.pressed = undefined; b.front.y = b.queued ? 10 : 0; b.face.setDisplaySize(b.size, b.size); this.shade(b)
   }
-  // Co-op: a power you pressed stays down and lit in your colour until it runs for both players.
+  // Co-op: a power you pressed stays down, with a steady glow in your colour (animate), until it runs for both players.
   private hold(b: Button, queued: boolean) {
     if (b.queued === queued) return
-    b.queued = queued; b.glow.setVisible(queued).setTint(YOU); if (b.pressed === undefined) b.front.y = queued ? 10 : 0
+    b.queued = queued; if (b.pressed === undefined) b.front.y = queued ? 10 : 0
   }
   private enabled(b: Button, enabled: boolean) {
     if (!enabled && b.pressed !== undefined) this.release(b)
@@ -992,7 +992,7 @@ export class Hud {
     this.toastText.setVisible(time < this.toastUntil)
     if (this.toastText.visible) this.toastText.setText(this.toastPages[Math.floor((time - this.toastStart) / this.toastSeconds)] ?? '')
     const pulse = motion && !s.settings.lite && s.quality.tier < 2
-    for (const b of this.pulsing) b.glow.setVisible(b.enabled).setAlpha(pulse ? .55 + Math.sin(time * 4) * .25 : .65)
+    for (const b of this.pulsing) b.glow.setVisible(b.enabled || !!b.queued).setAlpha(b.queued ? 1 : pulse ? .55 + Math.sin(time * 4) * .25 : .65).setTint(b.queued ? YOU : 0xffdf92)
     this.ultimateBurst += dt
     const burst = Math.min(1, this.ultimateBurst / .36)
     this.ultimateRing.setVisible(pulse && this.ultimateReady && burst < 1).setDisplaySize(140 + 100 * burst, 140 + 100 * burst).setAlpha(1 - burst)
