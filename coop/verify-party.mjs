@@ -159,12 +159,15 @@ try {
     if (mode === 'finish') {
       // Host picks manually while the partner lets the first card auto-pick after 450 turns.
       const before = await state(pages[0])
-      assert.ok(before.talents[1].length, 'Guest fixture must open a talent card')
-      for (let i = 0; i < before.talents[0].length; i++) { await pages[0].keyboard.press('z'); await pages[0].waitForTimeout(1100) }
-      await pages[0].waitForFunction(() => window.__siege.hud.talentCard.list.some(item => item.text === 'Partner is choosing…'), null, { timeout: 10000 })
-      await pages[0].screenshot({ path: `${evidence}/partner-choosing.png` })
-      await pages[1].waitForFunction(level => window.__siege.heroes[1].talentLevels[0] !== level, before.talents[1][0], { timeout: 20000 })
-      const auto = await state(pages[1]); assert.ok(auto.tick >= 450); console.log('shared talent auto-pick', { tick: auto.tick, combatSeconds: auto.seconds })
+      let auto = null
+      // Since 14 Oct a co-op Chog's starting talents resolve at once, so a fresh room usually opens no card.
+      if (before.talents[1].length) {
+        for (let i = 0; i < before.talents[0].length; i++) { await pages[0].keyboard.press('z'); await pages[0].waitForTimeout(1100) }
+        await pages[0].waitForFunction(() => window.__siege.hud.talentCard.list.some(item => item.text === 'Partner is choosing…'), null, { timeout: 10000 })
+        await pages[0].screenshot({ path: `${evidence}/partner-choosing.png` })
+        await pages[1].waitForFunction(level => window.__siege.heroes[1].talentLevels[0] !== level, before.talents[1][0], { timeout: 20000 })
+        auto = await state(pages[1]); assert.ok(auto.tick >= 450); console.log('shared talent auto-pick', { tick: auto.tick, combatSeconds: auto.seconds })
+      } else console.log('no starting talent card: resolved at once')
       // Each client can move only its own hero; the other hero keeps its target.
       const targets = [{ x: 900, y: 600 }, { x: 1150, y: 700 }]
       await Promise.all(pages.map((page, player) => page.evaluate(target => window.__siege.command({ type: 'move', ...target }), targets[player])))
@@ -197,7 +200,7 @@ try {
       }
       await Promise.all(pages.map(page => page.getByLabel('Porch Party result').waitFor({ timeout: 15000 })))
       const results = await Promise.all(pages.map(state))
-      await writeFile(`${evidence}/finish.json`, JSON.stringify({ initial, routing, auto: { tick: auto.tick, seconds: auto.seconds }, results, errors, wallet: 'Read-only NFT and holder fixtures; no chain writes' }, null, 2))
+      await writeFile(`${evidence}/finish.json`, JSON.stringify({ initial, routing, auto: auto && { tick: auto.tick, seconds: auto.seconds }, results, errors, wallet: 'Read-only NFT and holder fixtures; no chain writes' }, null, 2))
       assert.ok(results.every(r => r.result?.won), 'Both clients must win the story level')
       assert.deepEqual(results[0].hashes, results[1].hashes); assert.equal(results[0].snapshot, results[1].snapshot)
       assert.ok(results.every(r => r.elapsedMs < r.tick / 45 * 1000 * 1.05 + 1000), 'Lockstep must progress near real time')
