@@ -4,7 +4,7 @@ import { CONSUMABLES, ENEMIES } from './data/config'
 import type { ConsumableKind, Point } from './data/config'
 import { distanceSq } from './world'
 
-export type PlacedItem = Point & { kind: ConsumableKind; life: number; pulse: number; hp: number; image: Phaser.GameObjects.Image }
+export type PlacedItem = Point & { kind: ConsumableKind; life: number; pulse: number; hp: number; owner?: number; image: Phaser.GameObjects.Image }
 export function useConsumable(s: SiegeScene, kind: ConsumableKind, x: number, y: number, hero = s.hero) {
   const c = CONSUMABLES[kind], spot = s.nearestPath(x, y), mine = hero === s.localHero // co-op: only the sender sees their refusals
   if (s.itemCooldown[kind] > 0 || s.stock[kind] <= 0) return

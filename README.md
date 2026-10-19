@@ -177,7 +177,7 @@ The [player guide](docs/HOLDERS.md) covers every mode in more detail.
 
 ## Porch Party co-op
 
-Two holders, one porch. Each player brings a Chog they hold, with its own kit, special, ultimate and talents. Candy, towers, traps, spells and jars are shared, so you agree on what to build, and a talent pick pauses both games. Open a room from the hero picker on any night you've unlocked, and send the invite link.
+Two holders, one porch. Each player brings a Chog they hold, with its own kit, special, ultimate and talents. Each player has their own candy and their own towers; income is split evenly, and the jars, traps and spells are shared. A talent pick pauses both games. Open a room from the hero picker on any night you've unlocked, and send the invite link.
 
 Both browsers run the whole game in deterministic lockstep. A small relay passes the inputs in a fixed order and compares state hashes. No server runs the game.
 

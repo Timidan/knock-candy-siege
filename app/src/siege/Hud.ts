@@ -11,7 +11,7 @@ import { NIGHTS } from './data/endless'
 import { bossLead, bossFraction } from './Boss'
 import type { BossState } from './Boss'
 import type { Enemy } from './world'
-import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner, YOU } from './renderShapes'
+import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner, YOU, PARTNER, hex } from './renderShapes'
 
 const PORCH_BAR = 120 // the porch health bar's inner width, world px
 type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; queued?: boolean; costLabel?: Phaser.GameObjects.Text; costRed?: Phaser.GameObjects.Image; hot?: boolean; tip?: () => string; price?: () => number }
@@ -120,6 +120,7 @@ export class Hud {
   private suppliesButton: Button
   private calls: (Button & { early: Phaser.GameObjects.Text; bounty: Phaser.GameObjects.Image })[] = []
   private partner?: Phaser.GameObjects.Text
+  private partnerCandy?: Phaser.GameObjects.Text
   private speed: Button
   private tutorialCard: Phaser.GameObjects.Container
   private tutorialText: Phaser.GameObjects.Text
@@ -198,6 +199,7 @@ export class Hud {
     this.candyPlate = plate(scene, -20, 37, 198, 3, 1.5, 0xffd23f, .35).setAlpha(PLATE)
     this.candyRoot.add([this.candyPlate, scene.art.image(0, 0, 'ui/candy').setDisplaySize(56, 56).setAlpha(REST)])
     this.candy = scene.add.bitmapText(46, 0, 'siege-digits', '', 44).setOrigin(0, .5).setTint(0xffd23f).setAlpha(REST); this.candyRoot.add(this.candy)
+    if (scene.options.coop) { this.partnerCandy = this.text(307, 134, '', 24, hex(PARTNER)).setOrigin(0, .5).setStroke('#241b30', 4); top.add(this.partnerCandy) }
     top.add(scene.art.image(497, 81, 'mod/skull').setDisplaySize(42, 42).setAlpha(REST))
     top.add(this.text(577, 57, 'WAVE', 27).setOrigin(.5).setAlpha(REST))
     this.wave = this.text(577, 100, '', 40).setOrigin(.5).setResolution(2).setAlpha(REST); top.add(this.wave)
@@ -472,8 +474,8 @@ export class Hud {
   // Candy only falls when it is spent: towers, upgrades, specialisations and the Sugar Rush prop (traps and supplies use a stock).
   // ponytail: income and a spend inside one check window net out (a kill in that frame shrinks the −N); exact amounts need a scene hook.
   private watchSpend() {
-    const s = this.scene, drop = this.candySeen - s.candy
-    this.candySeen = s.candy
+    const s = this.scene, drop = this.candySeen - s.localCandy
+    this.candySeen = s.localCandy
     if (drop <= 0 || s.ended) return
     this.spendValue = this.spendAge < .25 ? this.spendValue + drop : drop; this.spendAge = 0
     this.candyLoss.setText(`−${this.spendValue}`)
@@ -489,7 +491,7 @@ export class Hud {
   }
   // Tapping something unaffordable says how far off it is, at most once a second.
   private needCandy(cost: number) {
-    const s = this.scene, short = cost - s.candy
+    const s = this.scene, short = cost - s.localCandy
     if (short <= 0 || s.presentationTime < this.needAt) return
     this.needAt = s.presentationTime + 1; this.toast(`Need ${short} more candy`, 2)
   }
@@ -642,14 +644,15 @@ export class Hud {
     if (s.paused && this.tipFor) this.hideTip()
     if (s.ended) return
     this.watchSpend()
-    if (this.candyTarget !== s.candy) {
-      const first = this.candyTarget < 0; this.candyTarget = s.candy
+    if (this.candyTarget !== s.localCandy) {
+      const first = this.candyTarget < 0; this.candyTarget = s.localCandy
       s.tweens.killTweensOf(this.candyRoll)
-      if (reducedMotion() || first) this.candyRoll.value = s.candy
-      else s.tweens.add({ targets: this.candyRoll, value: s.candy, duration: 300, ease: 'Cubic.Out' })
+      if (reducedMotion() || first) this.candyRoll.value = s.localCandy
+      else s.tweens.add({ targets: this.candyRoll, value: s.localCandy, duration: 300, ease: 'Cubic.Out' })
     }
     if (reducedMotion() || this.candy.text === '') this.candy.setText(candyFormat.format(Math.round(this.candyRoll.value))).setScale(1)
     this.candy.setScale(Math.min(1, 150 / this.candy.getTextBounds().local.width))
+    this.partnerCandy?.setText(`PARTNER ${candyFormat.format(s.partnerCandy)}`)
     this.jars.setText(String(s.jars)); this.wave.setText(s.level.endless ? String(s.wave) : `${s.wave}/${s.waveCount}`)
     s.art.set(this.speed.icon, `ui/speed-${s.speed}`)
     this.enabled(this.portrait, s.localHero.hp > 0)
@@ -692,7 +695,7 @@ export class Hud {
       this.tutorialCard.setVisible(true); this.tutorialText.setText(`${s.tutorialStep + 1}/${TUTORIAL.length}  ${copy}`)
     }
     else if (this.tutorialCard.visible && this.tutorialCard.alpha === 1) this.close(this.tutorialCard)
-    for (const item of this.radialButtons) { this.enabled(item.button, s.candy >= item.cost && (!item.kind || !s.towerLock(item.kind))); this.afford(item.button, s.candy >= item.cost) }
+    for (const item of this.radialButtons) { this.enabled(item.button, s.localCandy >= item.cost && (!item.kind || !s.towerLock(item.kind))); this.afford(item.button, s.localCandy >= item.cost) }
     for (const [kind, b] of Object.entries(this.itemButtons) as [ConsumableKind, Button][]) { this.cooldown(b, s.itemCooldown[kind], CONSUMABLES[kind].cooldown, 's'); this.enabled(b, s.itemCooldown[kind] <= 0 && s.stock[kind] > 0); this.count(b, s.stock[kind]) }
     this.suppliesButton.root.setVisible(!s.focus?.active)
     this.suppliesButton.glow.setVisible(this.suppliesOpen)
@@ -732,7 +735,7 @@ export class Hud {
             this.refresh()
             b.label.setText('✓').setPosition(43, -43).setFontFamily(BODY).setColor('#ffe296').setStroke('#241b30', 4)
             const cost = config.levels[0].cost
-            this.toast(`${config.name} · ${config.description}\n${cost} candy · ${s.candy < cost ? `Need ${cost - s.candy} more candy` : 'Tap again to build'}${s.options.assets.geometry.pads[s.selected]?.boost ? '\nBoosted pad: +20% range and damage' : ''}`)
+            this.toast(`${config.name} · ${config.description}\n${cost} candy · ${s.localCandy < cost ? `Need ${cost - s.localCandy} more candy` : 'Tap again to build'}${s.options.assets.geometry.pads[s.selected]?.boost ? '\nBoosted pad: +20% range and damage' : ''}`)
           }
         }, true, true)
         this.cost(b, config.levels[0].cost)
@@ -743,7 +746,7 @@ export class Hud {
       const next = tower.spec ? tower.rank < 2 ? { cost: rankCost(tower.rank) } : null : TOWERS[tower.kind].levels[tower.level]
       if (tower.level === 3 && !tower.spec && TOWERS[tower.kind].specialisations.length > 0) {
         Object.entries(SPECIALISATIONS).filter(([, v]) => v.kind === tower.kind).forEach(([key, spec], i) => {
-          const b = this.button(this.radialRoot, i ? 164 : -164, -140, `tower/${tower.kind}/${key}`, 136, () => { if (s.previewSpec === key) s.command({ type: 'specialise', pad: s.selected, spec: key as Specialisation }); else { s.previewSpec = key as Specialisation; this.toast(`${spec.name} · ${spec.description}\n${SPEC_COST} candy · ${s.candy < SPEC_COST ? `Need ${SPEC_COST - s.candy} more candy` : 'Tap again to choose'}`) } }, true, true)
+          const b = this.button(this.radialRoot, i ? 164 : -164, -140, `tower/${tower.kind}/${key}`, 136, () => { if (s.previewSpec === key) s.command({ type: 'specialise', pad: s.selected, spec: key as Specialisation }); else { s.previewSpec = key as Specialisation; this.toast(`${spec.name} · ${spec.description}\n${SPEC_COST} candy · ${s.localCandy < SPEC_COST ? `Need ${SPEC_COST - s.localCandy} more candy` : 'Tap again to choose'}`) } }, true, true)
           this.cost(b, SPEC_COST); this.radialButtons.push({ button: b, cost: SPEC_COST })
           b.root.add(this.text(0, -106, spec.name.replace(' ', '\n'), 30).setOrigin(.5).setAlign('center').setStroke('#241b30', 5))
         })
@@ -835,7 +838,7 @@ export class Hud {
     s.input.keyboard?.off('keydown', this.talentKey, this)
     if (level === -2) {
       this.talentCard.add(plate(s, -360, -40, 720, 140, 20, 0x2e203c, .97, 0xffd58b, 3))
-      this.talentCard.add(this.text(0, 15, 'Partner is choosing…', 36).setOrigin(.5))
+      this.talentCard.add(this.text(0, 15, 'Partner is choosing…', 36, hex(PARTNER)).setOrigin(.5))
       this.talentBar = plate(s, -330, 70, 660, 14, 7, 0xffd58b); this.talentCard.add(this.talentBar)
       return
     }

@@ -11,7 +11,7 @@ import { ShapePool, circle, plate, curbedMap, YOU, PARTNER, hex } from './render
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
-import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
+import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, COOP_STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
 import { LEVELS, TUTORIAL, TIPS } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
@@ -194,6 +194,9 @@ export class SiegeScene extends Phaser.Scene {
     if (!this.talentWaiting) this.tick(dt)
   }
   candy = STARTING_CANDY
+  // Co-op: each player's own candy, and the fraction of shared income not yet paid to them (simulation state; solo leaves both unset).
+  wallets?: number[]
+  candyCarry?: number[]
   jars = 20
   kills = 0
   killsByKind: Record<string, number> = {}
@@ -335,10 +338,14 @@ export class SiegeScene extends Phaser.Scene {
       const partner = this.options.coop.players[1]
       this.art.pin(partner.id)
       this.heroes.push(new Hero(this, { x: spawn.x + 95, y: spawn.y }, partner))
-      if (this.heroes.some(hero => hero.kit.trinket === 'lucky-coin')) this.candy += 50
+      // Each player starts with their own candy and their own perks: holder candy, A sweeter start and the Lucky Coin.
+      this.wallets = this.heroes.map(({ selection, kit }) => COOP_STARTING_CANDY + selection.street.candy + (selection.owned.includes(23) ? 50 : 0) + (kit.trinket === 'lucky-coin' ? 50 : 0))
+      this.candyCarry = [0, 0]; this.candy = 0
+    } else {
+      this.candy += this.options.street.candy
+      if (this.options.owned.includes(23)) this.candy += 50
     }
-    this.candy += this.options.street.candy; if (this.options.street.trap) this.stock.pumpkin++
-    if (this.options.owned.includes(23)) this.candy += 50
+    if (this.options.street.trap) this.stock.pumpkin++
     // Co-op: your Chog stands on a ring in your colour with a YOU tag; your partner's has their colour and Chog number.
     this.heroRings = this.heroes.map((hero, player) => this.art.image(hero.x, hero.y, 'hero/ring').setDisplaySize(116, 44).setDepth(6).setTint(!this.options.coop ? 0xffffff : player === this.localPlayer ? YOU : PARTNER))
     if (this.options.coop) this.heroTags = this.heroes.map((hero, player) => this.add.text(0, 0, player === this.localPlayer ? 'YOU' : `#${hero.kit.id}`, { fontFamily: '"Luckiest Guy", sans-serif', fontSize: '28px', color: hex(player === this.localPlayer ? YOU : PARTNER), stroke: '#241b30', strokeThickness: 6 }).setOrigin(.5).setDepth(2750))
@@ -500,6 +507,8 @@ export class SiegeScene extends Phaser.Scene {
       if (command.type === 'speed' || this.ended || this.talentWaiting && command.type !== 'talent') return
       if (command.type === 'talent') command = { ...command, level: this.localHero.talentLevels[0] }
       // One change per tower at a time: a pad with a pending command from either player takes no other until it runs.
+      const theirs = 'pad' in command && command.type !== 'build' ? this.towers[command.pad] : null
+      if (theirs && theirs.owner !== this.localPlayer) { this.hud.toast("That's your partner's tower", 2); this.cancel(); return }
       const queued = 'pad' in command && command.type !== 'target' ? this.pendingAt(command.pad) : undefined
       if (queued) { this.hud.toast(queued.player !== this.localPlayer ? command.type === 'build' ? 'Your partner is building here' : 'Your partner is changing this tower' : 'On its way…', 2); this.cancel(); return }
       // A power already on its way is not sent twice.
@@ -541,10 +550,16 @@ export class SiegeScene extends Phaser.Scene {
       case 'upgrade': this.upgrade(command.pad, player); break
       case 'sell': this.sell(command.pad, player); break
       case 'specialise': this.specialise(command.pad, command.spec, player); break
-      case 'target': { const t = this.towers[command.pad]; if (t && TARGETING.includes(command.targeting)) { t.targeting = command.targeting; if (this.mine(player)) { this.hud.radial(); this.sfx('target', t) } }; break }
-      case 'consumable': if (Object.hasOwn(CONSUMABLES, command.kind)) useConsumable(this, command.kind, command.x, command.y, hero); break
+      case 'target': { const t = this.towers[command.pad]; if (t && TARGETING.includes(command.targeting) && this.owns(player, t)) { t.targeting = command.targeting; if (this.mine(player)) { this.hud.radial(); this.sfx('target', t) } }; break }
+      case 'consumable': if (Object.hasOwn(CONSUMABLES, command.kind)) {
+        const stock = this.stock[command.kind]
+        useConsumable(this, command.kind, command.x, command.y, hero)
+        // Co-op: a standing supply remembers who placed it; a thrown one gets a short mark where it lands.
+        if (this.options.coop && this.stock[command.kind] < stock) { if (CONSUMABLES[command.kind].duration) this.items.at(-1)!.owner = player; else this.placed(command.x, command.y, player, 1.4) }
+      }
+      break
       case 'trap': if (Object.hasOwn(TRAPS, command.kind)) this.placeTrap(command.kind, command.x, command.y, player); break
-      case 'spell': if (Object.hasOwn(SPELLS, command.kind)) this.cast(command.kind, command.x, command.y, hero, player); break
+      case 'spell': if (Object.hasOwn(SPELLS, command.kind)) { const ready = this.spellCooldown[command.kind] <= 0; this.cast(command.kind, command.x, command.y, hero, player); if (ready && this.spellCooldown[command.kind] > 0) this.placed(command.x, command.y, player, 1.1) }; break
       case 'move': this.moveHero(command, hero); break
       case 'ability': hero.abilityUse(); break
       case 'ultimate': hero.ultimateUse(); break
@@ -557,8 +572,8 @@ export class SiegeScene extends Phaser.Scene {
   }
   private specialise(pad: number, spec: Specialisation, player: Player = 0) {
     const t = this.towers[pad]
-    if (!t || t.level !== 3 || t.spec || !Object.hasOwn(SPECIALISATIONS, spec) || SPECIALISATIONS[spec].kind !== t.kind || this.candy < SPEC_COST) return
-    this.candy -= SPEC_COST; t.spent += SPEC_COST; t.spec = spec; t.pop = .4
+    if (!t || t.level !== 3 || t.spec || !Object.hasOwn(SPECIALISATIONS, spec) || SPECIALISATIONS[spec].kind !== t.kind || !this.owns(player, t) || !this.spend(player, SPEC_COST)) return
+    t.spent += SPEC_COST; t.spec = spec; t.pop = .4
     this.art.set(t.image, this.towerFrame(t.kind, t.level, spec)); this.discover([`spec/${spec}`])
     if (t.kind === 'patch') this.guardsFor(t)
     this.effect('fx/levelup/0', t.x, t.y - 80, .7, 1.5); this.sfx('spec', t); this.settle(player); if (this.mine(player)) this.hud.toast(SPECIALISATIONS[spec].name)
@@ -686,8 +701,8 @@ export class SiegeScene extends Phaser.Scene {
       for (const e of this.enemies) if (e.active && !e.returning && !ENEMIES[e.kind].flying && reach.nearest(e.x, e.y).gap < 90) { this.damage(e, 170, 'physical'); this.status(e, 'stun', 3) }
       if (this.level.endless) p.cooldown = 40; else p.used = true
     } else if (p.data.kind === 'shop') {
-      if (this.candy < 50) { if (this.mine(player)) this.hud.toast('Sugar rush costs 50 candy.'); return }
-      this.candy -= 50; this.sugarRush = 10; p.cooldown = 24 * slow; this.hud.toast('Sugar rush! Towers attack 60% faster for 10 seconds.')
+      if (!this.spend(player, 50)) { if (this.mine(player)) this.hud.toast('Sugar rush costs 50 candy.'); return }
+      this.sugarRush = 10; p.cooldown = 24 * slow; this.hud.toast('Sugar rush! Towers attack 60% faster for 10 seconds.')
     } else if (p.data.kind === 'bell') {
       // Mon Manor: everyone, flyers included, is stunned for two seconds.
       for (const e of this.enemies) if (e.active && !e.returning) this.status(e, 'stun', 2)
@@ -769,7 +784,7 @@ export class SiegeScene extends Phaser.Scene {
       chars[char.charCodeAt(0)] = { x: i * 96, y: 0, width, height: 104, centerX: width / 2, centerY: 52, xOffset: 0, yOffset: 0, xAdvance: char === ',' ? 32 : 64, kerning: {}, data: {}, u0: i * 96 / 2048, v0: 0, u1: (i * 96 + width) / 2048, v1: 104 / 128 }
     }
     texture.refresh(); this.cache.bitmapFont.add('siege-digits', { data: { font: 'siege-digits', size: 80, lineHeight: 104, chars }, texture: 'siege-digits', frame: null })
-    this.rewardText = this.add.bitmapText(0, 0, 'siege-digits', '', 44).setOrigin(.5).setDepth(2310).setTint(0xffdc83).setVisible(false)
+    this.rewardText = this.add.bitmapText(0, 0, 'siege-digits', '', 44).setOrigin(.5).setDepth(2310).setTint(this.options.coop ? YOU : 0xffdc83).setVisible(false)
     for (let i = 0; i < LIMITS.numbers; i++) this.numbers.push({ active: false, text: this.add.bitmapText(0, 0, 'siege-digits', '', 34).setOrigin(.5).setDepth(2300).setVisible(false), life: 0, x: 0, y: 0 })
   }
   // The side a wave's Witching Hour swarm comes from. Town Square's porch sits between four roads, so it has no single far side:
@@ -867,7 +882,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.paused || this.ended || this.wave >= this.waveCount || (this.options.tutorial && this.tutorialStep === 0)) return
     this.hud.closePreview()
     const early = this.wave > 0 ? Math.ceil(Math.max(0, this.countdown) * EARLY_CALL_CANDY_PER_SECOND) : 0
-    if (early) { this.earlyCalls++; this.income(early); this.hud.toast(`Early call! +${early} candy`); this.sfx('early-call') }
+    if (early) { this.earlyCalls++; const gain = this.income(early); this.hud.toast(`Early call! +${this.wallets ? gain : early} candy`); this.sfx('early-call') }
     const data = this.waveAt(this.wave)!
     this.previewHideUntil = this.presentationTime + .3
     const wave = this.wave++
@@ -942,7 +957,7 @@ export class SiegeScene extends Phaser.Scene {
     }
     for (let w = 0; w < this.wave; w++) if (!this.rewarded.has(w) && !this.waveAlive[w] && !this.schedule.some(s => s.wave === w)) {
       const bonus = this.waveAt(w)!.bonus, tip = this.options.tutorial ? TIPS[w] : undefined
-      this.rewarded.add(w); this.income(bonus); this.hud.toast(`Wave cleared! +${Math.round(bonus * this.candyScale)} candy${tip ? `\nTip: ${tip}` : ''}`, tip ? 7 : undefined)
+      this.rewarded.add(w); const gain = this.income(bonus); this.hud.toast(`Wave cleared! +${gain} candy${tip ? `\nTip: ${tip}` : ''}`, tip ? 7 : undefined)
       if (w + 1 < this.waveCount) this.sfx('wave-clear')
     }
     for (const key of ['rain', 'boo'] as const) this.spellCooldown[key] = Math.max(0, this.spellCooldown[key] - dt)
@@ -1316,9 +1331,17 @@ export class SiegeScene extends Phaser.Scene {
       if (e.boss && bossRevives(this, e)) return true
       if (e.mods.includes('lucky') && !e.lucky) { e.lucky = true; e.hp = 1; this.effect('fx/levelup/0', e.x, e.y - 50, .5); this.sfx('enemy-lucky', e); return true }
       if (e.mods.includes('skull') && !e.revived) { e.revived = true; e.hp = e.maxHp * .4; this.status(e, 'stun', .7); this.effect('fx/poof/0', e.x, e.y - 50, .6); this.sfx('enemy-revive', e); return true }
-      const candyBefore = this.candy
-      this.kills++; this.income(Math.max(...this.heroes.map(hero => hero.killIncome(e.candy * this.killCandyScale(e.wave)))) * (this.options.street.chog ? 1.1 : 1))
-      this.rewardFeedback(this.candy - candyBefore, e)
+      if (this.wallets) {
+        // Co-op: each player earns half, with their own Chog's perks and their own holder bonus. Pops show your share.
+        const half = e.candy * this.killCandyScale(e.wave) / 2
+        this.kills++
+        const gains = this.heroes.map((hero, player) => this.earn(player as Player, hero.killIncome(half, true) * (hero.selection.street.chog ? 1.1 : 1) * this.candyScale))
+        this.rewardFeedback(gains[this.localPlayer], e)
+      } else {
+        const candyBefore = this.candy
+        this.kills++; this.income(Math.max(...this.heroes.map(hero => hero.killIncome(e.candy * this.killCandyScale(e.wave)))) * (this.options.street.chog ? 1.1 : 1))
+        this.rewardFeedback(this.candy - candyBefore, e)
+      }
       this.heroes.forEach(hero => hero.onKill(e))
       this.killsByKind[e.kind] = (this.killsByKind[e.kind] ?? 0) + 1
       // The last few fallen ground enemies can be raised again (Brainz).
@@ -1382,7 +1405,33 @@ export class SiegeScene extends Phaser.Scene {
     }
     if (status === 'charm') this.combo('charm', e)
   }
-  income(amount: number) { this.candy += Math.round(amount * this.candyScale) }
+  // Shared income: solo's one pot, or co-op halves, each paid to its player. Returns what the local player received.
+  income(amount: number) {
+    if (!this.wallets) { const gain = Math.round(amount * this.candyScale); this.candy += gain; return gain }
+    const gains = [this.earn(0, amount * this.candyScale / 2), this.earn(1, amount * this.candyScale / 2)]
+    return gains[this.localPlayer]
+  }
+  // Whole candy now and the fraction carried to that player's next payout, so the split neither loses nor makes candy.
+  private earn(player: Player, amount: number) {
+    const total = this.candyCarry![player] + amount, whole = Math.floor(total)
+    this.candyCarry![player] = total - whole; this.wallets![player] += whole
+    return whole
+  }
+  // Candy a player can spend: their own in co-op, the one pot in solo. A purchase they cannot afford changes nothing.
+  purse(player: Player) { return this.wallets ? this.wallets[player] : this.candy }
+  get localCandy() { return this.purse(this.localPlayer) }
+  get partnerCandy() { return this.wallets ? this.wallets[this.localPlayer ? 0 : 1] : 0 }
+  private spend(player: Player, cost: number) {
+    if (this.purse(player) < cost) return false
+    if (this.wallets) this.wallets[player] -= cost; else this.candy -= cost
+    return true
+  }
+  // Co-op: a tower takes changes only from the player who built it.
+  private owns(player: Player, tower: Tower) {
+    if (!this.options.coop || tower.owner === player) return true
+    if (this.mine(player)) this.hud.toast("That's your partner's tower", 2)
+    return false
+  }
   private build(kind: TowerKind, padIndex: number, player: Player = 0) {
     const hero = this.heroes[player], mine = this.mine(player), built = this.towers[padIndex]
     if (this.paused || this.ended || padIndex < 0) return
@@ -1392,28 +1441,29 @@ export class SiegeScene extends Phaser.Scene {
     const locked = towerLock(kind, hero.selection.stars, hero.selection.owned)
     if (locked) { if (mine) this.hud.toast(locked); return }
     const cost = TOWERS[kind].levels[0].cost
-    if (this.candy < cost) { if (mine) this.hud.toast('A little more candy first!'); return }
+    if (!this.spend(player, cost)) { if (mine) this.hud.toast('A little more candy first!'); return }
     const pad = this.options.assets.geometry.pads[padIndex]
     const tower: Tower = { ...pad, kind, level: 1, spec: null, rank: 0, spent: cost, targeting: 'first', cooldown: 0, stun: 0, image: this.art.image(pad.x, pad.y - 90, this.towerFrame(kind, 1)).setDepth(pad.y).setDisplaySize(144, 180), guards: [], pop: .4, boost: !!pad.boost, gold: 0 }
-    this.discover([`tower/${kind}`]); this.towers[padIndex] = tower; this.candy -= cost
+    this.discover([`tower/${kind}`]); this.towers[padIndex] = tower
     if (this.options.coop) tower.owner = player
     if (kind === 'patch') this.guardsFor(tower)
     this.effect('fx/poof/0', pad.x, pad.y - 60, .6, 1.4); this.sfx('build', pad); this.tutorial('build'); this.settle(player); if (mine) this.hud.toast(`${TOWERS[kind].name} built`); this.hud.refresh()
   }
   private upgrade(padIndex: number, player: Player = 0) {
     const tower = this.towers[padIndex]
-    if (this.paused || this.ended || !tower || tower.level >= 3 && (!tower.spec || tower.rank >= 2)) return
+    if (this.paused || this.ended || !tower || tower.level >= 3 && (!tower.spec || tower.rank >= 2) || !this.owns(player, tower)) return
     const cost = tower.spec ? rankCost(tower.rank) : TOWERS[tower.kind].levels[tower.level].cost
-    if (this.candy < cost) { if (this.mine(player)) this.hud.toast('A little more candy first!'); return }
-    this.candy -= cost; tower.spent += cost; if (tower.spec) tower.rank++; else tower.level++; tower.pop = .4
+    if (!this.spend(player, cost)) { if (this.mine(player)) this.hud.toast('A little more candy first!'); return }
+    tower.spent += cost; if (tower.spec) tower.rank++; else tower.level++; tower.pop = .4
     this.art.set(tower.image, this.towerFrame(tower.kind, tower.level, tower.spec))
     if (tower.kind === 'patch') this.guardsFor(tower)
     this.effect('fx/levelup/0', tower.x, tower.y - 70, .8, 1.5); this.sfx('upgrade', tower); this.settle(player); if (this.mine(player)) this.hud.toast(tower.spec ? `${SPECIALISATIONS[tower.spec].name} · Rank ${tower.rank}` : `${TOWERS[tower.kind].name} · Level ${tower.level}`); this.hud.refresh()
   }
   private sell(padIndex: number, player: Player = 0) {
     const tower = this.towers[padIndex]
-    if (this.paused || this.ended || !tower) return
-    this.candy += Math.floor(tower.spent * .7); tower.image.destroy(); for (const guard of tower.guards) guard.image.destroy(); this.towers[padIndex] = null
+    if (this.paused || this.ended || !tower || !this.owns(player, tower)) return
+    if (this.wallets) this.wallets[player] += Math.floor(tower.spent * .7); else this.candy += Math.floor(tower.spent * .7)
+    tower.image.destroy(); for (const guard of tower.guards) guard.image.destroy(); this.towers[padIndex] = null
     this.sfx('sell', tower); this.settle(player); if (this.mine(player)) this.hud.toast(`Tower sold · +${Math.floor(tower.spent * .7)} candy`); this.hud.refresh()
   }
   private guardsFor(tower: Tower) {
@@ -1457,7 +1507,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.stock[kind] <= 0) { if (mine) this.hud.toast(`No ${config.name}s left this level.`); this.settle(player); return }
     if (this.traps.length >= LIMITS.traps) { if (mine) this.hud.toast('The path is full of surprises already.'); return }
     this.stock[kind]--
-    this.traps.push({ x: spot.x, y: spot.y, kind, life: config.duration, armed: false, image: this.art.image(spot.x, spot.y, `trap/${kind}/0`).setDepth(7).setDisplaySize(100, 75) })
+    this.traps.push({ x: spot.x, y: spot.y, kind, life: config.duration, armed: false, ...this.options.coop ? { owner: player } : {}, image: this.art.image(spot.x, spot.y, `trap/${kind}/0`).setDepth(7).setDisplaySize(100, 75) })
     this.effect('fx/poof/0', spot.x, spot.y, .4); this.sfx('trap-set', spot); this.settle(player); this.hud.refresh()
   }
   private updateTraps(dt: number) {
@@ -1497,7 +1547,8 @@ export class SiegeScene extends Phaser.Scene {
     if (distanceSq(pointer, this.localHero) < 70 ** 2) { this.holdAt = { x: pointer.x, y: pointer.y }; this.holdTime = 0; this.selectHero(); this.hud.toast(`Chog #${this.localHero.kit.id} · ${this.abilityName()}\nTap ground to move · Hold to emote`); return }
     for (let i = 0; i < this.pads.length; i++) if (this.towers[i] ? Math.abs(pointer.x - this.pads[i].x) < 82 && pointer.y >= this.pads[i].y - 190 && pointer.y <= this.pads[i].y + 35 : distanceSq(pointer, this.pads[i]) < 82 ** 2) {
       if (this.tutorialStep === 0 && i !== 0) { this.hud.toast('The glowing pad first!'); return }
-      const queued = this.pendingAt(i)
+      const queued = this.pendingAt(i), tower = this.towers[i]
+      if (tower && this.options.coop && tower.owner !== this.localPlayer) { this.cancel(); this.hud.toast(`Your partner's ${TOWERS[tower.kind].name} · Level ${tower.level}${tower.spec ? ` · ${SPECIALISATIONS[tower.spec].name}` : ''}`, 2); return }
       if (queued) { this.cancel(); this.hud.toast(queued.player !== this.localPlayer ? this.towers[i] ? 'Your partner is changing this tower' : 'Your partner is building here' : 'On its way…', 2); return }
       this.cancel(); this.selected = i; this.hud.radial(); return
     }
@@ -1797,8 +1848,17 @@ export class SiegeScene extends Phaser.Scene {
   }
   // Co-op: pending commands drawn where they will land, in their sender's colour. A build shows a tower ghost; a tower
   // change, a label; a move, spell, trap or supply, a pulsing ground ring. A partner's command on your open menu closes it.
+  private marks: { x: number; y: number; player: Player; until: number }[] = []
+  private placed(x: number, y: number, player: Player, seconds: number) { if (this.options.coop) this.marks.push({ x, y, player, until: this.presentationTime + seconds }) }
   private drawQueued() {
     this.ringCount = 0
+    // What each player owns: towers, traps, standing supplies, and a spell or thrown supply while its effect plays.
+    const colour = (player: number | undefined) => player === this.localPlayer ? YOU : PARTNER, alpha = (player: number | undefined) => player === this.localPlayer ? .75 : .4
+    for (const tower of this.towers) if (tower?.owner !== undefined) this.groundRing(tower.x, tower.y + 6, 150, colour(tower.owner), alpha(tower.owner))
+    for (const trap of this.traps) if (trap.owner !== undefined) this.groundRing(trap.x, trap.y + 8, 112, colour(trap.owner), alpha(trap.owner))
+    for (const item of this.items) if (item.owner !== undefined) this.groundRing(item.x, item.y + 8, 112, colour(item.owner), alpha(item.owner) * Math.min(1, item.life))
+    this.marks = this.marks.filter(mark => mark.until > this.presentationTime)
+    for (const mark of this.marks) this.groundRing(mark.x, mark.y, 170, colour(mark.player), alpha(mark.player) * Math.min(1, (mark.until - this.presentationTime) * 3))
     this.ghosts.forEach(ghost => { ghost.image.setVisible(false); ghost.label.setVisible(false) }) // sparse: one per pad used
     const local = this.localPlayer, pulse = this.motion ? .7 + .25 * Math.sin(this.presentationTime * 7) : .85
     const labels: Partial<Record<Command['type'], string>> = { build: 'building…', upgrade: 'upgrading…', specialise: 'upgrading…', sell: 'selling…' }

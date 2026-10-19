@@ -22,7 +22,7 @@ export type Blocker = Point & { life: number; radius: number; image: Phaser.Game
 export type Projectile = Point & { active: boolean; target: Enemy | null; generation: number; life: number; duration: number; fromX: number; fromY: number; endX: number; endY: number; damage: number; kind: TowerKind | 'hero'; splash: number; image: Phaser.GameObjects.Image; drawn?: boolean; owner?: number; arc?: number; frame?: string; frameCount?: number; onHit?: (enemy: Enemy) => void; after?: () => void }
 export type Effect = { active: boolean; image: Phaser.GameObjects.Image; text: Phaser.GameObjects.Text | null; life: number; duration: number; x: number; y: number; toX: number; toY: number; size: number; name: string; mode: 'burst' | 'coin' | 'emote' | 'jar' | 'travel' | 'steal' | 'pop'; count: number; angle: number; width?: number; height?: number; simulationStart?: number; delay: number; flip: boolean }
 export type DamageNumber = { active: boolean; text: Phaser.GameObjects.BitmapText; life: number; x: number; y: number }
-export type Trap = Point & { kind: TrapKind; life: number; armed: boolean; image: Phaser.GameObjects.Image }
+export type Trap = Point & { kind: TrapKind; life: number; armed: boolean; owner?: number; image: Phaser.GameObjects.Image }
 
 // Equal-distance samples make the speed independent of how densely the artist placed spline knots.
 export class Route {
