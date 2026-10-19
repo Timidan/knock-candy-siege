@@ -11,10 +11,10 @@ import { NIGHTS } from './data/endless'
 import { bossLead, bossFraction } from './Boss'
 import type { BossState } from './Boss'
 import type { Enemy } from './world'
-import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner } from './renderShapes'
+import { plate, circle, shapeTexture, setSweep, hudPlate, hudDisc, comicBanner, YOU } from './renderShapes'
 
 const PORCH_BAR = 120 // the porch health bar's inner width, world px
-type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; costLabel?: Phaser.GameObjects.Text; costRed?: Phaser.GameObjects.Image; hot?: boolean; tip?: () => string; price?: () => number }
+type Button = { root: Phaser.GameObjects.Container; face: Phaser.GameObjects.Image; front: Phaser.GameObjects.Container; lip: Phaser.GameObjects.Image; icon: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; sweep: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; size: number; enabled: boolean; pressed?: number; queued?: boolean; costLabel?: Phaser.GameObjects.Text; costRed?: Phaser.GameObjects.Image; hot?: boolean; tip?: () => string; price?: () => number }
 const DISPLAY = '"Luckiest Guy", sans-serif'
 const BODY = '"Patrick Hand", sans-serif'
 // At rest, docked controls let the road and enemies show through: plates at .75,
@@ -568,7 +568,12 @@ export class Hud {
     for (const b of this.buttons) if (b.pressed !== undefined && (pointerId === undefined || b.pressed === pointerId)) this.release(b)
   }
   private release(b: Button) {
-    b.pressed = undefined; b.front.y = 0; b.face.setDisplaySize(b.size, b.size); this.shade(b)
+    b.pressed = undefined; b.front.y = b.glow.visible && b.queued ? 10 : 0; b.face.setDisplaySize(b.size, b.size); this.shade(b)
+  }
+  // Co-op: a power you pressed stays down and lit in your colour until it runs for both players.
+  private hold(b: Button, queued: boolean) {
+    if (b.queued === queued) return
+    b.queued = queued; b.glow.setVisible(queued).setTint(YOU); if (b.pressed === undefined) b.front.y = queued ? 10 : 0
   }
   private enabled(b: Button, enabled: boolean) {
     if (!enabled && b.pressed !== undefined) this.release(b)
@@ -665,6 +670,7 @@ export class Hud {
     if (this.talentTimer) { const left = Math.ceil(this.talentTimer.getRemainingSeconds()); if (left <= 3 && left !== this.talentTick) { this.talentTick = left; s.options.sfx.play('talent-tick') } }
     this.cooldown(this.rain, s.spellCooldown.rain, SPELLS.rain.cooldown * factor)
     this.cooldown(this.boo, s.spellCooldown.boo, SPELLS.boo.cooldown * factor)
+    if (s.options.coop) { this.hold(this.ability, s.queuedOwn('ability')); this.hold(this.ultimate, s.queuedOwn('ultimate')); this.hold(this.rain, s.queuedOwn('spell', 'rain')); this.hold(this.boo, s.queuedOwn('spell', 'boo')) }
     for (const kind of ['pumpkin', 'bowl', 'gum'] as const) {
       const b = this.trapButtons[kind]
       this.enabled(b, s.stock[kind] > 0); this.count(b, s.stock[kind])

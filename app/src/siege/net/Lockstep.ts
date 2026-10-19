@@ -27,6 +27,7 @@ export class Lockstep {
   private packets: [Map<number, CoopCommand[]>, Map<number, CoopCommand[]>] = [new Map(), new Map()]
   private nextReceived = [0, 0]
   private pending: CoopCommand[] = []
+  private sent = new Map<number, CoopCommand[]>() // own commands in flight, by the tick they run
   private hashes = new Map<number, string>()
   private simulation: Simulation
   private options: Options
@@ -65,10 +66,11 @@ export class Lockstep {
       for (const command of a) this.simulation.command(0, command)
       for (const command of b) this.simulation.command(1, command)
       this.simulation.step(1 / TICK_RATE, this.tick)
-      this.packets[0].delete(this.tick); this.packets[1].delete(this.tick)
+      this.packets[0].delete(this.tick); this.packets[1].delete(this.tick); this.sent.delete(this.tick)
       const future = this.tick + this.delay
       this.tick++
       const commands = this.pending; this.pending = []
+      if (commands.length) this.sent.set(future, commands)
       this.options.send({ type: 'input', tick: future, commands })
       if (this.tick % HASH_EVERY === 0) {
         const hash = hashState(this.simulation.snapshot())
@@ -79,9 +81,13 @@ export class Lockstep {
       return true
     } catch (error) { this.detail = error instanceof Error ? error.message : String(error); this.stop('error'); return false }
   }
+  /** Read-only, for presentation: own commands not yet run, from the tap until their tick (queued, then in flight). */
+  own(): readonly CoopCommand[] { return this.sent.size ? [...[...this.sent.values()].flat(), ...this.pending] : this.pending }
+  /** Read-only, for presentation: a player's relayed commands for ticks not yet run. */
+  relayed(player: Player): ReadonlyMap<number, readonly CoopCommand[]> { return this.packets[player] }
   stop(reason: StopReason) {
     if (this.state !== 'waiting' && this.state !== 'running') return
-    this.state = reason; this.pending = []; this.packets.forEach(packets => packets.clear())
+    this.state = reason; this.pending = []; this.sent.clear(); this.packets.forEach(packets => packets.clear())
     this.options.onStop(reason, STOP_TEXT[reason])
   }
 }

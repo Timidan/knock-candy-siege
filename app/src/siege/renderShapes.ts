@@ -5,6 +5,9 @@ import type { LevelGeometry } from './data/level1'
 // The illustrated background already includes the road. Bake the exposed curb
 // union once, with the original road interior/scenery preserved in the same map
 // texture. Nothing is redrawn when a bridge moves or the quality tier changes.
+// Co-op ownership: one colour for what is yours and one for your partner's, the same on every screen.
+export const YOU = 0xffd23f, PARTNER = 0x7fdcff
+export const hex = (color: number) => `#${color.toString(16).padStart(6, '0')}`
 export function curbedMap(scene: Phaser.Scene, routes: Route[], geometry: LevelGeometry) {
   const key = 'siege-curbed-map'
   if (!scene.textures.exists(key)) {

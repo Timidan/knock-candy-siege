@@ -15,7 +15,7 @@ export type Enemy = Point & {
   route?: Route; boss?: BossState; shield: number; gold: number; lit: boolean
 }
 export type Guard = Point & { hp: number; maxHp: number; respawn: number; cooldown: number; slow: number; image: Phaser.GameObjects.Image; poseUntil?: number; blockUntil?: number; recoilX?: number; recoilY?: number }
-export type Tower = Point & { kind: TowerKind; level: number; spec: Specialisation | null; rank: number; spent: number; targeting: Targeting; cooldown: number; stun: number; image: Phaser.GameObjects.Image; guards: Guard[]; pop: number; boost: boolean; gold: number; shotAt?: number; aimX?: number; aimY?: number }
+export type Tower = Point & { kind: TowerKind; level: number; spec: Specialisation | null; rank: number; spent: number; targeting: Targeting; cooldown: number; stun: number; image: Phaser.GameObjects.Image; guards: Guard[]; pop: number; boost: boolean; gold: number; owner?: number; shotAt?: number; aimX?: number; aimY?: number }
 // Temporary fighters (zombie Chogs, risen enemies) block and fight like guards; a blocker is a wall that only stops the march.
 export type Ally = Guard & { life: number; damage: number }
 export type Blocker = Point & { life: number; radius: number; image: Phaser.GameObjects.Image }

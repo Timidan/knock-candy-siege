@@ -2,12 +2,12 @@ import { attachRoom } from './net/session'
 import { thumb } from '../images'
 import type { CoopSession } from './net/session'
 import type { Lockstep } from './net/Lockstep'
-import type { Player } from './net/protocol'
+import type { CoopCommand, Player } from './net/protocol'
 import { HASH_EVERY } from './net/protocol'
 import Phaser from 'phaser'
 import { Art, loadImage } from './assets'
 import { ChogHeads } from './chogHead'
-import { ShapePool, circle, plate, curbedMap } from './renderShapes'
+import { ShapePool, circle, plate, curbedMap, YOU, PARTNER, hex } from './renderShapes'
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
@@ -252,6 +252,13 @@ export class SiegeScene extends Phaser.Scene {
   // The map's far side: the mean direction from the porch to where its roads and flight paths enter (set in create).
   private away = { x: -1, y: 0 }
   private heroRings: Phaser.GameObjects.Image[] = []
+  // Co-op presentation only: commands accepted but not yet run (own ones from the tap, the partner's once relayed),
+  // the ghosts and labels that show them, a pool of ground rings, and the YOU / #id tags over the Chogs.
+  private queued: { player: Player; command: CoopCommand }[] = []
+  private ghosts: { image: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text; key: string }[] = []
+  private rings: Phaser.GameObjects.Image[] = []
+  private ringCount = 0
+  private heroTags: Phaser.GameObjects.Text[] = []
   private preview!: Phaser.GameObjects.Image
   private hudTime = 0
   private portraitTime = 0
@@ -332,7 +339,9 @@ export class SiegeScene extends Phaser.Scene {
     }
     this.candy += this.options.street.candy; if (this.options.street.trap) this.stock.pumpkin++
     if (this.options.owned.includes(23)) this.candy += 50
-    this.heroRings = this.heroes.map((hero, player) => this.art.image(hero.x, hero.y, 'hero/ring').setDisplaySize(116, 44).setDepth(6).setTint(player ? 0x9ae8ff : 0xffffff))
+    // Co-op: your Chog stands on a ring in your colour with a YOU tag; your partner's has their colour and Chog number.
+    this.heroRings = this.heroes.map((hero, player) => this.art.image(hero.x, hero.y, 'hero/ring').setDisplaySize(116, 44).setDepth(6).setTint(!this.options.coop ? 0xffffff : player === this.localPlayer ? YOU : PARTNER))
+    if (this.options.coop) this.heroTags = this.heroes.map((hero, player) => this.add.text(0, 0, player === this.localPlayer ? 'YOU' : `#${hero.kit.id}`, { fontFamily: '"Luckiest Guy", sans-serif', fontSize: '28px', color: hex(player === this.localPlayer ? YOU : PARTNER), stroke: '#241b30', strokeThickness: 6 }).setOrigin(.5).setDepth(2750))
     this.preview = this.art.image(0, 0, 'trap/pumpkin/0').setDepth(2900).setAlpha(.75).setVisible(false)
     if (this.dark) this.darkness = new Darkness(this)
     this.hud = new Hud(this)
@@ -490,10 +499,33 @@ export class SiegeScene extends Phaser.Scene {
     if (this.options.coop) {
       if (command.type === 'speed' || this.ended || this.talentWaiting && command.type !== 'talent') return
       if (command.type === 'talent') command = { ...command, level: this.localHero.talentLevels[0] }
-      this.net?.enqueue(command); return
+      // One change per tower at a time: a pad with a pending command from either player takes no other until it runs.
+      const queued = 'pad' in command && command.type !== 'target' ? this.pendingAt(command.pad) : undefined
+      if (queued) { this.hud.toast(queued.player !== this.localPlayer ? command.type === 'build' ? 'Your partner is building here' : 'Your partner is changing this tower' : 'On its way…', 2); this.cancel(); return }
+      // A power already on its way is not sent twice.
+      if ((command.type === 'ability' || command.type === 'ultimate' || command.type === 'spell') && this.queuedOwn(command.type, command.type === 'spell' ? command.kind : undefined)) return
+      if (!this.net?.enqueue(command)) return
+      this.readQueue(); this.hud.refresh()
+      // Instant local feedback: the command itself runs for both players after the input delay.
+      if (command.type === 'move') { this.effect('hero/ring', command.x, command.y, .55, .8)?.image.setTint(YOU); this.sfx('move', command) }
+      if (['build', 'upgrade', 'sell', 'specialise', 'spell', 'trap', 'consumable', 'move', 'emote'].includes(command.type)) this.cancel()
+      return
     }
     this.applyCommand(0, command)
   }
+  get localPlayer(): Player { return this.options.coop?.client.player ?? 0 }
+  // A command's own toasts and menu changes belong to the player who sent it. Co-op closes menus at the tap (command).
+  private mine(player: Player) { return !this.options.coop || player === this.localPlayer }
+  private settle(player: Player) { if (!this.options.coop && this.mine(player)) this.cancel() }
+  readQueue() {
+    this.queued.length = 0
+    const net = this.net, local = this.localPlayer
+    if (!net || !this.options.coop) return
+    for (const command of net.own()) this.queued.push({ player: local, command })
+    for (const commands of net.relayed(local ? 0 : 1).values()) for (const command of commands) this.queued.push({ player: local ? 0 : 1, command })
+  }
+  pendingAt(pad: number) { return this.queued.find(({ command }) => 'pad' in command && command.pad === pad && command.type !== 'target') }
+  queuedOwn(type: Command['type'], kind?: string) { return this.queued.some(({ player, command }) => player === this.localPlayer && command.type === type && (!kind || 'kind' in command && command.kind === kind)) }
   applyCommand(player: Player, command: Command) {
     const hero = this.heroes[player]
     if (!hero || this.options.coop && this.talentWaiting && command.type !== 'talent') return
@@ -505,31 +537,31 @@ export class SiegeScene extends Phaser.Scene {
       if (TUTORIAL[this.tutorialStep]?.action !== action || ('pad' in command && command.pad !== 0)) return
     }
     switch (command.type) {
-      case 'build': if (Object.hasOwn(TOWERS, command.kind)) this.build(command.kind, command.pad, hero); break
-      case 'upgrade': this.upgrade(command.pad); break
-      case 'sell': this.sell(command.pad); break
-      case 'specialise': this.specialise(command.pad, command.spec); break
-      case 'target': { const t = this.towers[command.pad]; if (t && TARGETING.includes(command.targeting)) { t.targeting = command.targeting; this.hud.radial(); this.sfx('target', t) }; break }
+      case 'build': if (Object.hasOwn(TOWERS, command.kind)) this.build(command.kind, command.pad, player); break
+      case 'upgrade': this.upgrade(command.pad, player); break
+      case 'sell': this.sell(command.pad, player); break
+      case 'specialise': this.specialise(command.pad, command.spec, player); break
+      case 'target': { const t = this.towers[command.pad]; if (t && TARGETING.includes(command.targeting)) { t.targeting = command.targeting; if (this.mine(player)) { this.hud.radial(); this.sfx('target', t) } }; break }
       case 'consumable': if (Object.hasOwn(CONSUMABLES, command.kind)) useConsumable(this, command.kind, command.x, command.y, hero); break
-      case 'trap': if (Object.hasOwn(TRAPS, command.kind)) this.placeTrap(command.kind, command.x, command.y); break
-      case 'spell': if (Object.hasOwn(SPELLS, command.kind)) this.cast(command.kind, command.x, command.y, hero); break
+      case 'trap': if (Object.hasOwn(TRAPS, command.kind)) this.placeTrap(command.kind, command.x, command.y, player); break
+      case 'spell': if (Object.hasOwn(SPELLS, command.kind)) this.cast(command.kind, command.x, command.y, hero, player); break
       case 'move': this.moveHero(command, hero); break
       case 'ability': hero.abilityUse(); break
       case 'ultimate': hero.ultimateUse(); break
       case 'emote': this.chooseEmote(command.name, hero); break
       case 'talent': if ((command.index === 0 || command.index === 1) && (!this.options.coop || command.level === hero.talentLevels[0])) { hero.chooseTalent(command.index); this.talentDeadlines[player] = 0 }; break
       case 'wave': this.callWave(); break
-      case 'prop': this.useProp(command.index); break
+      case 'prop': this.useProp(command.index, player); break
       case 'speed': this.speed = this.speed % 3 + 1; this.hud.refresh(); this.sfx('speed'); break
     }
   }
-  private specialise(pad: number, spec: Specialisation) {
+  private specialise(pad: number, spec: Specialisation, player: Player = 0) {
     const t = this.towers[pad]
     if (!t || t.level !== 3 || t.spec || !Object.hasOwn(SPECIALISATIONS, spec) || SPECIALISATIONS[spec].kind !== t.kind || this.candy < SPEC_COST) return
     this.candy -= SPEC_COST; t.spent += SPEC_COST; t.spec = spec; t.pop = .4
     this.art.set(t.image, this.towerFrame(t.kind, t.level, spec)); this.discover([`spec/${spec}`])
     if (t.kind === 'patch') this.guardsFor(t)
-    this.effect('fx/levelup/0', t.x, t.y - 80, .7, 1.5); this.sfx('spec', t); this.cancel(); this.hud.toast(SPECIALISATIONS[spec].name)
+    this.effect('fx/levelup/0', t.x, t.y - 80, .7, 1.5); this.sfx('spec', t); this.settle(player); if (this.mine(player)) this.hud.toast(SPECIALISATIONS[spec].name)
   }
   private towerAttack(t: Tower, target: Enemy): boolean {
     const c = towerStats(t), damage = c.damage * this.towerBuff(t), spec = t.spec, rank = t.rank
@@ -643,7 +675,7 @@ export class SiegeScene extends Phaser.Scene {
       if (a.kind === 'bat') { this.art.set(a.image, `amb/bat/${Math.floor(t * 9) % 4}`); a.image.setPosition((t % 28) * 220 - 400 - i * 65, a.y + Math.sin(t * 4 + i) * 10) }
     }
   }
-  private useProp(index: number) {
+  private useProp(index: number, player: Player = 0) {
     const p = this.props[index]
     if (!p || p.cooldown > 0) return
     // Endless props recover more slowly; the timed bridge keeps its 50-second cycle.
@@ -654,7 +686,7 @@ export class SiegeScene extends Phaser.Scene {
       for (const e of this.enemies) if (e.active && !e.returning && !ENEMIES[e.kind].flying && reach.nearest(e.x, e.y).gap < 90) { this.damage(e, 170, 'physical'); this.status(e, 'stun', 3) }
       if (this.level.endless) p.cooldown = 40; else p.used = true
     } else if (p.data.kind === 'shop') {
-      if (this.candy < 50) { this.hud.toast('Sugar rush costs 50 candy.'); return }
+      if (this.candy < 50) { if (this.mine(player)) this.hud.toast('Sugar rush costs 50 candy.'); return }
       this.candy -= 50; this.sugarRush = 10; p.cooldown = 24 * slow; this.hud.toast('Sugar rush! Towers attack 60% faster for 10 seconds.')
     } else if (p.data.kind === 'bell') {
       // Mon Manor: everyone, flyers included, is stunned for two seconds.
@@ -893,6 +925,7 @@ export class SiegeScene extends Phaser.Scene {
     if (!this.presentationFrozen) { this.updateSignatures(real); updateCorpses(this, real) }
     this.darkness?.update(this.sources, real, this.bonfire > 0)
     this.drawUnits(this.focus.waiting ? 0 : real)
+    if (this.options.coop) { this.readQueue(); this.drawQueued() }
     this.drawSelection()
     this.hud.animate(this.presentationTime, real)
     this.focus.draw()
@@ -1350,34 +1383,38 @@ export class SiegeScene extends Phaser.Scene {
     if (status === 'charm') this.combo('charm', e)
   }
   income(amount: number) { this.candy += Math.round(amount * this.candyScale) }
-  private build(kind: TowerKind, padIndex: number, hero = this.hero) {
-    if (this.paused || this.ended || padIndex < 0 || this.towers[padIndex]) return
+  private build(kind: TowerKind, padIndex: number, player: Player = 0) {
+    const hero = this.heroes[player], mine = this.mine(player), built = this.towers[padIndex]
+    if (this.paused || this.ended || padIndex < 0) return
+    // Both players can tap one pad before either tower appears: the first command builds, the later one is refused for free.
+    if (built) { if (mine && this.options.coop && built.owner !== player) this.hud.toast('Your partner is building here'); return }
     if (this.tutorialStep === 0 && (kind !== 'egg' || padIndex !== 0)) { this.hud.toast('Start with an Egg Stand on the glowing pad.'); return }
     const locked = towerLock(kind, hero.selection.stars, hero.selection.owned)
-    if (locked) { this.hud.toast(locked); return }
+    if (locked) { if (mine) this.hud.toast(locked); return }
     const cost = TOWERS[kind].levels[0].cost
-    if (this.candy < cost) { this.hud.toast('A little more candy first!'); return }
+    if (this.candy < cost) { if (mine) this.hud.toast('A little more candy first!'); return }
     const pad = this.options.assets.geometry.pads[padIndex]
     const tower: Tower = { ...pad, kind, level: 1, spec: null, rank: 0, spent: cost, targeting: 'first', cooldown: 0, stun: 0, image: this.art.image(pad.x, pad.y - 90, this.towerFrame(kind, 1)).setDepth(pad.y).setDisplaySize(144, 180), guards: [], pop: .4, boost: !!pad.boost, gold: 0 }
     this.discover([`tower/${kind}`]); this.towers[padIndex] = tower; this.candy -= cost
+    if (this.options.coop) tower.owner = player
     if (kind === 'patch') this.guardsFor(tower)
-    this.effect('fx/poof/0', pad.x, pad.y - 60, .6, 1.4); this.sfx('build', pad); this.tutorial('build'); this.cancel(); this.hud.toast(`${TOWERS[kind].name} built`); this.hud.refresh()
+    this.effect('fx/poof/0', pad.x, pad.y - 60, .6, 1.4); this.sfx('build', pad); this.tutorial('build'); this.settle(player); if (mine) this.hud.toast(`${TOWERS[kind].name} built`); this.hud.refresh()
   }
-  private upgrade(padIndex: number) {
+  private upgrade(padIndex: number, player: Player = 0) {
     const tower = this.towers[padIndex]
     if (this.paused || this.ended || !tower || tower.level >= 3 && (!tower.spec || tower.rank >= 2)) return
     const cost = tower.spec ? rankCost(tower.rank) : TOWERS[tower.kind].levels[tower.level].cost
-    if (this.candy < cost) { this.hud.toast('A little more candy first!'); return }
+    if (this.candy < cost) { if (this.mine(player)) this.hud.toast('A little more candy first!'); return }
     this.candy -= cost; tower.spent += cost; if (tower.spec) tower.rank++; else tower.level++; tower.pop = .4
     this.art.set(tower.image, this.towerFrame(tower.kind, tower.level, tower.spec))
     if (tower.kind === 'patch') this.guardsFor(tower)
-    this.effect('fx/levelup/0', tower.x, tower.y - 70, .8, 1.5); this.sfx('upgrade', tower); this.cancel(); this.hud.toast(tower.spec ? `${SPECIALISATIONS[tower.spec].name} · Rank ${tower.rank}` : `${TOWERS[tower.kind].name} · Level ${tower.level}`); this.hud.refresh()
+    this.effect('fx/levelup/0', tower.x, tower.y - 70, .8, 1.5); this.sfx('upgrade', tower); this.settle(player); if (this.mine(player)) this.hud.toast(tower.spec ? `${SPECIALISATIONS[tower.spec].name} · Rank ${tower.rank}` : `${TOWERS[tower.kind].name} · Level ${tower.level}`); this.hud.refresh()
   }
-  private sell(padIndex: number) {
+  private sell(padIndex: number, player: Player = 0) {
     const tower = this.towers[padIndex]
     if (this.paused || this.ended || !tower) return
     this.candy += Math.floor(tower.spent * .7); tower.image.destroy(); for (const guard of tower.guards) guard.image.destroy(); this.towers[padIndex] = null
-    this.sfx('sell', tower); this.cancel(); this.hud.toast(`Tower sold · +${Math.floor(tower.spent * .7)} candy`); this.hud.refresh()
+    this.sfx('sell', tower); this.settle(player); if (this.mine(player)) this.hud.toast(`Tower sold · +${Math.floor(tower.spent * .7)} candy`); this.hud.refresh()
   }
   private guardsFor(tower: Tower) {
     const config = towerStats(tower), near = this.nearestPath(tower.x, tower.y)
@@ -1401,7 +1438,7 @@ export class SiegeScene extends Phaser.Scene {
     this.cancel(); this.mode = kind; this.dragStart = point ?? null
     this.hud.toast(`${CONSUMABLES[kind].name} · ${CONSUMABLES[kind].description}\nDrag or tap the road · ${this.stock[kind]} left this level`)
   }
-  private cast(kind: SpellKind, x: number, y: number, hero = this.hero) {
+  private cast(kind: SpellKind, x: number, y: number, hero = this.hero, player: Player = 0) {
     if (this.spellCooldown[kind] > 0) return
     const spell = SPELLS[kind]
     this.spellCooldown[kind] = spell.cooldown * hero.spellFactor
@@ -1412,16 +1449,16 @@ export class SiegeScene extends Phaser.Scene {
     this.effect(kind === 'rain' ? 'fx/candy-rain/0' : 'fx/boo/0', x, y - 30, 1, spell.radius / 45)
     this.sfx(kind === 'rain' ? 'spell-rain' : 'spell-boo', { x, y })
     if (kind === 'rain') { this.shake(.005); for (let i = 0; i < (this.settings.lite ? 6 : 12); i++) this.effect('fx/coin', x + (this.visualRandom() - .5) * 280, y - 200, .5 + this.visualRandom() * .4, .25, 'jar', x + (this.visualRandom() - .5) * 220, y + 40) }
-    this.cancel(); this.hud.refresh()
+    this.settle(player); this.hud.refresh()
   }
-  private placeTrap(kind: TrapKind, x: number, y: number) {
-    const spot = this.nearestPath(x, y), config = TRAPS[kind]
-    if (spot.gap > 65 || x < 50 || x > 1820 || y < 150 || y > 915) { this.hud.toast('Place it on the path. One is used only when placed.'); return }
-    if (this.stock[kind] <= 0) { this.hud.toast(`No ${config.name}s left this level.`); this.cancel(); return }
-    if (this.traps.length >= LIMITS.traps) { this.hud.toast('The path is full of surprises already.'); return }
+  private placeTrap(kind: TrapKind, x: number, y: number, player: Player = 0) {
+    const spot = this.nearestPath(x, y), config = TRAPS[kind], mine = this.mine(player)
+    if (spot.gap > 65 || x < 50 || x > 1820 || y < 150 || y > 915) { if (mine) this.hud.toast('Place it on the path. One is used only when placed.'); return }
+    if (this.stock[kind] <= 0) { if (mine) this.hud.toast(`No ${config.name}s left this level.`); this.settle(player); return }
+    if (this.traps.length >= LIMITS.traps) { if (mine) this.hud.toast('The path is full of surprises already.'); return }
     this.stock[kind]--
     this.traps.push({ x: spot.x, y: spot.y, kind, life: config.duration, armed: false, image: this.art.image(spot.x, spot.y, `trap/${kind}/0`).setDepth(7).setDisplaySize(100, 75) })
-    this.effect('fx/poof/0', spot.x, spot.y, .4); this.sfx('trap-set', spot); this.cancel(); this.hud.refresh()
+    this.effect('fx/poof/0', spot.x, spot.y, .4); this.sfx('trap-set', spot); this.settle(player); this.hud.refresh()
   }
   private updateTraps(dt: number) {
     for (let i = this.traps.length - 1; i >= 0; i--) {
@@ -1460,6 +1497,8 @@ export class SiegeScene extends Phaser.Scene {
     if (distanceSq(pointer, this.localHero) < 70 ** 2) { this.holdAt = { x: pointer.x, y: pointer.y }; this.holdTime = 0; this.selectHero(); this.hud.toast(`Chog #${this.localHero.kit.id} · ${this.abilityName()}\nTap ground to move · Hold to emote`); return }
     for (let i = 0; i < this.pads.length; i++) if (this.towers[i] ? Math.abs(pointer.x - this.pads[i].x) < 82 && pointer.y >= this.pads[i].y - 190 && pointer.y <= this.pads[i].y + 35 : distanceSq(pointer, this.pads[i]) < 82 ** 2) {
       if (this.tutorialStep === 0 && i !== 0) { this.hud.toast('The glowing pad first!'); return }
+      const queued = this.pendingAt(i)
+      if (queued) { this.cancel(); this.hud.toast(queued.player !== this.localPlayer ? this.towers[i] ? 'Your partner is changing this tower' : 'Your partner is building here' : 'On its way…', 2); return }
       this.cancel(); this.selected = i; this.hud.radial(); return
     }
     for (const enemy of this.enemies) if (enemy.active && (distanceSq(pointer, { x: enemy.x, y: enemy.y - 70 }) < 70 ** 2 || (Math.abs(pointer.x - enemy.x) < 45 && Math.abs(pointer.y - enemy.y + 150) < 25))) {
@@ -1473,10 +1512,11 @@ export class SiegeScene extends Phaser.Scene {
   }
   private moveHero(pointer: Point, hero = this.localHero) {
     if (hero.hp <= 0) return
-    this.cancel()
+    if (!this.options.coop) this.cancel()
     hero.rig.cancelDance()
     hero.target = { x: Phaser.Math.Clamp(pointer.x, 60, 1850), y: Phaser.Math.Clamp(pointer.y, 180, 885) }
-    this.effect('hero/ring', pointer.x, pointer.y, .55, .8); if (hero === this.localHero) this.sfx('move', pointer)
+    if (!this.options.coop) { this.effect('hero/ring', pointer.x, pointer.y, .55, .8); this.sfx('move', pointer) }
+    else if (hero !== this.localHero) this.effect('hero/ring', pointer.x, pointer.y, .55, .8)?.image.setTint(PARTNER)
   }
   private worldUp(input: Phaser.Input.Pointer) {
     this.holdAt = null
@@ -1497,7 +1537,7 @@ export class SiegeScene extends Phaser.Scene {
     if (name === 'signature') this.signature(undefined, false, hero)
     else { hero.rig.dance(dance); this.emote(this.options.assets.dances[dance]?.emote ?? (CRYPTO_EMOTES.includes(name) ? name : 'gg'), hero.x, hero.y - 150) }
     if (name !== 'signature') this.options.sfx.emote(dance, false, this.pan(hero))
-    this.emoteOpen = false; this.hud.emotes()
+    if (!this.options.coop) { this.emoteOpen = false; this.hud.emotes() }
   }
   emote(name: string, x: number, y: number) { this.effect(`emote/${name}/0`, x, y, 1.7, 1, 'emote') }
   private tutorial(action: TutorialAction) {
@@ -1745,6 +1785,7 @@ export class SiegeScene extends Phaser.Scene {
     if (hero.rig.root.depth !== hero.y + 25) hero.rig.root.setDepth(hero.y + 25)
     hero.rig.root.setPosition((held ? hero.reaction.atX : hero.x) + hero.reaction.x * spring, (held ? hero.reaction.atY : hero.y) + hero.reaction.y * spring).setAlpha(hero.hp > 0 ? hero.reaction.dodge > 0 && this.motion ? .35 + .65 * Math.abs(Math.sin(hero.reaction.dodge * 40)) : 1 : .4)
     this.heroRings[player].setPosition(hero.x, hero.y).setAlpha(hero.hp > 0 ? .8 : .2)
+    this.heroTags[player]?.setPosition(hero.rig.root.x, hero.rig.root.y - 200).setVisible(!this.ended).setAlpha(hero.hp > 0 ? 1 : .5)
     if (!this.ended) this.bar(hero.x, hero.y - 172, hero.hp / hero.maxHp, 0xffdc7b, 82)
     }
     for (const beam of this.beam) {
@@ -1753,6 +1794,41 @@ export class SiegeScene extends Phaser.Scene {
       this.paint.image('white', beam.from.x + Math.sin(angle), beam.from.y - Math.cos(angle), length, 2, 0xffffff, 1, angle)
     }
     this.paint.end()
+  }
+  // Co-op: pending commands drawn where they will land, in their sender's colour. A build shows a tower ghost; a tower
+  // change, a label; a move, spell, trap or supply, a pulsing ground ring. A partner's command on your open menu closes it.
+  private drawQueued() {
+    this.ringCount = 0
+    this.ghosts.forEach(ghost => { ghost.image.setVisible(false); ghost.label.setVisible(false) }) // sparse: one per pad used
+    const local = this.localPlayer, pulse = this.motion ? .7 + .25 * Math.sin(this.presentationTime * 7) : .85
+    const labels: Partial<Record<Command['type'], string>> = { build: 'building…', upgrade: 'upgrading…', specialise: 'upgrading…', sell: 'selling…' }
+    for (const { player, command } of this.queued) {
+      const color = player === local ? YOU : PARTNER
+      if ('pad' in command && command.type !== 'target') {
+        const pad = this.pads[command.pad], tower = this.towers[command.pad]
+        if (!pad || command.type === 'build' && tower) continue
+        const ghost = this.ghost(command.pad)
+        if (ghost.label.visible) continue
+        if (command.type === 'build') {
+          this.art.set(ghost.image, this.towerFrame(command.kind, 1))
+          ghost.image.setPosition(pad.x, pad.y - 90).setDisplaySize(144, 180).setTint(color).setAlpha(.45 * pulse + .1).setVisible(true)
+          this.groundRing(pad.x, pad.y + 4, 150, color, pulse)
+        }
+        const key = `${command.type}:${color}`
+        if (ghost.key !== key) { ghost.key = key; ghost.label.setText(`${player === local ? '' : 'Partner '}${labels[command.type]}`).setColor(hex(color)) }
+        ghost.label.setPosition(pad.x, pad.y - 100).setVisible(true) // over the tower or its ghost, clear of the top HUD
+        if (player !== local && this.selected === command.pad) { this.cancel(); this.hud.toast(tower ? 'Your partner is changing this tower' : 'Your partner is building here', 2) }
+      } else if ('x' in command && command.type !== 'move' || command.type === 'move' && player === local) this.groundRing(command.x, command.y, command.type === 'move' ? 96 : 140, color, pulse)
+    }
+    for (let i = this.ringCount; i < this.rings.length; i++) if (this.rings[i].visible) this.rings[i].setVisible(false)
+  }
+  private ghost(pad: number) {
+    return this.ghosts[pad] ??= { image: this.art.image(0, 0, 'world/rune-pad').setDepth(this.pads[pad].y).setVisible(false), key: '',
+      label: this.add.text(0, 0, '', { fontFamily: '"Luckiest Guy", sans-serif', fontSize: '28px', color: '#ffffff', stroke: '#241b30', strokeThickness: 6 }).setOrigin(.5).setDepth(2750).setVisible(false) }
+  }
+  private groundRing(x: number, y: number, width: number, tint: number, alpha: number) {
+    const ring = this.rings[this.ringCount++] ??= this.art.image(0, 0, 'hero/ring').setDepth(6)
+    ring.setPosition(x, y).setDisplaySize(width, width * .38).setTint(tint).setAlpha(alpha).setVisible(true)
   }
   // An atlas frame drawn with the pooled overlay quads, centred on (x, y).
   mark(name: string, x: number, y: number, size: number, alpha = 1, tint = 0xffffff, add = false, squash = 1) {
