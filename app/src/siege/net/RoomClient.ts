@@ -92,11 +92,12 @@ export class RoomClient {
   private tryReady() {
     if (!this.readyHash || this.samples.length < 8 || this.closed) return
     // Tick T's input leaves at T - delay and both peers wait for the relay's copy, so the window is one sender RTT:
-    // a later start on the receiving side cancels its own downlink. Three standard deviations of the probes cover
-    // jitter; one more tick covers inputs leaving on tick boundaries. The room keeps the larger peer value all match.
+    // a later start on the receiving side cancels its own downlink. The window also carries that downlink's change
+    // since start, so it varies by about sqrt(2) RTT deviations; three of those cover jitter, and one more tick covers
+    // inputs leaving on tick boundaries. The room keeps the larger peer value for the whole match.
     const mean = this.samples.reduce((sum, rtt) => sum + rtt, 0) / this.samples.length
     const sd = Math.sqrt(this.samples.reduce((sum, rtt) => sum + (rtt - mean) ** 2, 0) / this.samples.length)
-    const delay = Math.min(MAX_DELAY, Math.max(INPUT_DELAY, Math.ceil((mean + 3 * sd) * TICK_RATE / 1000) + 1))
+    const delay = Math.min(MAX_DELAY, Math.max(INPUT_DELAY, Math.ceil((mean + 3 * Math.SQRT2 * sd) * TICK_RATE / 1000) + 1))
     this.send({ type: 'ready', hash: this.readyHash, delay }); this.readyHash = ''
   }
   close() {

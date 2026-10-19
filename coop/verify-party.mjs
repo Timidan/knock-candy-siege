@@ -21,7 +21,12 @@ try {
     const page = await context.newPage(); pages.push(page)
     // PARTY_RTT_MS ± PARTY_JITTER_MS, split evenly each way. Each direction keeps its order, as TCP does: a late frame holds back the ones behind it.
     const latency = Number(process.env.PARTY_RTT_MS ?? 0) / 2, jitter = Number(process.env.PARTY_JITTER_MS ?? 0) / 2
-    const lane = () => { let due = 0; return send => { due = Math.max(due, Date.now() + latency + (Math.random() * 2 - 1) * jitter); setTimeout(send, due - Date.now()) } }
+    const lane = () => {
+      // One timer drains a FIFO queue: separate timers with equal deadlines may fire out of order.
+      const queue = []; let last = 0, timer = null
+      const pump = () => { timer = null; while (queue.length && queue[0].due <= Date.now()) queue.shift().send(); if (queue.length) timer = setTimeout(pump, queue[0].due - Date.now()) }
+      return send => { last = Math.max(last, Date.now() + latency + (Math.random() * 2 - 1) * jitter); queue.push({ due: last, send }); timer ??= setTimeout(pump, last - Date.now()) }
+    }
     if (latency || jitter) await page.routeWebSocket(/\/rooms\/.*\/ws/, socket => {
       const server = socket.connectToServer(), up = lane(), down = lane()
       socket.onMessage(message => up(() => server.send(message)))
@@ -117,10 +122,10 @@ try {
       net.simulation.command = (player, command) => { if (player === local && queued.length) window.partyTaps.push(performance.now() - queued.shift()); apply(player, command) }
       net.advance = () => {
         const ok = advance(), now = performance.now(), stall = window.partyStall
-        if (ok && stall.since) { stall.ms += now - stall.since; stall.count += now - stall.since > 50; stall.since = 0 } else if (!ok && net.state === 'running' && !stall.since) stall.since = now
+        if (ok && stall.since) { stall.ms += now - stall.since; if (now - stall.since > 50) { stall.count++; (stall.at ??= []).push([Math.round((stall.since - window.partyStart) / 100) / 10, Math.round(now - stall.since)]) } stall.since = 0 } else if (!ok && net.state === 'running' && !stall.since) stall.since = now
         return ok
       }
-      return { relay: new URL(s.options.coop.client.socket.url).origin, ids: s.heroes.map(hero => hero.kit.id), local: s.localHero.kit.id, delay: s.net.delay, rtt: s.options.coop.client.rtt, talents: s.heroes.map(hero => hero.talentLevels), gpu: ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL), webdriver: navigator.webdriver }
+      return { relay: new URL(s.options.coop.client.socket.url).origin, ids: s.heroes.map(hero => hero.kit.id), local: s.localHero.kit.id, delay: s.net.delay, rtt: s.options.coop.client.rtt, probes: s.options.coop.client.samples?.map(Math.round), talents: s.heroes.map(hero => hero.talentLevels), gpu: ext && gl.getParameter(ext.UNMASKED_RENDERER_WEBGL), webdriver: navigator.webdriver }
     })))
     assert.deepEqual(initial.map(r => r.ids), [[1, 2], [1, 2]]); assert.deepEqual(initial.map(r => r.local), [1, 2])
     assert.ok(initial.every(r => r.webdriver)); console.log(mode, 'joined', initial)
@@ -221,10 +226,10 @@ try {
         await pages[0].waitForTimeout(1000)
       }
       await pages[0].waitForTimeout(1500)
-      const final = await Promise.all(pages.map(page => page.evaluate(() => { const s = window.__siege, stall = { ...window.partyStall }; if (stall.since) stall.ms += performance.now() - stall.since; return { state: s.net.state, tick: s.net.tick, ticks: s.net.tick - window.partyTick0, verified: s.net.verifiedTick, delay: s.net.delay, rttMax: s.options.coop.client.rtt, hashes: window.partyHashes, taps: window.partyTaps, stall, events: window.partyEvents, elapsedMs: performance.now() - window.partyStart } })))
+      const final = await Promise.all(pages.map(page => page.evaluate(() => { const s = window.__siege, stall = { ...window.partyStall }; if (stall.since) stall.ms += performance.now() - stall.since; return { state: s.net.state, tick: s.net.tick, ticks: s.net.tick - window.partyTick0, verified: s.net.verifiedTick, delay: s.net.delay, rttMax: s.options.coop.client.rtt, hashes: window.partyHashes, taps: window.partyTaps, rtt: window.partyRtt, stall, events: window.partyEvents, elapsedMs: performance.now() - window.partyStart } })))
       const common = Math.min(...final.map(f => f.hashes.length)), at = (xs, q) => Math.round([...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(q * xs.length))])
       const summary = { tag: TAG, injected: { rttMs: Number(process.env.PARTY_RTT_MS ?? 0), jitterMs: Number(process.env.PARTY_JITTER_MS ?? 0) }, delayTicks: final.map(f => f.delay), delayMs: final.map(f => Math.round(f.delay * 1000 / 45)), rttMax: final.map(f => Math.round(f.rttMax)),
-        tapToActionMs: final.map(f => ({ n: f.taps.length, median: at(f.taps, .5), p90: at(f.taps, .9), max: at(f.taps, 1) })), stalls: final.map(f => ({ over50ms: f.stall.count, ms: Math.round(f.stall.ms), fraction: +(f.stall.ms / f.elapsedMs).toFixed(4) })),
+        tapToActionMs: final.map(f => ({ n: f.taps.length, median: at(f.taps, .5), p90: at(f.taps, .9), max: at(f.taps, 1) })), inputEchoRttMs: final.map(f => ({ median: at(f.rtt, .5), p99: at(f.rtt, .99), max: at(f.rtt, 1) })), stalls: final.map(f => ({ over50ms: f.stall.count, ms: Math.round(f.stall.ms), fraction: +(f.stall.ms / f.elapsedMs).toFixed(4), atSecondsMs: f.stall.at ?? [] })),
         turnsPerSecond: final.map(f => +(f.ticks / (f.elapsedMs / 1000)).toFixed(2)), checkpointsCompared: common, checkpointsMatch: JSON.stringify(final[0].hashes.slice(0, common)) === JSON.stringify(final[1].hashes.slice(0, common)) }
       await writeFile(`${evidence}/play-${TAG}.json`, JSON.stringify({ summary, initial, final }, null, 2))
       console.log('summary', JSON.stringify(summary))
