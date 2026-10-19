@@ -1,6 +1,6 @@
 # Porch Party co-op
 
-Two players defend one story level with their own Chogs, shared candy, towers, traps, spells and jars. The relay is deployed at `https://knock-coop.timidan-knock.workers.dev`, and the game integration is live at https://knock.timidan.xyz.
+Two players defend one story level, each with their own Chog, candy and towers; the jars are shared. The relay is deployed at `https://knock-coop.timidan-knock.workers.dev`, and the game integration is live at https://knock.timidan.xyz.
 
 `app/public/_headers` lists both `https://knock-coop.timidan-knock.workers.dev` and `wss://knock-coop.timidan-knock.workers.dev` in `connect-src`.
 
