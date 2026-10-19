@@ -535,7 +535,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     try {
       const client = await RoomClient.connect(COOP_RELAY, inviteCode, __COOP_BUILD__)
       if (controller.signal.aborted) { client.close(); return }
-      enterParty(client, controller); setPartyStatus('You’re in! Pick your Chog to join.'); setPicking(true)
+      enterParty(client, controller); setPartyStatus('You’re in! Pick your Chog to join.')
+      // Let the friend see they're in the room first, then open the picker over the lobby.
+      setTimeout(() => { if (!controller.signal.aborted && partyClient.current === client && !client.roster[client.player]) setPicking(true) }, 1500)
     } catch (error) { if (!controller.signal.aborted) { setPartyError(plainInvite(error instanceof Error ? error.message : 'Could not open the room.')); setMenu('party-error') } }
   }
   // Deferred a task so a dev StrictMode remount cancels the first attempt before it claims the seat.
