@@ -202,7 +202,9 @@ try {
       const results = await Promise.all(pages.map(state))
       await writeFile(`${evidence}/finish.json`, JSON.stringify({ initial, routing, auto: auto && { tick: auto.tick, seconds: auto.seconds }, results, errors, wallet: 'Read-only NFT and holder fixtures; no chain writes' }, null, 2))
       assert.ok(results.every(r => r.result?.won), 'Both clients must win the story level')
-      assert.deepEqual(results[0].hashes, results[1].hashes); assert.equal(results[0].snapshot, results[1].snapshot)
+      // The rig is presentation: the victory dance keeps animating on wall-clock time after the last tick.
+      const sim = text => JSON.stringify(JSON.parse(text, (key, value) => key === 'rig' ? undefined : value))
+      assert.deepEqual(results[0].hashes, results[1].hashes); assert.equal(sim(results[0].snapshot), sim(results[1].snapshot))
       assert.ok(results.every(r => r.elapsedMs < r.tick / 45 * 1000 * 1.05 + 1000), 'Lockstep must progress near real time')
       await pages[0].waitForTimeout(2000)
       await Promise.all(pages.map((page, i) => page.screenshot({ path: `${evidence}/result-${i}.png` })))
