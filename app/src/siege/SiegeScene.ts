@@ -33,6 +33,7 @@ import type { Rig } from './hero/Rig'
 import { Hero } from './hero/Hero'
 import { Signature } from './hero/Signature'
 import { TutorialFocus } from './TutorialFocus'
+import { Hints } from './Hints'
 import { canDance, CRYPTO_EMOTES } from './data/shop'
 import { scoreFor } from './data/score'
 import { specialTowerAttack } from './SpecialTowers'
@@ -79,6 +80,7 @@ export class SiegeScene extends Phaser.Scene {
   heads!: ChogHeads
   hud!: Hud
   focus!: TutorialFocus
+  hints!: Hints
   hudLayer!: Phaser.GameObjects.Layer
   private worldLayer!: Phaser.GameObjects.Layer
   private hudCamera!: Phaser.Cameras.Scene2D.Camera
@@ -356,6 +358,7 @@ export class SiegeScene extends Phaser.Scene {
     // Live level-ups keep the shared pause. A choice that is refused stays queued for that pause.
     if (this.options.coop) for (const hero of this.heroes) for (let n = hero.talentLevels.length; n > 0; n--) hero.chooseTalent(0)
     this.focus = new TutorialFocus(this)
+    this.hints = new Hints(this)
     this.createPathPreview()
     this.layout()
     this.scale.on('resize', this.layout, this)
@@ -914,6 +917,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.portraitTime > .2) { this.art.refresh(); this.portraitTime = 0 }
     if (this.hudTime > .12) { this.hud.refresh(); this.hudTime = 0 }
     this.drawPathPreview(this.paused ? 0 : real)
+    this.hints.update()
     if (this.ended) {
       // Co-op: no more checkpoints once the final one matched, so the Chogs may dance.
       if (!this.celebrating && this.coopResult && this.net && this.net.verifiedTick >= this.coopFinishAt) this.celebrate(this.coopResult.won)
