@@ -529,3 +529,5 @@
 .siege-modal--result .siege-party-heroes figure { display: flex; align-items: center; gap: 8px; }
 .siege-modal--result .siege-party-heroes img { width: 48px; height: 48px; margin: 0; border-radius: 12px; }
 @media (max-height: 500px) { .siege-party-heroes { margin: 8px 0; } .siege-party-heroes img, .siege-party-empty { width: 64px; height: 64px; } }
+/* Modal titles take focus for screen readers on open; they are not controls, so no focus ring. */
+.siege-modal h2[tabindex="-1"]:focus { outline: none; }
