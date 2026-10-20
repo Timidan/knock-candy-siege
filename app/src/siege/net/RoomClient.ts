@@ -165,7 +165,7 @@ export class RoomClient {
     this.terminal = { type: 'disconnected', player: this.player === 0 ? 1 : 0, reason }
     this.emit(this.terminal); this.close()
   }
-  /** Drops the current socket if it is the one meant, and tries again after a backoff: 0, 0.5, 1, 2, 4, then every 5 s. */
+  /** Drops the current socket if it is the one meant, and tries again after a backoff: 0, 0.5, 1, 2, then every 3 s (about a dozen upgrades in the grace, under the relay's 30 a minute per address). */
   private lost(meant: (socket: WebSocket) => boolean) {
     const socket = this.socket
     if (!socket || !meant(socket) || this.closed || this.terminal) return
@@ -177,7 +177,7 @@ export class RoomClient {
     // The last attempt is at the end of the relay's grace.
     const left = this.droppedAt + GRACE_MS - Date.now()
     if (left <= 0) { this.disconnect('Could not rejoin the room'); return }
-    this.retry = setTimeout(this.reopen, Math.min(left, 5000, this.attempts && 250 * 2 ** this.attempts))
+    this.retry = setTimeout(this.reopen, Math.min(left, 3000, this.attempts && 250 * 2 ** this.attempts))
     this.attempts++
   }
   // A phone that hid the page may have lost its socket without a close event: check at once rather than after the stale timer.
