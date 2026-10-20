@@ -26,7 +26,7 @@ assert.equal(forbiddenSocket, 403)
 const statuses = [], requests = []
 // This host's route alternates LOS/MAD; each Cloudflare location has a counter.
 for (let i = 0; i < 16 && !statuses.includes(429); i++) {
-  const response = await fetch(`${relay}/rooms`, { method: 'POST', headers: { Origin: 'http://localhost:5200', 'Content-Type': 'application/json' }, body: JSON.stringify({ version: 5, build: 'phase2-http-check', level: 1 }) })
+  const response = await fetch(`${relay}/rooms`, { method: 'POST', headers: { Origin: 'http://localhost:5200', 'Content-Type': 'application/json' }, body: JSON.stringify({ version: 6, build: 'phase2-http-check', level: 1 }) })
   statuses.push(response.status)
   requests.push({ status: response.status, at: new Date().toISOString(), colo: response.headers.get('cf-ray')?.split('-').at(-1) })
   assert.ok(response.status === 201 || response.status === 429)

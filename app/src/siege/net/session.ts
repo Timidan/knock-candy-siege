@@ -31,16 +31,17 @@ export function attachRoom(scene: SiegeScene) {
   const stopClock = startClock(() => {
     if (scene.ended && driver.tick >= scene.coopFinishAt) return false
     const advanced = driver.advance()
-    if (advanced) { if (waitingSince) session.onStatus(''); waitingSince = 0 }
+    if (advanced) { if (waitingSince) session.onStatus(client.awayNote); waitingSince = 0 }
     else if (driver.state === 'running') {
       waitingSince ||= performance.now()
-      if (performance.now() - waitingSince > 350) session.onStatus('Waiting for partner…')
+      if (performance.now() - waitingSince > 350) session.onStatus(client.awayNote || 'Waiting for partner…')
     }
     return advanced
   })
   // After the result this round lets go of the room: the result card listens for the partner and the next round's start.
   const unsubscribe = client.subscribe(message => {
     driver.receive(message)
+    if (message.type === 'away' || message.type === 'back') session.onStatus(client.awayNote || (waitingSince ? 'Waiting for partner…' : ''))
     if (message.type === 'start') session.onStatus('')
     if (!finished && scene.coopResult && driver.verifiedTick >= scene.coopFinishAt) {
       finished = true; stopClock(); unsubscribe(); session.onStatus(''); scene.options.onEnd(scene.coopResult)
