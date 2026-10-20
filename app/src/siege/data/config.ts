@@ -135,7 +135,8 @@ export function towerStats(t: { kind: TowerKind; level: number; rank: number; bo
 // Co-op peers hash what the simulation computes, so simulation code uses only arithmetic that rounds the same in every
 // JavaScript engine: + − × ÷, Math.sqrt, floor, round, abs, min and max. Math.sin, cos, atan2, exp, log, pow and `**` give
 // engine-specific last bits (JavaScriptCore, SpiderMonkey and V8 versions differ), and so does SpiderMonkey's Math.hypot.
-// rig-check.mts enforces this. sine and cosine: reduced to [−π/2, π/2], then their Taylor series (error under 1e-16).
+// rig-check.mts enforces this. sine and cosine: reduced to [−π/2, π/2], then their Taylor series; within 1e-15 of Math.sin for
+// |x| ≤ 10, and the reduction by a 53-bit π lets that grow to 1e-12 by |x| = 5000. Identical bits everywhere is what matters.
 export function sine(x: number) {
   const k = Math.round(x / Math.PI), r = x - k * Math.PI, r2 = r * r
   let term = r, sum = r
