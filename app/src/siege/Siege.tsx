@@ -398,8 +398,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         setOutcome(result); setDefeatTip(result.won ? '' : counterTip(result, world)); setMenu('result'); setOpened(0); setFeedback('')
         if (run.coop) partyResult(run.coop.client)
         const now = saveRef.current
-        // A challenge on a night still locked here plays unsaved: no stars, scores or unlocks. A Porch Party saves for both players, locked or not.
-        if (!run.coop && !isOpen(now, nightOf(run))) return
+        // A night still locked here plays unsaved: no stars, scores or unlocks. A Porch Party win is the exception, saved for both players;
+        // a co-op loss on a locked night saves nothing, so losing together never opens a night.
+        if (!isOpen(now, nightOf(run)) && !(run.coop && result.won)) return
         // Each mode keeps its own best: stars and score per level, the best endless wave, and the best score of each daily.
         if (run.mode === 'endless') persist({ ...now, endless: { wave: Math.max(now.endless.wave, result.wave), score: Math.max(now.endless.score, result.score) } })
         else if (run.mode === 'daily' && run.daily) persist({ ...now, daily: { ...now.daily, [run.daily.day]: Math.max(now.daily[run.daily.day] ?? 0, result.score) } })
