@@ -1,7 +1,7 @@
 import type { Command } from '../SiegeScene'
 import { CONSUMABLES, SPECIALISATIONS, SPELLS, TARGETING, TOWERS, TRAPS } from '../data/config'
 
-export const PROTOCOL = 5
+export const PROTOCOL = 6
 export const TICK_RATE = 45
 export const INPUT_DELAY = 6
 export const MAX_DELAY = 45
@@ -11,6 +11,9 @@ export const MAX_PACKET_BYTES = 4096
 export const ROOM_CODE = /^[A-HJ-NP-Z2-9]{10}$/
 export const HASH = /^[a-f0-9]{16}$/
 export const BUILD = /^[a-zA-Z0-9._-]{1,96}$/
+// The relay holds a dropped seat this long for its token to resume it on a new socket.
+export const GRACE_MS = 30000
+export const SEAT = /^[0-9a-f-]{36}$/
 export type Player = 0 | 1
 export type CoopCommand = Exclude<Command, { type: 'speed' }>
 export type HeroSelection = {
@@ -28,8 +31,15 @@ export type ClientMessage =
   | { type: 'ping'; at: number }
   // On the result card: play this night next (the same one to replay), with the voter's stars as saved now.
   | { type: 'next'; level: number; stars: Record<string, number> }
+// A new socket's first frame for a dropped seat: what it received this round (the round's seed, start, next input tick per player, last checkpoint).
+export type Resume = { type: 'resume'; seat: string; seed: number; started: boolean; inputs: [number, number]; verified: number }
 export type ServerMessage =
-  | { type: 'welcome'; version: number; player: Player; room: RoomInfo; delay: number; hashEvery: number }
+  | { type: 'welcome'; version: number; player: Player; room: RoomInfo; delay: number; hashEvery: number; seat: string }
+  // seq: how many of this seat's messages (pings aside) the relay has accepted. What the seat missed follows.
+  | { type: 'resumed'; seq: number }
+  // A seat's socket dropped and the relay holds it, or it came back. A client also emits these for its own link.
+  | { type: 'away'; player: Player }
+  | { type: 'back'; player: Player }
   // joined: the seat is taken. A joined seat with no Chog is still choosing.
   | { type: 'roster'; players: Roster; joined: [boolean, boolean] }
   | { type: 'start'; delay: number }
@@ -77,6 +87,10 @@ export function isCommand(value: unknown): value is CoopCommand {
 }
 // A Porch Party plays a story night (1-6) or the Legend Gauntlet (8, GAUNTLET_LEVEL in data/level1.ts).
 export const partyLevel = (value: unknown) => integer(value, 1, 6) || value === 8
+export function isResume(value: unknown): value is Resume {
+  return record(value) && value.type === 'resume' && typeof value.seat === 'string' && SEAT.test(value.seat) && integer(value.seed, 0, 0xffffffff) && typeof value.started === 'boolean'
+    && Array.isArray(value.inputs) && value.inputs.length === 2 && value.inputs.every(tick => integer(tick, 0, 1_000_000)) && integer(value.verified, 0, 1_000_000) && value.verified % HASH_EVERY === 0
+}
 export function isClientMessage(value: unknown): value is ClientMessage {
   if (!record(value)) return false
   switch (value.type) {

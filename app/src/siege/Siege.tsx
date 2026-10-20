@@ -1,6 +1,6 @@
 import { createRoom, RoomClient } from './net/RoomClient'
 import type { CoopSession } from './net/session'
-import type { HeroSelection, Player, Roster } from './net/protocol'
+import type { HeroSelection, Player, Roster, ServerMessage } from './net/protocol'
 import { prepareParty } from './net/prepare'
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
@@ -226,6 +226,8 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   // The friend's Chog picker, a small dialog over the lobby.
   const [picking, setPicking] = useState(false)
   const [partyStatus, setPartyStatus] = useState(''), [partyError, setPartyError] = useState('')
+  // In the lobby and on the result card, a dropped socket (either seat) while the relay holds it; in play, the session reports it.
+  const [partyAway, setPartyAway] = useState('')
   const partyClient = useRef<RoomClient | null>(null), lobbyUnsubscribe = useRef<(() => void) | null>(null)
   const partyAbort = useRef<AbortController | null>(null)
   useEffect(() => () => { partyAbort.current?.abort(); lobbyUnsubscribe.current?.(); partyClient.current?.close() }, [])
@@ -465,7 +467,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     closeTimer.current = window.setTimeout(() => { flushSync(() => { setClosing(false); setMenu(null) }); after() }, 120)
   }
   const resume = () => { playUi('ui-close'); closeMenu(() => { scene.current?.setPaused(false); host.current?.querySelector('canvas')?.focus() }) }
-  const leaveLevel = (keepInvite = false) => { startToken.current++; setStarting(false); partyAbort.current?.abort(); partyAbort.current = null; lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; partyClient.current?.close(); partyClient.current = null; setParty(null); setPicking(false); setPartyStatus(''); setPartyError(''); if (!keepInvite) { setInviteCode(''); const url = new URL(location.href); url.searchParams.delete('room'); history.replaceState(null, '', url) } setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
+  const leaveLevel = (keepInvite = false) => { startToken.current++; setStarting(false); partyAbort.current?.abort(); partyAbort.current = null; lobbyUnsubscribe.current?.(); lobbyUnsubscribe.current = null; partyClient.current?.close(); partyClient.current = null; setParty(null); setPicking(false); setPartyStatus(''); setPartyAway(''); setPartyError(''); if (!keepInvite) { setInviteCode(''); const url = new URL(location.href); url.searchParams.delete('room'); history.replaceState(null, '', url) } setRun(null); setPrepared(null); setOutcome(null); setMenu('levels'); sfx.current?.pause(false) }
   // Retry only the stage that failed: the base pack, the hero and level art, or the scene (a fresh run object rebuilds the game).
   const retry = () => { const stage = failed; setFailed(null); if (stage === 'candy') setLoadAttempt(n => n + 1); else if (stage === 'lanterns') setRun(r => r && { ...r }); else setPrepAttempt(n => n + 1) }
   // A story win with a playable level after it leads on to that night's hero picker, keeping the hero and costume.
@@ -526,9 +528,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
           coop: { client, players, onStatus: setPartyStatus, onError: message => { setPartyError(message); setMenu('party-error') } } })
       } catch (error) { if (!controller.signal.aborted) { setPartyError(error instanceof Error ? error.message : 'Could not prepare the room.'); setMenu('party-error'); client.close() } }
     }
-    show()
+    show(); setPartyAway(client.awayNote)
     lobbyUnsubscribe.current?.()
     lobbyUnsubscribe.current = client.subscribe(message => {
+      awayNote(client, message)
       if (message.type === 'roster') { show(); void prepare() }
       if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') {
         // A seat's own lost connection is not the friend leaving.
@@ -537,10 +540,13 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     })
     void prepare()
   }
+  const awayNote = (client: RoomClient, message: ServerMessage) => { if (message.type === 'away' || message.type === 'back') setPartyAway(client.awayNote) }
   // The Porch Party result card: both players vote for the next night (or the same one again), and the room starts it once both have.
   const partyResult = (client: RoomClient) => {
+    setPartyAway(client.awayNote)
     lobbyUnsubscribe.current?.()
     lobbyUnsubscribe.current = client.subscribe(message => {
+      awayNote(client, message)
       if (message.type === 'round' && partyAbort.current) enterParty(client, partyAbort.current, false)
       if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') { setPartyStatus(''); setPartyError(message.type === 'disconnected' && message.reason.startsWith('Partner') ? 'Your partner left the Porch Party.' : 'This Porch Party has ended.') }
     })
@@ -739,7 +745,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <h2 tabIndex={-1} data-initial-focus>{party?.player === 1 && party.players[0] ? `Chog #${party.players[0].id}’s Porch Party` : 'Porch Party'}</h2>
         <p>{LEVELS[level - 1].name} · Your own candy · shared jars</p>
         {party && <div className="siege-party-heroes">{party.players.map((player, slot) => { const who = slot === party.player ? 'You' : slot ? 'Your friend' : 'Host'; return <figure key={slot}>{player ? <img src={thumb(player.id, true)} alt={`Chog #${player.id}`} /> : <span className="siege-party-empty">?</span>}<figcaption>{player ? `Chog #${player.id} · ${who}` : party.joined[slot] ? `${who} · choosing…` : 'Waiting for a friend'}</figcaption></figure> })}</div>}
-        <p role="status">{partyStatus}</p>
+        <p role="status">{partyAway || partyStatus}</p>
         {party?.player === 0 && <label className="siege-party-link">Invite a friend<input readOnly value={`https://knock.timidan.xyz/?room=${party.code}`} onFocus={event => event.target.select()} /></label>}
         <div className="row">{party?.player === 0 && <Sticker tone="orange" sound="ui-confirm" onClick={() => { void navigator.clipboard.writeText(`https://knock.timidan.xyz/?room=${party.code}`).then(() => setPartyStatus('Invite copied!')).catch(() => setPartyStatus('Select and copy the invite link above.')) }}>Copy invite</Sticker>}
           {party?.player === 1 && !party.players[1] && <Sticker tone="orange" sound="ui-open" onClick={() => setPicking(true)}>Pick your Chog</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Leave room</Sticker></div>
@@ -785,7 +791,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.mode === 'gauntlet' && outcome.won ? `${outcome.jars} jars kept. You ran the whole Gauntlet.` : outcome.won ? <>{outcome.jars} jars saved. {opened ? <b className="siege-unlocked" style={{ animationDelay: `${SLAMS[Math.max(1, outcome.stars) - 1] + IMPACT + 150}ms` }}><img src="/art/icons/key.svg" alt="" />Night {String(opened).padStart(2, '0')} unlocked!</b> : starsShort ? `Win with ${UNLOCK_STARS}★ to unlock Night ${String(starsShort).padStart(2, '0')}.` : 'The porch is yours.'}</> : defeatTip}</p>
         <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.party ? 'Team score' : run?.rival ? <>You {outcome.score.toLocaleString()} · Them {run.rival.score.toLocaleString()} · <b>{outcome.score > run.rival.score ? 'You beat them!' : 'So close!'}</b></> : outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'gauntlet' ? `Best: ${gauntletBest.legends}/10 legends · ${gauntletBest.jars} jars kept` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span>{outcome.mode === 'gauntlet' ? <span><b>{outcome.legends}/10</b> legends beaten</span> : <span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span>}<span><b>{outcome.heroLevel}</b> hero level</span></div>
-        <div className="row">{outcome.party ? partyError ? <p role="alert">{partyError}</p> : partyStatus ? <p role="status">{partyStatus}</p> : <Sticker tone="orange" sound="ui-confirm" onClick={() => voteNext(nextLevel || outcome.level)}>{nextLevel ? 'Next night →' : 'Play again →'}</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => toPicker(nextLevel)}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>{outcome.party ? 'Leave room' : 'Level select'}</Sticker></div>
+        <div className="row">{outcome.party ? partyError ? <p role="alert">{partyError}</p> : partyAway || partyStatus ? <p role="status">{partyAway || partyStatus}</p> : <Sticker tone="orange" sound="ui-confirm" onClick={() => voteNext(nextLevel || outcome.level)}>{nextLevel ? 'Next night →' : 'Play again →'}</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => toPicker(nextLevel)}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>{outcome.party ? 'Leave room' : 'Level select'}</Sticker></div>
         {/* After the tutorial night (often a random guest Chog from one-tap Play), point at the hero picker. */}
         {run?.tutorial && !outcome.party && <button className="siege-text-button" onClick={() => toPicker(nextLevel || run.level)}>Every Chog plays differently: pick yours →</button>}
         {run && !run.coop ? <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} featured={run.id === chogOfDay} crate={!!run.crate} seed={run.seed} back={!!run.rival}>{outcome.won && <button className="siege-text-button" onClick={() => subMenu('shop')}>Spend $KNOCK in the shop</button>}{feedbackLink}</ShareCard> : feedbackLink}
