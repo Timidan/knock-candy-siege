@@ -2,15 +2,16 @@ import { useEffect, useRef, useState } from 'react'
 import type { Address, Hash } from 'viem'
 import type { SiegeWallet } from './guestWallet'
 import { injectedWallet, isSandbox } from '../chain'
-import { cachedOwned, confirmPurchase, onShopNetwork, pendingPurchase, purchase, readShop, shopError, switchShopNetwork, type PurchasePhase } from './shopChain'
+import { buyCrate as payCrate, cachedOwned, confirmCrate, confirmPurchase, onShopNetwork, pendingPurchase, purchase, readShop, shopError, switchShopNetwork, type PurchasePhase } from './shopChain'
 import { track } from './telemetry'
 
-export function useShop(wallet: SiegeWallet) {
+// onCrate: a Candy Crate payment confirmed and verified; the caller credits it to the save once per hash and says whether it was new.
+export function useShop(wallet: SiegeWallet, onCrate: (hash: Hash) => boolean) {
   const account = wallet.account
   const [data, setData] = useState<{ account: Address | null; owned: number[]; balance: bigint | null; gas: bigint | null; prices: Record<number, bigint> | null }>({ account: wallet.account, owned: cachedOwned(wallet.account), balance: null, gas: null, prices: null })
   const [network, setNetwork] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState(''), [error, setError] = useState(''), [hash, setHash] = useState<Hash | null>(null)
-  const current = useRef(account), locked = useRef(false)
-  current.current = account
+  const current = useRef(account), locked = useRef(false), crate = useRef(onCrate)
+  current.current = account; crate.current = onCrate
   const refresh = async (address = current.current) => {
     try {
       const next = await readShop(address)
@@ -28,7 +29,7 @@ export function useShop(wallet: SiegeWallet) {
     return () => { active = false; provider.removeListener('chainChanged', chain) }
   }, [wallet.account, wallet.guest])
   useEffect(() => {
-    setData(previous => ({ account, owned: cachedOwned(account), balance: null, gas: null, prices: previous.prices })); setStatus(''); setHash(account ? pendingPurchase(account) : null)
+    setData(previous => ({ account, owned: cachedOwned(account), balance: null, gas: null, prices: previous.prices })); setStatus(''); setHash(account ? pendingPurchase(account) ?? pendingPurchase(account, true) : null)
     void refresh(account)
     const timer = window.setInterval(() => { if (!locked.current) void refresh(account) }, 30_000)
     return () => clearInterval(timer)
@@ -53,13 +54,29 @@ export function useShop(wallet: SiegeWallet) {
     } catch (reason) { if (current.current === owner) setError(shopError(reason)) }
     finally { locked.current = false; setBusy(false) }
   }
+  // A crate payment is credited from its own receipt even if the wallet changed while it confirmed: the crate lives in this browser's save.
+  const buyCrate = async () => {
+    if (!account || locked.current) return
+    locked.current = true; setBusy(true); setError(''); setHash(null)
+    const owner = account
+    const messages: Partial<Record<PurchasePhase, string>> = { checking: 'Checking your $KNOCK balance…', transaction: wallet.guest ? 'Sending 50 $KNOCK from your guest wallet…' : 'Confirm the 50 $KNOCK transfer in your wallet.', confirming: 'Confirming on Robinhood Chain Testnet…' }
+    try {
+      const added = crate.current(await payCrate(owner, (phase, tx) => { if (current.current === owner) { setStatus(messages[phase] ?? ''); if (tx) setHash(tx) } }, wallet.guest))
+      if (current.current === owner) setStatus(added ? 'Candy Crate added. Switch it on in the hero picker before a night.' : 'This payment already added its crate.')
+      await refresh(owner)
+    } catch (reason) { if (current.current === owner) setError(shopError(reason)) }
+    finally { locked.current = false; setBusy(false) }
+  }
   const checkPending = async () => {
     if (!account || !hash || locked.current) return
     locked.current = true; setBusy(true); setError(''); setStatus('Checking your purchase…')
-    try { await confirmPurchase(account, hash); setHash(null); await refresh(); setStatus('Transaction confirmed. Ownership refreshed.') }
+    try {
+      if (pendingPurchase(account, true) === hash) { const added = crate.current(await confirmCrate(account, hash)); setHash(null); await refresh(); setStatus(added ? 'Payment confirmed. Candy Crate added.' : 'This payment already added its crate.'); return }
+      await confirmPurchase(account, hash); setHash(null); await refresh(); setStatus('Transaction confirmed. Ownership refreshed.')
+    }
     catch (reason) { setError(shopError(reason)) }
     finally { locked.current = false; setBusy(false) }
   }
-  return { account, owned: data.account === account ? data.owned : cachedOwned(account), prices: data.prices, balance: data.account === account ? data.balance : null, gas: data.account === account ? data.gas : null, network, busy, status, error, hash, pending: !!account && !!pendingPurchase(account), connect, buy, refresh, checkPending }
+  return { account, owned: data.account === account ? data.owned : cachedOwned(account), prices: data.prices, balance: data.account === account ? data.balance : null, gas: data.account === account ? data.gas : null, network, busy, status, error, hash, pending: !!account && !!(pendingPurchase(account) || pendingPurchase(account, true)), connect, buy, buyCrate, refresh, checkPending }
 }
 export type ShopState = ReturnType<typeof useShop>

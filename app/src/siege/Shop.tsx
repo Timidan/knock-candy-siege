@@ -10,7 +10,7 @@ import type { Kit } from './data/kits'
 import { SHOP_ITEMS, CRYPTO_EMOTES } from './data/shop'
 import { HeroPreview } from './hero/HeroPreview'
 import { reducedMotion } from './data/save'
-import { SHOP_ADDRESS, knockAmount } from './shopChain'
+import { CRATE_PRICE, SHOP_ADDRESS, knockAmount } from './shopChain'
 import type { ShopState } from './useShop'
 import './shop-vault.css'
 
@@ -23,7 +23,7 @@ export function AtlasSprite({ atlas, name, size = 128 }: { atlas?: AssetPack['at
 // The claim ceremony: candies fountain up out of the balance and drop back into it. [apex x px, apex y px, delay ms, spin deg]; the class picks the candy.
 const BURST = [[-64, -92, 0, 260], [-38, -124, 40, -320], [-12, -100, 90, 200], [14, -132, 20, -240], [40, -110, 70, 300], [66, -88, 120, -200], [-52, -66, 160, 340], [28, -74, 180, -280], [-26, -136, 210, 220], [52, -120, 240, -300], [2, -84, 260, 180], [-4, -116, 300, -220]]
 const CANDY = ['mint', 'corn', 'gum', 'slime']
-export function Shop({ assets, kit, shop, wallet, bank, onBack, inLevel }: { assets: AssetPack; kit: Kit; shop: ShopState; wallet: SiegeWallet; bank: CandyBank; onBack: () => void; inLevel: boolean }) {
+export function Shop({ assets, kit, shop, wallet, bank, crates, onBack, inLevel }: { assets: AssetPack; kit: Kit; shop: ShopState; wallet: SiegeWallet; bank: CandyBank; crates: number; onBack: () => void; inLevel: boolean }) {
   const [selected, setSelected] = useState(1), [pack, setPack] = useState<AssetPack | null>(null), [cards, setCards] = useState<AssetPack['atlases'][number]>(), [dances, setDances] = useState<AssetPack['atlases'][number]>(), [error, setError] = useState(''), [attempt, setAttempt] = useState(0), [frame, setFrame] = useState(0)
   const item = SHOP_ITEMS.find(i => i.id === selected)!, owned = shop.owned.includes(selected), price = shop.prices?.[selected] ?? (!SHOP_ADDRESS ? BigInt(item.price) * 10n ** 18n : null)
   useEffect(() => {
@@ -44,7 +44,7 @@ export function Shop({ assets, kit, shop, wallet, bank, onBack, inLevel }: { ass
   useEffect(() => { const before = lastClaim.current; lastClaim.current = claim; if (claim === 'paid' && (before === 'none' || before === 'queued') && !reducedMotion()) setBurst(true) }, [claim])
   useEffect(() => { if (!burst) return; const timer = setTimeout(() => setBurst(false), 1700); return () => clearTimeout(timer) }, [burst])
   const short = shop.account ? `${shop.account.slice(0, 6)}…${shop.account.slice(-4)}` : ''
-  const insufficient = price !== null && shop.balance !== null && shop.balance < price
+  const insufficient = price !== null && shop.balance !== null && shop.balance < price, crateShort = shop.balance !== null && shop.balance < CRATE_PRICE
   return <div className="siege-shop siege-vault">
     <h2><span>Candy Vault</span> · dress your Chog</h2>
     <WalletChoice wallet={wallet} disabled={shop.busy || inLevel} />
@@ -70,9 +70,16 @@ export function Shop({ assets, kit, shop, wallet, bank, onBack, inLevel }: { ass
         {shop.account && !shop.network && <small>Switch your wallet to Robinhood before buying.</small>}
       </section>
     </div>
+    <section className="siege-crate" aria-label="Candy Crate">
+      <p><strong>Candy Crate</strong> +100 candy at the start of one night. Switch it on in the hero picker; not for the Daily or challenges.{crates > 0 && <b> You have {crates}.</b>}</p>
+      <Sticker tone="gold" sound="ui-confirm" disabled={!SHOP_ADDRESS || isSandbox || shop.busy || shop.pending || !shop.account || !shop.network || shop.balance === null || crateShort || shop.gas === null || shop.gas === 0n} onClick={() => void shop.buyCrate()}>{!SHOP_ADDRESS ? 'Shop opens soon' : crateShort ? 'Not enough $KNOCK' : shop.gas === 0n ? 'Get test ETH for gas' : `Buy for ${knockAmount(CRATE_PRICE)} $KNOCK`}</Sticker>
+    </section>
     {(shop.status || shop.error || error) && <div className="siege-shop-status" role="status">{shop.status && <p>{shop.status}</p>}{(shop.error || error) && <p>{shop.error || error}</p>}</div>}
     {shop.hash && <p><a href={`https://explorer.testnet.chain.robinhood.com/tx/${shop.hash}`} target="_blank" rel="noreferrer">View purchase transaction ↗</a>{shop.pending && <Sticker disabled={shop.busy} onClick={() => void shop.checkPending()}>Check pending purchase</Sticker>}</p>}
-    <div className="row siege-shop-links"><a href={`https://testnet.vibevibe.fun/token/${CANDY_TOKEN}`} target="_blank" rel="noreferrer">Get it on vibe/vibe ↗</a><a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">Get test ETH for gas ↗</a></div>
+    <section className="siege-knock" aria-label="About $KNOCK">
+      <p><strong>$KNOCK</strong> is Knock’s candy token, launched on vibe/vibe on Robinhood Chain testnet. You spend it here on costumes, dances and Candy Crates.</p>
+      <div className="row siege-shop-links"><a href={`https://testnet.vibevibe.fun/token/${CANDY_TOKEN}`} target="_blank" rel="noreferrer">$KNOCK on vibe/vibe ↗</a><a href={`https://explorer.testnet.chain.robinhood.com/token/${CANDY_TOKEN}`} target="_blank" rel="noreferrer">Token on the explorer ↗</a><a href="https://faucet.testnet.chain.robinhood.com" target="_blank" rel="noreferrer">Get test ETH for gas ↗</a></div>
+    </section>
     <p className="siege-hint">One permit for the exact price, then one purchase transaction from your wallet. Guest wallets sign and send locally in this browser. If you already approved enough, only the transaction is needed. Test ETH pays gas.</p>
     <div className="row"><Sticker sound="ui-back" onClick={onBack}>← Back</Sticker><Sticker disabled={shop.busy} onClick={() => { void shop.refresh(); setAttempt(n => n + 1) }}>Refresh shop</Sticker></div>
     <p className="siege-shop-disclosure">$KNOCK is a testnet token with no real value. Siege only spends it. Playing Siege never pays out $KNOCK.</p>

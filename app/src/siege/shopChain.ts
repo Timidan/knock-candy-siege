@@ -1,4 +1,4 @@
-import { createPublicClient, createWalletClient, custom, encodeFunctionData, defineChain, http, isAddress, parseAbi, parseSignature, formatEther, type Address, type Hash, type Hex, type PrivateKeyAccount, type TypedDataDomain } from 'viem'
+import { createPublicClient, createWalletClient, custom, decodeEventLog, encodeFunctionData, defineChain, http, isAddress, parseAbi, parseSignature, formatEther, type Address, type Hash, type Hex, type PrivateKeyAccount, type TypedDataDomain } from 'viem'
 import { CANDY_TOKEN, injectedWallet, isSandbox } from '../chain'
 import { SHOP_ITEMS } from './data/shop'
 
@@ -10,8 +10,8 @@ export const shopRpc = import.meta.env.VITE_SHOP_RPC_URL || 'https://rpc.testnet
 export const robinhood = defineChain({ id: 46630, name: 'Robinhood Chain Testnet', nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 }, rpcUrls: { default: { http: [shopRpc] } }, contracts: { multicall3: { address: '0xcA11bde05977b3631167028862bE2a173976CA11' } } })
 // All shop reads share one transport so prices, balances and ownership travel together.
 const client = createPublicClient({ chain: robinhood, batch: { multicall: { batchSize: 16_384 } }, transport: http(shopRpc, { batch: true }) })
-const shopAbi = parseAbi(['function knock() view returns (address)', 'function price(uint256) view returns (uint256)', 'function owned(address,uint256) view returns (bool)', 'function ownedItems(address,uint256[]) view returns (bool[])', 'function buyFor(address,uint256,uint256,uint8,bytes32,bytes32)', 'function buy(uint256)'])
-const tokenAbi = parseAbi(['function balanceOf(address) view returns (uint256)', 'function nonces(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)', 'function name() view returns (string)', 'function eip712Domain() view returns (bytes1,string,string,uint256,address,bytes32,uint256[])'])
+const shopAbi = parseAbi(['function knock() view returns (address)', 'function price(uint256) view returns (uint256)', 'function owned(address,uint256) view returns (bool)', 'function ownedItems(address,uint256[]) view returns (bool[])', 'function buyFor(address,uint256,uint256,uint8,bytes32,bytes32)', 'function buy(uint256)', 'function treasury() view returns (address)'])
+const tokenAbi = parseAbi(['function balanceOf(address) view returns (uint256)', 'function nonces(address) view returns (uint256)', 'function allowance(address,address) view returns (uint256)', 'function name() view returns (string)', 'function eip712Domain() view returns (bytes1,string,string,uint256,address,bytes32,uint256[])', 'function transfer(address,uint256) returns (bool)', 'event Transfer(address indexed from, address indexed to, uint256 value)'])
 export const knockAmount = (value: bigint) => Number(formatEther(value)).toLocaleString(undefined, { maximumFractionDigits: 4 })
 const storageKey = (address: Address) => `knock-siege-shop:${robinhood.id}:${SHOP_ADDRESS?.toLowerCase() ?? 'unopened'}:${address.toLowerCase()}`
 export function cachedOwned(address: Address | null): number[] {
@@ -19,10 +19,12 @@ export function cachedOwned(address: Address | null): number[] {
   try { const ids = JSON.parse(localStorage.getItem(storageKey(address)) ?? '[]'); return Array.isArray(ids) ? SHOP_ITEMS.filter(i => ids.includes(i.id)).map(i => i.id) : [] } catch { return [] }
 }
 export function cacheOwned(address: Address, ids: number[]) { try { localStorage.setItem(storageKey(address), JSON.stringify(ids)) } catch { /* Chain ownership still works without storage. */ } }
-export function pendingPurchase(address: Address): Hash | null {
-  try { const value = localStorage.getItem(storageKey(address) + ':pending'); return value && /^0x[0-9a-f]{64}$/i.test(value) ? value as Hash : null } catch { return null }
+// crate: a Candy Crate payment, kept apart from item purchases because it is confirmed differently.
+const pendingKey = (address: Address, crate: boolean) => storageKey(address) + (crate ? ':crate' : ':pending')
+export function pendingPurchase(address: Address, crate = false): Hash | null {
+  try { const value = localStorage.getItem(pendingKey(address, crate)); return value && /^0x[0-9a-f]{64}$/i.test(value) ? value as Hash : null } catch { return null }
 }
-function savePending(address: Address, hash: Hash | null) { try { if (hash) localStorage.setItem(storageKey(address) + ':pending', hash); else localStorage.removeItem(storageKey(address) + ':pending') } catch { /* Keep the hash in the visible purchase state too. */ } }
+function savePending(address: Address, hash: Hash | null, crate = false) { try { if (hash) localStorage.setItem(pendingKey(address, crate), hash); else localStorage.removeItem(pendingKey(address, crate)) } catch { /* Keep the hash in the visible purchase state too. */ } }
 export async function readShop(address: Address | null) {
   const [balance, gas, prices, owned, legacyOwned] = await Promise.all([
     address && !isSandbox ? client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'balanceOf', args: [address] }) : null,
@@ -65,20 +67,21 @@ export async function confirmPurchase(address: Address, hash: Hash) {
   savePending(address, null)
   if (receipt.status !== 'success') throw new Error('The purchase reverted. No item was bought; the network may still charge gas.')
 }
+async function verifyAccount(address: Address, guest?: PrivateKeyAccount | null) {
+  if (guest) {
+    if (guest.address.toLowerCase() !== address.toLowerCase()) throw new Error('Choose your guest wallet again.')
+    if (await client.getChainId() !== robinhood.id) throw new Error('The shop RPC is on the wrong network.')
+    return
+  }
+  if ((await readAccount())?.toLowerCase() !== address.toLowerCase()) throw new Error('Your wallet account changed. Choose the item again with the current wallet.')
+  if (!await onShopNetwork()) throw new Error('Switch to Robinhood Chain Testnet before buying.')
+}
 export async function purchase(address: Address, item: number, displayedPrice: bigint, state: (phase: PurchasePhase, hash?: Hash) => void, guest?: PrivateKeyAccount | null) {
   if (isSandbox || !SHOP_ADDRESS) throw new Error('Buying is not available in this shop yet.')
   const provider = injectedWallet()
   if (!provider && !guest) throw new Error('Choose a guest wallet or connect your wallet first.')
-  if (pendingPurchase(address)) throw new Error('A purchase is still pending. Check that transaction before buying again.')
-  const verifyWallet = async () => {
-    if (guest) {
-      if (guest.address.toLowerCase() !== address.toLowerCase()) throw new Error('Choose your guest wallet again.')
-      if (await client.getChainId() !== robinhood.id) throw new Error('The shop RPC is on the wrong network.')
-      return
-    }
-    if ((await readAccount())?.toLowerCase() !== address.toLowerCase()) throw new Error('Your wallet account changed. Choose the item again with the current wallet.')
-    if (!await onShopNetwork()) throw new Error('Switch to Robinhood Chain Testnet before buying.')
-  }
+  if (pendingPurchase(address) || pendingPurchase(address, true)) throw new Error('A purchase is still pending. Check that transaction before buying again.')
+  const verifyWallet = () => verifyAccount(address, guest)
   state('checking'); await verifyWallet()
   const [price, owned, token, balance, gasBalance, allowance] = await Promise.all([
     client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'price', args: [BigInt(item)] }),
@@ -120,6 +123,44 @@ export async function purchase(address: Address, item: number, displayedPrice: b
   await confirmPurchase(address, hash)
   if (!await client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'owned', args: [address, BigInt(item)] })) throw new Error('The transaction confirmed, but ownership could not be verified. Refresh the shop.')
   state('owned', hash)
+}
+// Candy Crate: a plain transfer of CRATE_PRICE $KNOCK to the shop's treasury, no contract of its own. The local save credits it once per transaction hash.
+export const CRATE_PRICE = 50n * 10n ** 18n
+const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+export async function buyCrate(address: Address, state: (phase: PurchasePhase, hash?: Hash) => void, guest?: PrivateKeyAccount | null) {
+  if (isSandbox || !SHOP_ADDRESS) throw new Error('Buying is not available in this shop yet.')
+  const provider = injectedWallet()
+  if (!provider && !guest) throw new Error('Choose a guest wallet or connect your wallet first.')
+  if (pendingPurchase(address) || pendingPurchase(address, true)) throw new Error('A purchase is still pending. Check that transaction before buying again.')
+  state('checking'); await verifyAccount(address, guest)
+  const [treasury, token, balance, gasBalance] = await Promise.all([
+    client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'treasury' }), client.readContract({ address: SHOP_ADDRESS, abi: shopAbi, functionName: 'knock' }),
+    client.readContract({ address: CANDY_TOKEN, abi: tokenAbi, functionName: 'balanceOf', args: [address] }), client.getBalance({ address }),
+  ])
+  if (!same(token, CANDY_TOKEN)) throw new Error('This shop uses a different token. Buying is disabled.')
+  if (balance < CRATE_PRICE) throw new Error('Not enough $KNOCK. Claim the starter grant if eligible, or get it on vibe/vibe.')
+  if (gasBalance === 0n) throw new Error('No test ETH for gas. Use the Robinhood faucet, then try again.')
+  const signer = guest ?? address, request = { to: CANDY_TOKEN, data: encodeFunctionData({ abi: tokenAbi, functionName: 'transfer', args: [treasury, CRATE_PRICE] }), account: signer }
+  const [gas, gasPrice] = await Promise.all([client.estimateGas(request), client.getGasPrice()])
+  if (gasBalance < gas * gasPrice * 12n / 10n) throw new Error('Not enough test ETH for gas. Top up at the Robinhood faucet.')
+  await verifyAccount(address, guest)
+  state('transaction')
+  const hash = await createWalletClient({ chain: robinhood, transport: guest ? http(shopRpc) : custom(provider!), account: signer }).sendTransaction(request)
+  savePending(address, hash, true); state('confirming', hash)
+  return confirmCrate(address, hash)
+}
+// A crate only for a successful direct call to the token whose Transfer moved at least CRATE_PRICE from the buyer to the treasury.
+// Shop item purchases also emit buyer-to-treasury Transfers, but their transaction goes to the shop, so they never count.
+export async function confirmCrate(address: Address, hash: Hash): Promise<Hash> {
+  const [receipt, treasury] = await Promise.all([client.waitForTransactionReceipt({ hash, timeout: 120_000 }), client.readContract({ address: SHOP_ADDRESS!, abi: shopAbi, functionName: 'treasury' })])
+  savePending(address, null, true)
+  if (receipt.status !== 'success') throw new Error('The crate payment reverted. No crate was added; the network may still charge gas.')
+  const paid = !!receipt.to && same(receipt.to, CANDY_TOKEN) && receipt.logs.some(log => {
+    if (!same(log.address, CANDY_TOKEN)) return false
+    try { const { args } = decodeEventLog({ abi: tokenAbi, eventName: 'Transfer', data: log.data, topics: log.topics }); return same(args.from, address) && same(args.to, treasury) && args.value >= CRATE_PRICE } catch { return false }
+  })
+  if (!paid) throw new Error('That transaction did not pay 50 $KNOCK to the shop. No crate was added.')
+  return hash
 }
 export function shopError(error: unknown) {
   const e = error as { code?: number; shortMessage?: string; message?: string }, text = e.shortMessage ?? e.message ?? 'The network did not respond. Please try again.'

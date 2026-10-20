@@ -52,8 +52,8 @@ function accolade(result: Outcome, boss: string) {
   return result.won && boss ? `BOSS SLAYER · ${boss.toUpperCase()}` : result.won && result.jars === 20 ? 'PERFECT DEFENSE · ALL 20 JARS SAVED' : `${result.kills.toLocaleString('en-US')} ${result.kills === 1 ? 'CHOG' : 'CHOGS'} STOPPED`
 }
 // A trophy for the NFT: the Chog cheers out of a Monad-purple burst on the right, the result sits on the left. Defeats get a quieter card.
-// featured: the run's Chog was that day's Chog of the Day, which adds a gold badge under the accolade.
-export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome, boss = '', featured = false) {
+// featured: the run's Chog was that day's Chog of the Day, which adds a gold badge under the accolade. crate: the run started with a Candy Crate, which adds a badge below.
+export async function renderShareCard(assets: AssetPack, kit: Kit, costume: string, result: Outcome, boss = '', featured = false, crate = false) {
   const [portrait, heads] = await Promise.all([loadImage(thumb(kit.id, true)), loadPreviewHeads(), document.fonts.ready])
   const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350
   const ctx = canvas.getContext('2d')!
@@ -123,6 +123,7 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   }
   pill(award, 754, face, lip, proud ? NIGHT : '#eadff2', proud ? NIGHT : '#d7c1e3')
   if (featured) pill('CHOG OF THE DAY', 852, GOLD, '#c48a0c', NIGHT, NIGHT)
+  if (crate) pill('CANDY CRATE +100', featured ? 950 : 852, DUSK, '#140a22', '#eadff2', PUMPKIN)
   // Footer: the original NFT stays identifiable beside its number.
   ctx.fillStyle = '#12091fdd'; ctx.strokeStyle = frame; ctx.lineWidth = 4; ctx.beginPath(); ctx.roundRect(52, 1186, 976, 112, 30); ctx.fill(); ctx.stroke()
   ctx.save(); ctx.beginPath(); ctx.arc(116, 1242, 42, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(portrait, 74, 1200, 84, 84); ctx.restore()
@@ -135,19 +136,19 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
 // `bosses` is the scene's runStats().bossesDefeated; only its last entry's name reaches the effect, so a fresh array each render can't redraw the card.
 // children sit on the share button's line (the result card's feedback link), so the card stays short on a landscape phone.
 // seed: the run's seed, which a story night's challenge link carries. back: this run answered a friend's challenge.
-export function ShareCard({ assets, kit, costume, result, bosses, featured = false, seed, back = false, children }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[]; featured?: boolean; seed?: number; back?: boolean; children?: ReactNode }) {
+export function ShareCard({ assets, kit, costume, result, bosses, featured = false, crate = false, seed, back = false, children }: { assets: AssetPack; kit: Kit; costume: string; result: Outcome; bosses?: string[]; featured?: boolean; crate?: boolean; seed?: number; back?: boolean; children?: ReactNode }) {
   const [file, setFile] = useState<File | null>(null), [url, setUrl] = useState(''), [open, setOpen] = useState(false), [status, setStatus] = useState(''), [attempt, setAttempt] = useState(0), [sent, setSent] = useState('')
   const text = shareText(result, kit.id, seed), link = challengeLink(result, kit.id, seed), boss = result.won ? bossName(assets, bosses?.at(-1)) : ''
   useEffect(() => {
     let active = true, objectUrl = ''
     setFile(null); setStatus('')
     // Drawing the card blocks the main thread for a moment (a 1200 × 1200 pixel scan), so wait until the result fanfare has landed.
-    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, result, boss, featured).then(blob => {
+    const timer = setTimeout(() => void renderShareCard(assets, kit, costume, result, boss, featured, crate).then(blob => {
       if (!active) return
       const file = new File([blob], `candy-siege-chog-${kit.id}.png`, { type: 'image/png' }); objectUrl = URL.createObjectURL(file); setFile(file); setUrl(objectUrl)
     }).catch(() => { if (active) setStatus('Could not make the share image. Check your connection and try again.') }), attempt ? 0 : 1400)
     return () => { active = false; clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl) }
-  }, [assets, kit.id, costume, result, boss, featured, attempt])
+  }, [assets, kit.id, costume, result, boss, featured, crate, attempt])
   const share = async () => {
     if (!file) return
     if (navigator.canShare?.({ files: [file] }) && navigator.share) {

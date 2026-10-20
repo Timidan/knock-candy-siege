@@ -50,6 +50,12 @@
 .siege-modal--shop .siege-vault .siege-shop-item.is-selected { background: radial-gradient(110% 80% at 50% 0%, #ff7a0048, #ff7a0000 70%), #47295f; border-color: #ff9a3c; box-shadow: 0 0 0 2px #ff9a3c, 0 0 18px #ff7a0066; }
 .siege-modal--shop .siege-vault .siege-shop-preview { border-color: #ff9a3c99; background: radial-gradient(100% 50% at 50% 0%, #ff7a0026, #ff7a0000 70%), #2a1838; }
 
+/* The Candy Crate is a vault slot of its own: what it does on the left, the buy button on the right. The $KNOCK note sits under a rule. */
+.siege-modal--shop .siege-vault .siege-crate { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 18px; margin-top: 16px; padding: 8px 16px; border: 2px solid #5b3a85; border-radius: 14px 6px; background: linear-gradient(#37214f, #28173c); box-shadow: 2px 3px 0 #120d1a; text-align: left; }
+.siege-modal--shop .siege-vault .siege-crate p { flex: 1 1 280px; max-width: none; margin: 0; font-size: 17px; }
+.siege-modal--shop .siege-vault .siege-knock { margin-top: 16px; border-top: 1px solid #80658e; }
+.siege-modal--shop .siege-vault .siege-knock p { margin: 10px auto 4px; font-size: 17px; }
+
 /* The claim ceremony: twelve candies fountain up out of the balance, then drop back in and the number pops. */
 .siege-vault-burst { position: absolute; left: 50%; top: 40%; pointer-events: none; }
 .siege-vault-burst i { position: absolute; left: -9px; top: -9px; width: 18px; height: 18px; border: 2px solid var(--ink); animation: siege-vault-fountain 1.15s both; }
@@ -78,5 +84,7 @@
   .siege-modal--shop .siege-vault .siege-grant:not(.siege-grant--pill) { padding: 4px 12px 7px; }
   .siege-modal--shop .siege-vault .siege-shop-wallet { margin-top: 4px; }
   .siege-modal--shop .siege-vault .siege-shop-wallet strong { display: inline-block; }
+  .siege-modal--shop .siege-vault .siege-crate { margin-top: 8px; padding: 4px 12px; }
+  .siege-modal--shop .siege-vault :is(.siege-crate, .siege-knock) p { font-size: 15px; }
   .siege-vault-burst { --k: .75; } /* a lower fountain: the balance sits near the dialog's top edge here */
 }

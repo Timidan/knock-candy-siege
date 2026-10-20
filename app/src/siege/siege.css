@@ -59,6 +59,8 @@
 .siege-settings .siege-toggle { display: flex; align-items: center; gap: 18px; }
 .siege-toggle input { flex: none; width: 30px; height: 30px; accent-color: #ffb975; }
 .siege-toggle small { display: block; font-size: 16px; color: #c6adc9; }
+.siege-crate-toggle { display: flex; align-items: center; gap: 10px; margin: 4px 0; text-align: left; }
+.siege-crate-badge { display: inline-block; margin-left: 10px; padding: 0 10px; border: 2px solid #120d1a; border-radius: 999px; background: #2e1a47; color: #ffb975; font: 12px/1.6 var(--font-display); letter-spacing: .06em; vertical-align: middle; }
 .siege-guide { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; text-align: left; }
 .siege-guide article { padding: 14px; background: #2c2039; border: 1px solid #71527d; border-radius: 12px 5px; }
 .siege-guide h3 { margin-top: 0; color: #ffd477; }
