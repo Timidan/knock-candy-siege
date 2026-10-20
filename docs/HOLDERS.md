@@ -308,7 +308,7 @@ Two players, two Chogs, one porch: you defend a story level together.
 - **Talents:** when either hero levels up, combat pauses for both of you, and the other player sees "Partner is choosing…". After about 10 seconds the left card is picked. A Chog that starts above hero level 1 takes the left card for each of its starting talents at once.
 - **No pause and one speed:** the game runs at 1× and keeps going when you switch tabs. The pause button reads **LEAVE** and asks before you go, while the game keeps running. Leaving ends the room for both of you. The shop stays closed until the room ends.
 - **If the connection drops or the two games disagree,** play stops with "Partner disconnected" or "Out of sync: restart together". There's no reconnect, so start a new room.
-- **The result:** a win ends with both Chogs dancing in a close-up. The result shows both Chogs and a team score. A Porch Party doesn't change your saved stars or best scores, doesn't unlock levels, has no share card, and isn't counted on the stats page.
+- **The result:** a win ends with both Chogs dancing in a close-up. The result shows both Chogs and a team score. Each of you keeps the night's stars and best score, as in solo, and a win with 2★ unlocks the next night for each of you, even if the night was still locked for the friend. There's no share card, and a Porch Party isn't counted on the stats page.
 
 ## Daily and Endless
 
