@@ -7,17 +7,17 @@ import { reducedMotion } from './data/save'
 import { thumb } from '../images'
 import type { Kit } from './data/kits'
 import type { Outcome } from './SiegeScene'
-import { LEVELS, ENDLESS_LEVEL } from './data/level1'
+import { LEVELS, ENDLESS_LEVEL, GAUNTLET_LEVEL } from './data/level1'
 import { NIGHTS, DAILY_LEVEL } from './data/endless'
 import { heroPainter, loadPreviewHeads } from './hero/HeroPreview'
 
 export const gameLink = () => 'https://knock.timidan.xyz'
-// A friend's challenge, carried in a shared link: the night (1-6, DAILY_LEVEL or ENDLESS_LEVEL), their Chog, score and stars, plus the Daily's
+// A friend's challenge, carried in a shared link: the night (1-6, DAILY_LEVEL, ENDLESS_LEVEL or GAUNTLET_LEVEL), their Chog, score and stars, plus the Daily's
 // number or a story night's run seed. Nothing in it is verified, so the game calls the score "theirs" and never saves or reports it.
 export type Challenge = { level: number; hero: number; score: number; stars: number; day: number; seed?: number }
 export function challengeLink(result: Outcome, id: number, seed?: number) {
   const params = new URLSearchParams({ vs: result.mode === 'level' ? String(result.level) : result.mode, chog: String(id), score: String(result.score) })
-  if (result.mode !== 'endless') params.set('stars', String(result.stars))
+  if (result.mode !== 'endless' && result.mode !== 'gauntlet') params.set('stars', String(result.stars))
   if (result.mode === 'daily') params.set('day', String(result.daily))
   if (result.mode === 'level' && seed !== undefined) params.set('seed', String(seed >>> 0))
   return `${gameLink()}/?${params}`
@@ -26,8 +26,8 @@ export function challengeLink(result: Outcome, id: number, seed?: number) {
 export function readChallenge(search: string): Challenge | null {
   const query = new URLSearchParams(search), vs = query.get('vs') ?? ''
   const int = (key: string, max: number, min = 0) => { const value = query.get(key) ?? ''; return /^\d{1,10}$/.test(value) && +value >= min && +value <= max ? +value : NaN }
-  const level = vs === 'daily' ? DAILY_LEVEL : vs === 'endless' ? ENDLESS_LEVEL : /^[1-6]$/.test(vs) ? +vs : NaN
-  const hero = int('chog', 1969, 1), score = int('score', 9_999_999), stars = level === ENDLESS_LEVEL ? 0 : int('stars', 3), day = level === DAILY_LEVEL ? int('day', 99_999, 1) : 0
+  const level = vs === 'daily' ? DAILY_LEVEL : vs === 'endless' ? ENDLESS_LEVEL : vs === 'gauntlet' ? GAUNTLET_LEVEL : /^[1-6]$/.test(vs) ? +vs : NaN
+  const hero = int('chog', 1969, 1), score = int('score', 9_999_999), stars = level === ENDLESS_LEVEL || level === GAUNTLET_LEVEL ? 0 : int('stars', 3), day = level === DAILY_LEVEL ? int('day', 99_999, 1) : 0
   const seed = level <= 6 && query.has('seed') ? int('seed', 4_294_967_295) : undefined
   return [level, hero, score, stars, day, seed ?? 0].some(Number.isNaN) ? null : { level, hero, score, stars, day, ...(seed === undefined ? {} : { seed }) }
 }
@@ -35,6 +35,7 @@ export function readChallenge(search: string): Challenge | null {
 export function shareText(result: Outcome, id: number, seed?: number) {
   const score = result.score.toLocaleString('en-US'), stars = `${'★'.repeat(result.stars)}${'☆'.repeat(3 - result.stars)}`, link = challengeLink(result, id, seed)
   if (result.mode === 'endless') return `I held out to wave ${result.wave} in Candy Siege Endless with Chog #${id}: ${result.kills} Chogs stopped, ${score} points. Can you beat it? ${link}`
+  if (result.mode === 'gauntlet') return `I beat ${result.legends} of 10 legends in the Candy Siege Legend Gauntlet with Chog #${id}${result.won ? ` and kept ${result.jars} jars` : ''}: ${score} points. Can you beat it? ${link}`
   if (result.mode === 'daily') return `Daily #${result.daily} in Candy Siege (${LEVELS[result.level - 1].name}, ${NIGHTS[result.theme].name}) with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${link}`
   return `I ${result.won ? 'held' : 'took on'} ${LEVELS[result.level - 1].name} in Candy Siege with Chog #${id}: ${stars}, ${score} points. Can you beat it? ${link}`
 }
@@ -49,6 +50,7 @@ function star(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, po
 const bossName = (assets: AssetPack, id?: string) => !id ? '' : id === 'pumpkin' ? assets.legends.greatPumpkin.name : assets.legends.legends[id]?.name ?? ''
 // Only what the run proves: a boss the scene recorded as defeated on a won level, else a full porch at the end (perks refill jars, so not "no jars lost"), else the kill count.
 function accolade(result: Outcome, boss: string) {
+  if (result.mode === 'gauntlet' && result.legends) return result.legends === 10 ? 'LEGEND SLAYER · ALL TEN DEFEATED' : `${result.legends} ${result.legends === 1 ? 'LEGEND' : 'LEGENDS'} DEFEATED`
   return result.won && boss ? `BOSS SLAYER · ${boss.toUpperCase()}` : result.won && result.jars === 20 ? 'PERFECT DEFENSE · ALL 20 JARS SAVED' : `${result.kills.toLocaleString('en-US')} ${result.kills === 1 ? 'CHOG' : 'CHOGS'} STOPPED`
 }
 // A trophy for the NFT: the Chog cheers out of a Monad-purple burst on the right, the result sits on the left. Defeats get a quieter card.
@@ -57,7 +59,7 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   const [portrait, heads] = await Promise.all([loadImage(thumb(kit.id, true)), loadPreviewHeads(), document.fonts.ready])
   const canvas = document.createElement('canvas'); canvas.width = 1080; canvas.height = 1350
   const ctx = canvas.getContext('2d')!
-  const endless = result.mode === 'endless', daily = result.mode === 'daily', proud = result.won || endless, frame = kit.home ? GOLD : proud ? MONAD : '#5b4a7a'
+  const endless = result.mode === 'endless', daily = result.mode === 'daily', gauntlet = result.mode === 'gauntlet', proud = result.won || endless || gauntlet && result.legends > 0, frame = kit.home ? GOLD : proud ? MONAD : '#5b4a7a'
   const text = (value: string, x: number, y: number, size: number, color: string, font = 'Luckiest Guy', max?: number) => { ctx.fillStyle = color; ctx.font = `${size}px "${font}", sans-serif`; ctx.fillText(value, x, y, max) }
   // Display text with a dark outline over an extruded lip, like the game's stickers.
   const bold = (value: string, x: number, y: number, size: number, color: string, lip: string, max?: number) => {
@@ -100,8 +102,9 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   text(tag, 100, 120, 30, proud ? '#ffffff' : '#d7c1e3', 'Luckiest Guy', pw - 60)
   const icons = assets.atlases.find(a => a.key === 'props3'), icon = daily ? icons?.data.frames[NIGHTS[result.theme].icon]?.frame : undefined
   if (icons && icon) ctx.drawImage(icons.image, icon.x, icon.y, icon.w, icon.h, 86 + pw, 64, 88, 88)
-  text(endless ? 'HOW LONG CAN YOU HOLD?' : result.won ? 'THE PORCH IS YOURS.' : 'ONE MORE NIGHT?', 74, 226, 40, '#d7c1e3', 'Patrick Hand')
+  text(endless ? 'HOW LONG CAN YOU HOLD?' : gauntlet ? 'TEN LEGENDS. ONE PORCH.' : result.won ? 'THE PORCH IS YOURS.' : 'ONE MORE NIGHT?', 74, 226, 40, '#d7c1e3', 'Patrick Hand')
   if (endless) bold(`WAVE ${result.wave}`, 70, 440, 120, GOLD, PUMPKIN, 500)
+  else if (gauntlet) bold(`${result.legends}/10 LEGENDS`, 70, 430, 100, GOLD, PUMPKIN, 560)
   else for (let i = 0; i < 3; i++) {
     const x = 150 + i * 170, y = i === 1 ? 350 : 374, r = i === 1 ? 84 : 74, earned = i < result.stars
     star(ctx, x, y + 9, r); ctx.fillStyle = NIGHT; ctx.fill()

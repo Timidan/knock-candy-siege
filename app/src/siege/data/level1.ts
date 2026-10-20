@@ -1,4 +1,5 @@
 import type { EnemyKind, Point } from './config'
+import { GAUNTLET_WAVES } from './gauntlet.ts'
 
 // A boss is a legend's token id or the Great Pumpkin; it walks the road beside the wave's ordinary groups.
 export type BossId = number | 'pumpkin'
@@ -11,10 +12,10 @@ export type LevelPad = Point & { boost?: boolean }
 export type Portal = { path: number; enter: [number, number]; exit: [number, number] }
 export type Zone = Point & { kind: 'toxic'; r: number }
 export type LevelGeometry = { size: [number, number]; background: string; paths: [number, number][][]; pads: LevelPad[]; porch: Point; props: LevelProp[]; fly?: [number, number][][]; switch?: { prop: string; path: number; points: [number, number][] }; portals?: Portal[]; zones?: Zone[]; dark?: boolean; lights?: (Point & { r: number })[]; ambient?: { fireflies?: number; leaves?: boolean; fog?: number[]; glows?: (Point & { r: number })[] } }
-export type LevelConfig = { id: number; name: string; geometry: LevelGeometry; waves: Wave[]; endless?: boolean }
-export const ENDLESS_LEVEL = 7
-// Level maps live in levelN.json; the endless plaza is its own file.
-export const mapFile = (level: number) => level === ENDLESS_LEVEL ? 'townsquare' : `level${level}`
+export type LevelConfig = { id: number; name: string; geometry: LevelGeometry; waves: Wave[]; endless?: boolean; gauntlet?: boolean }
+export const ENDLESS_LEVEL = 7, GAUNTLET_LEVEL = 8
+// Level maps live in levelN.json; the plaza of Endless and the Legend Gauntlet is its own file.
+export const mapFile = (level: number) => level === ENDLESS_LEVEL || level === GAUNTLET_LEVEL ? 'townsquare' : `level${level}`
 export const LEVEL1: LevelConfig = {
   id: 1, name: 'Rosie Row',
   geometry: {
@@ -125,4 +126,4 @@ export const LEVELS: LevelConfig[] = [LEVEL1, {
     wave('Last call', 85, 24, [g('witch', 9, 2), g('mummy', 14, 1), g('skeleton', 12, 1.3), g('bat', 22, .5, 6), g('goblin', 18, .6, 8)]),
     wave('The Great Pumpkin', 115, 24, [g('pumpkin', 10, 1.1), g('mummy', 10, 1.3), g('witch', 8, 2, 5), swarm('ghost', 10, .6), swarm('bat', 16, .5)], { witching: true, boss: { id: 'pumpkin', delay: 6 } }),
   ],
-}, { id: ENDLESS_LEVEL, name: 'Endless', geometry: LEVEL1.geometry, waves: [], endless: true }]
+}, { id: ENDLESS_LEVEL, name: 'Endless', geometry: LEVEL1.geometry, waves: [], endless: true }, { id: GAUNTLET_LEVEL, name: 'Legend Gauntlet', geometry: LEVEL1.geometry, waves: GAUNTLET_WAVES, gauntlet: true }]

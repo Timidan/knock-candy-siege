@@ -61,7 +61,7 @@ assert.ok(!canDance('floss', 'giggle', [], dances.dances))
 const banned = /\bMath\.(?:sin|cos|tan|asin|acos|atan2?|sinh|cosh|tanh|asinh|acosh|atanh|exp|expm1|log|log1p|log2|log10|pow|cbrt|hypot)\b|\*\*/
 const simulation: Record<string, string[] | null> = {
   'world.ts': null, 'Consumables.ts': null, 'SpecialTowers.ts': null, 'hero/Hero.ts': null, 'hero/Legend.ts': null, 'hero/pose.ts': null,
-  'data/config.ts': null, 'data/endless.ts': null, 'data/traits.ts': null, 'data/kits.ts': null, 'data/talents.ts': null, 'data/level1.ts': null, 'data/bosses.ts': null,
+  'data/config.ts': null, 'data/endless.ts': null, 'data/traits.ts': null, 'data/kits.ts': null, 'data/talents.ts': null, 'data/level1.ts': null, 'data/bosses.ts': null, 'data/gauntlet.ts': null,
   'data/shop.ts': null, 'data/score.ts': null,
   'SiegeScene.ts': ['create', 'createWorld', 'makePools', 'waveAt', 'healthScale', 'killCandyScale', 'routeFor', 'roadFor', 'nearestHero', 'networkStep', 'applyCommand',
     'specialise', 'towerAttack', 'updateWorld', 'useProp', 'swarmAway', 'wildRoute', 'spawn', 'callWave', 'tick', 'summon', 'wall', 'updateAllies', 'updateHazards',
@@ -102,7 +102,7 @@ assert.notDeepEqual(rolls, Array.from({ length: 16 }, () => other()))
 console.log('PASS: seeded world stream replays exactly; a different seed changes it.')
 
 // Batch 3a: the ten legend kits, the new maps and waves, bosses, endless scaling and the daily rules.
-const { readGeometry, LEVELS, ENDLESS_LEVEL, mapFile } = await import('../src/siege/data/level1.ts')
+const { readGeometry, LEVELS, ENDLESS_LEVEL, GAUNTLET_LEVEL, mapFile } = await import('../src/siege/data/level1.ts')
 const { endlessWave, endlessRoads, endlessBoss, endlessHealth, BOSS_ROTATION, dailyInfo, shuffledKinds, NIGHTS, DAILY_FIRST_DAY, DAY_MS } = await import('../src/siege/data/endless.ts')
 const { bossConfig } = await import('../src/siege/data/bosses.ts')
 for (const [id, legend] of Object.entries(legends.legends) as [string, { costume: string; attack: string }][]) {
@@ -119,6 +119,8 @@ assert.deepEqual(LEVELS.slice(3, 6).map(level => level.waves.length), [8, 8, 9])
 for (const level of LEVELS.slice(2, 6)) assert.ok(level.waves.at(-1)!.witching && level.waves.at(-1)!.groups.some(g => g.edge), level.name)
 assert.deepEqual([2, 3, 4, 5].map(level => LEVELS[level - 1].waves.at(-1)!.boss?.id), [1481, 1881, 942, 1002])
 assert.deepEqual(LEVELS[5].waves.flatMap(w => w.boss ? [w.boss.id] : []), [561, 1884, 1798, 'pumpkin'])
+// The Legend Gauntlet brings each of the ten legends once, and no Great Pumpkin.
+assert.deepEqual(LEVELS[GAUNTLET_LEVEL - 1].waves.flatMap(w => w.boss ? [w.boss.id] : []).sort(), [1002, 1481, 1514, 1667, 1798, 1881, 1884, 561, 900, 942])
 // Endless: starts at ENDLESS_HEALTH, +8% health per wave, a road opens every ten waves, every tenth wave is a Witching Hour with the next boss.
 assert.deepEqual([1, 9, 10, 19, 20, 29, 30, 99].map(endlessRoads), [1, 1, 2, 2, 3, 3, 4, 4])
 assert.ok(Math.abs(endlessHealth(10) - ENDLESS_HEALTH * 1.08 ** 10) < 1e-12)

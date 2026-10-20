@@ -11,7 +11,7 @@ import { ShapePool, circle, plate, curbedMap, YOU, PARTNER, hex } from './render
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
-import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, COOP_STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES, hypot, sine } from './data/config'
+import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, COOP_STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES, hypot, sine, GAUNTLET_HEALTH, GAUNTLET_WAVE_HEALTH, GAUNTLET_CANDY } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
 import { LEVELS, TUTORIAL, TIPS } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
@@ -36,6 +36,7 @@ import { TutorialFocus } from './TutorialFocus'
 import { Hints } from './Hints'
 import { canDance, CRYPTO_EMOTES } from './data/shop'
 import { scoreFor } from './data/score'
+import { gauntletScore } from './data/gauntlet'
 import { specialTowerAttack } from './SpecialTowers'
 import { useConsumable, updateConsumables } from './Consumables'
 import type { PlacedItem } from './Consumables'
@@ -55,8 +56,9 @@ export type Command =
   | { type: 'talent'; index: number; level?: number }
   | { type: 'prop'; index: number }
   | { type: 'speed' }
-export type Mode = 'level' | 'endless' | 'daily'
-export type Outcome = { party?: { id: number; level: number }[]; level: number; mode: Mode; daily: number; theme: number; won: boolean; stars: number; jars: number; kills: number; wave: number; heroLevel: number; score: number; earlyCalls: number; seconds: number; date: string }
+export type Mode = 'level' | 'endless' | 'daily' | 'gauntlet'
+// legends: the Legend Gauntlet's legends defeated (0 in other modes).
+export type Outcome = { party?: { id: number; level: number }[]; level: number; mode: Mode; daily: number; theme: number; won: boolean; stars: number; jars: number; kills: number; wave: number; legends: number; heroLevel: number; score: number; earlyCalls: number; seconds: number; date: string }
 // A schedule entry is one enemy to spawn: on a road, or (edge: a quarter of the far-side stretch, see wildRoute) from the edges of the view; risen enemies pay no candy; boss entries spawn a legend or the Great Pumpkin.
 export type Spawn = { chogId?: number; time: number; kind: EnemyKind; path: number; wave: number; distance?: number; route?: number; edge?: number; risen?: boolean; boss?: BossSpawn }
 export type SceneOptions = { coop?: CoopSession; assets: AssetPack; level: number; mode: Mode; daily: Daily | null; seed: number; stars: Record<string, number>; street: StreetBonuses; seen: string[]; onDiscover: (keys: string[]) => void; hero: number; home: boolean; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; settings: Settings; sfx: Sfx; onFullscreen?: () => void; onShop: () => void; onPause: () => void; onEnd: (result: Outcome) => void; onIntro: (kind: string) => void; onTutorial: () => void; onReady: () => void }
@@ -141,7 +143,7 @@ export class SiegeScene extends Phaser.Scene {
     const base = this.level.endless ? endlessWave(i + 1, this.seed) : this.level.waves[i], shuffle = this.shuffle
     return this.plans[i] = shuffle ? { ...base, groups: base.groups.map(group => ({ ...group, type: shuffle[group.type] ?? group.type })) } : base
   }
-  healthScale(wave: number) { return this.level.endless ? endlessHealth(wave) : (NIGHT_HEALTH[this.level.id - 1] ?? 1) * (1 + WAVE_HEALTH * wave) }
+  healthScale(wave: number) { return this.level.endless ? endlessHealth(wave) : this.level.gauntlet ? GAUNTLET_HEALTH * (1 + GAUNTLET_WAVE_HEALTH * wave) : (NIGHT_HEALTH[this.level.id - 1] ?? 1) * (1 + WAVE_HEALTH * wave) }
   killCandyScale(wave: number) { return 1 + KILL_CANDY_HEALTH * (this.healthScale(wave) - 1) }
   routeFor(e: Enemy): Route { return e.route ?? (e.path >= this.routes.length ? e.path === this.routes.length + this.flyRoutes.length ? this.detour! : this.flyRoutes[e.path - this.routes.length] : this.routes[e.path]) }
   roadFor(kind: EnemyKind, path: number) { const sw = this.options.assets.geometry.switch; return this.bridgeUp && !ENEMIES[kind].flying && path === sw?.path ? this.routes.length + this.flyRoutes.length : this.entrancePath(kind, path) }
@@ -348,6 +350,7 @@ export class SiegeScene extends Phaser.Scene {
       if (this.options.owned.includes(23)) this.candy += 50
     }
     if (this.options.street.trap) this.stock.pumpkin++
+    if (this.level.gauntlet) this.income(GAUNTLET_CANDY)
     // Co-op: your Chog stands on a ring in your colour with a YOU tag; your partner's has their colour and Chog number.
     this.heroRings = this.heroes.map((hero, player) => this.art.image(hero.x, hero.y, 'hero/ring').setDisplaySize(116, 44).setDepth(6).setTint(!this.options.coop ? 0xffffff : player === this.localPlayer ? YOU : PARTNER))
     if (this.options.coop) this.heroTags = this.heroes.map((hero, player) => this.add.text(0, 0, player === this.localPlayer ? 'YOU' : `#${hero.kit.id}`, { fontFamily: '"Luckiest Guy", sans-serif', fontSize: '28px', color: hex(player === this.localPlayer ? YOU : PARTNER), stroke: '#241b30', strokeThickness: 6 }).setOrigin(.5).setDepth(2750))
@@ -412,6 +415,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.dark) this.hud.toast('Rare Row is dark. Only light shows enemies: lanterns, your Chog, and the bonfire.', 6)
     else if (daily) this.hud.toast(`Daily #${daily.number} · ${this.level.name}\n${NIGHTS[daily.theme].name}: ${NIGHTS[daily.theme].text}`, 6)
     else if (this.options.mode === 'endless') this.hud.toast('Endless: the waves never stop. A new road opens every ten waves.', 6)
+    else if (this.level.gauntlet) this.hud.toast('Legend Gauntlet: all ten legends, one after another, each with its own move. Keep a jar and beat them all.', 6)
   }
   private cancelGesture() {
     this.holdAt = null; this.holdTime = 0
@@ -1617,16 +1621,16 @@ export class SiegeScene extends Phaser.Scene {
     if (this.ended) return
     this.cancel(); this.ended = true; this.hud.hide(); this.focus.draw()
     const mode = this.options.mode, daily = this.options.daily
-    const result = { level: this.options.level, mode, daily: mode === 'daily' && daily ? daily.number : 0, theme: mode === 'daily' && daily ? daily.theme : 0, won, jars: this.jars, stars: won ? starsFor(this.jars) : 0, kills: this.kills, wave: this.wave, heroLevel: this.hero.level, earlyCalls: this.earlyCalls, seconds: this.clock, date: new Date().toISOString() }
+    const result = { level: this.options.level, mode, daily: mode === 'daily' && daily ? daily.number : 0, theme: mode === 'daily' && daily ? daily.theme : 0, won, jars: this.jars, stars: won && !this.level.gauntlet ? starsFor(this.jars) : 0, kills: this.kills, wave: this.wave, legends: this.level.gauntlet ? this.bossesDefeated.length : 0, heroLevel: this.hero.level, earlyCalls: this.earlyCalls, seconds: this.clock, date: new Date().toISOString() }
     this.options.sfx.play(won ? 'victory' : 'defeat')
     if (won) this.closeUp()
     if (this.options.coop) {
-      this.coopResult = { ...result, score: scoreFor(result), party: this.heroes.map(hero => ({ id: hero.kit.id, level: hero.level })) }
+      this.coopResult = { ...result, score: this.level.gauntlet ? gauntletScore(result.legends, result.jars) : scoreFor(result), party: this.heroes.map(hero => ({ id: hero.kit.id, level: hero.level })) }
       this.coopFinishAt = Math.ceil(((this.net?.tick ?? 0) + 1) / HASH_EVERY) * HASH_EVERY
       return // The result is released only after the final matching checkpoint; the Chogs dance then (update).
     }
     this.celebrate(won)
-    this.time.delayedCall(reducedMotion() || !won ? 0 : 1200, () => this.options.onEnd({ ...result, score: mode === 'endless' ? endlessScore(this.rewarded.size, this.kills) : scoreFor(result) }))
+    this.time.delayedCall(reducedMotion() || !won ? 0 : 1200, () => this.options.onEnd({ ...result, score: mode === 'endless' ? endlessScore(this.rewarded.size, this.kills) : this.level.gauntlet ? gauntletScore(result.legends, result.jars) : scoreFor(result) }))
   }
   // Every Chog dances its victory dance, or faints. Rig clips and times are checkpoint state, so co-op starts this only after the final checkpoint matched.
   private celebrate(won: boolean) {

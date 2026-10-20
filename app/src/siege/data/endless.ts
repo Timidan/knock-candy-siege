@@ -28,7 +28,7 @@ export function endlessWave(number: number, seed = 0): Wave {
 export const endlessScore = (waves: number, kills: number) => waves * 400 + kills * 100
 
 // The daily challenge: the UTC date seeds the run, picks the level and sets the night's theme, exactly as Knock.sol's nightTheme.
-export const DAILY_LEVEL = 8 // a pseudo level id: the level select's daily card
+export const DAILY_LEVEL = 9 // a pseudo level id: the level select's daily card (8 is the Legend Gauntlet)
 export const DAY_MS = 86400000
 export const DAILY_FIRST_DAY = Math.floor(Date.UTC(2026, 9, 12) / DAY_MS)
 export const NIGHTS = [
