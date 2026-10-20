@@ -243,7 +243,7 @@
 .siege-wallet p { margin: 0; font-size: 17px; }
 .siege-wallet-account strong { display: block; }
 .siege-wallet-account span { overflow-wrap: anywhere; }
-.siege-wallet small, .siege-wallet [role], .siege-wallet-sandbox { flex-basis: 100%; }
+.siege-wallet small, .siege-wallet [role] { flex-basis: 100%; }
 .siege-wallet .siege-text-button { margin: 0; color: inherit; }
 /* Wallet app links keep the sticker's ink (the shop's link colour is pale on paper), and their logos keep their own proportions (Trust's shield is taller than wide). */
 .siege-wallet a.sticker { color: var(--ink); }
@@ -261,8 +261,7 @@
   :is(.siege-modal--hero, .siege-modal--shop, .siege-modal--pick) .siege-wallet { margin: 4px 0 8px; padding: 3px 10px; gap: 2px 12px; }
   :is(.siege-modal--hero, .siege-modal--shop, .siege-modal--pick) .siege-wallet .sticker { min-height: 34px; padding: 6px 10px; font-size: 13px; }
   :is(.siege-modal--hero, .siege-modal--shop, .siege-modal--pick) .siege-wallet p { font-size: 15px; }
-  .siege-modal--hero .siege-wallet small, .siege-modal--hero .siege-wallet-sandbox br, .siege-modal--hero .siege-wallet-sandbox span { display: none; }
-  .siege-modal--hero .siege-wallet-sandbox { flex-basis: auto; }
+  .siege-modal--hero .siege-wallet small { display: none; }
   :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet-account strong { display: inline; }
   :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet-account span { display: inline-block; max-width: 11ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
   :is(.siege-modal--hero, .siege-modal--shop) .siege-wallet .siege-text-button { min-height: 34px; font-size: 15px; }

@@ -33,6 +33,5 @@ export function WalletChoice({ wallet, disabled = false }: { wallet: SiegeWallet
       </div>}
     </>}
     {(wallet.error || wallet.connectedError) && <p role="status">{wallet.error || wallet.connectedError}</p>}
-    {wallet.sandbox && <p className="siege-wallet-sandbox"><strong>Sandbox: a demo copy of Monad, nothing is real</strong><br /><span>The shop and starter grant still use Robinhood testnet.</span></p>}
   </section>
 }

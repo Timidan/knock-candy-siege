@@ -594,7 +594,6 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   return <div ref={shell} className={`siege-shell ${run ? 'siege-shell--playing' : ''}`}>
     <div className="siege-stage" ref={host} />
     {run?.coop && !menu && partyStatus && <p className="siege-party-status" role="status">{partyStatus}</p>}
-    {run && !menu && activeWallet.sandbox && <aside style={{ position: 'absolute', top: 4, left: '50%', transform: 'translateX(-50%)', maxWidth: '36%', padding: '4px 10px', borderRadius: 6, background: '#241632e6', color: '#fff1b3', fontSize: 13, textAlign: 'center', pointerEvents: 'none' }}>Sandbox: a demo copy of Monad, nothing is real</aside>}
     <div className="siege-safe-area" aria-hidden="true" />
     {!run && <div className="siege-night" aria-hidden="true" style={{ backgroundImage: 'linear-gradient(#24163233, #24163277), url(/siege/levels/level1.webp)', backgroundSize: 'cover', backgroundPosition: 'center' }}></div>}
     {onBack && <div className="siege-back"><Sticker onClick={onBack}>← Knock</Sticker></div>}
@@ -694,7 +693,6 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <h2>Your $CHOG perks</h2>
         {holderLines(streetRead.bonuses).length ? <ul>{holderLines(streetRead.bonuses).map(row => <li key={row.source}><strong>{row.source}</strong><span>{row.bonus}</span></li>)}</ul> : <p>No holder perks this time. Every Chog can still defend the porch.</p>}
         {pendingRun.current?.home && <p><strong>Home advantage</strong> · Your own Chog starts one level higher and wears a gold frame.</p>}
-        {activeWallet.sandbox && <p><strong>Sandbox: a demo copy of Monad, nothing is real</strong></p>}
         <Sticker tone="orange" sound="ui-confirm" onClick={() => { if (pendingRun.current) launchRun(pendingRun.current) }}>Defend the porch →</Sticker>
         <button className="siege-text-button" onClick={() => { playUi('ui-back'); escape() }}>← Back</button>
       </section>}
