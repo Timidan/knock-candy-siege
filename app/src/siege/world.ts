@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import type { EnemyKind, Modifier, Point, Status, Targeting, TowerKind, TrapKind, Specialisation } from './data/config'
+import { hypot, sine } from './data/config'
 import type { BossState } from './Boss'
 
 export type Statuses = Record<Status, number>
@@ -31,7 +32,7 @@ export class Route {
   constructor(knots: [number, number][], entrance = false) {
     if (entrance) {
       const [x, y] = knots[0], next = knots.find(p => p[0] !== x || p[1] !== y)
-      if (next) { const length = Math.hypot(next[0] - x, next[1] - y); knots = [[x - (next[0] - x) / length * 450, y - (next[1] - y) / length * 450], ...knots] }
+      if (next) { const length = hypot(next[0] - x, next[1] - y); knots = [[x - (next[0] - x) / length * 450, y - (next[1] - y) / length * 450], ...knots] }
     }
     const curve = new Phaser.Curves.Spline(knots.map(([x, y]) => new Phaser.Math.Vector2(x, y)))
     this.length = curve.getLength()
@@ -39,9 +40,9 @@ export class Route {
   }
   // Edge swarms need no road: a straight line to the porch, optionally weaving sideways, resampled to equal distances like the spline routes.
   static wild(from: Point, to: Point, drift = 0, phase = 0): Route {
-    const dx = to.x - from.x, dy = to.y - from.y, span = Math.hypot(dx, dy) || 1, raw: Phaser.Math.Vector2[] = []
-    for (let i = 0; i <= 48; i++) { const t = i / 48, side = Math.sin(t * Math.PI * 3 + phase) * Math.sin(t * Math.PI) * drift; raw.push(new Phaser.Math.Vector2(from.x + dx * t - dy / span * side, from.y + dy * t + dx / span * side)) }
-    let length = 0; const lengths = raw.map((p, i) => length += i ? Math.hypot(p.x - raw[i - 1].x, p.y - raw[i - 1].y) : 0)
+    const dx = to.x - from.x, dy = to.y - from.y, span = hypot(dx, dy) || 1, raw: Phaser.Math.Vector2[] = []
+    for (let i = 0; i <= 48; i++) { const t = i / 48, side = sine(t * Math.PI * 3 + phase) * sine(t * Math.PI) * drift; raw.push(new Phaser.Math.Vector2(from.x + dx * t - dy / span * side, from.y + dy * t + dx / span * side)) }
+    let length = 0; const lengths = raw.map((p, i) => length += i ? hypot(p.x - raw[i - 1].x, p.y - raw[i - 1].y) : 0)
     const route = Object.create(Route.prototype) as Route, count = Math.max(2, Math.ceil(length / 10)); route.length = length; route.points = []
     for (let k = 0, i = 1; k <= count; k++) {
       const at = length * k / count; while (i < raw.length - 1 && lengths[i] < at) i++
@@ -57,11 +58,11 @@ export class Route {
   }
   nearest(x: number, y: number): { x: number; y: number; distance: number; gap: number } {
     let best = 0, gap = Infinity
-    for (let i = 0; i < this.points.length; i++) { const p = this.points[i], d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < gap) { gap = d; best = i } }
+    for (let i = 0; i < this.points.length; i++) { const p = this.points[i], d = (p.x - x) * (p.x - x) + (p.y - y) * (p.y - y); if (d < gap) { gap = d; best = i } }
     return { x: this.points[best].x, y: this.points[best].y, distance: best / (this.points.length - 1) * this.length, gap: Math.sqrt(gap) }
   }
 }
-export const distanceSq = (a: Point, b: Point) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2
+export const distanceSq = (a: Point, b: Point) => (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y)
 
 // Witching Hour swarms enter only inside the 90° wedge facing `away` from the porch p: directions d with d·away >= |d·away⊥| (any length of away).
 // Writes the part of edge k of the box [x0, x1] × [y0, y1] inside it (0 top, 1 right, 2 bottom, 3 left, each walked clockwise):

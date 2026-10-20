@@ -3,7 +3,7 @@ import type { SiegeScene } from '../SiegeScene'
 import type { Enemy, Tower } from '../world'
 import { distanceSq, reaction } from '../world'
 import type { Point, Status, TrapKind } from '../data/config'
-import { ENEMIES, TRAPS } from '../data/config'
+import { ENEMIES, TRAPS, hypot } from '../data/config'
 import { resolveKit, WEAPONS, SPECIAL_COOLDOWNS, ULTIMATE_CHARGE_RATE } from '../data/kits'
 import type { Kit } from '../data/kits'
 import { talentChoices } from '../data/talents'
@@ -113,7 +113,7 @@ export class Hero {
   onKill(enemy: Enemy) {
     this.addCharge(2)
     this.xp++
-    if (this.kit.passive === 'sweet-tooth' && distanceSq(this, enemy) < 360 ** 2) this.heal(this.has('passive') ? 16 : 8)
+    if (this.kit.passive === 'sweet-tooth' && distanceSq(this, enemy) < 360 * 360) this.heal(this.has('passive') ? 16 : 8)
     if (this.kit.trinket === 'pump') { this.streak = this.scene.clock - this.lastKill < 5 ? Math.min(5, this.streak + 1) : 1; this.lastKill = this.scene.clock }
     if (this.xp >= 8 + this.level * 5 && this.level < 5) {
       this.xp = 0; this.level++; this.maxHp += 30; if (this.alive) this.hp = this.maxHp
@@ -124,15 +124,15 @@ export class Hero {
   towerBuff(tower: Tower) {
     // Deal With the Devil doubles every tower's damage too.
     const devil = this.devil > 0 ? 1 : 0
-    if (!this.alive || distanceSq(this, tower) > 320 ** 2) return 1 + devil
+    if (!this.alive || distanceSq(this, tower) > 320 * 320) return 1 + devil
     return 1 + devil + (this.kit.headgear === 'royal' ? this.has('headgear') ? .25 : .15 : 0) + (this.kit.passive === 'cheerful' ? this.has('passive') ? .1 : .05 : 0)
   }
-  towerSpeed(tower: Tower) { return this.alive && this.pep > 0 && distanceSq(this, tower) < 440 ** 2 ? this.has('special') ? 1.5 : 1.3 : 1 }
+  towerSpeed(tower: Tower) { return this.alive && this.pep > 0 && distanceSq(this, tower) < 440 * 440 ? this.has('special') ? 1.5 : 1.3 : 1 }
   enemySpeed(enemy: Enemy) {
-    if (!this.alive || distanceSq(this, enemy) > 190 ** 2) return 1
+    if (!this.alive || distanceSq(this, enemy) > 190 * 190) return 1
     return (this.kit.passive === 'pity' ? this.has('passive') ? .8 : .9 : 1) * (this.kit.trinket === 'dump' ? .85 : 1)
   }
-  enemyDamage(enemy: Enemy) { return this.alive && this.kit.headgear === 'chill' && distanceSq(this, enemy) < 190 ** 2 ? this.has('headgear') ? .65 : .8 : 1 }
+  enemyDamage(enemy: Enemy) { return this.alive && this.kit.headgear === 'chill' && distanceSq(this, enemy) < 190 * 190 ? this.has('headgear') ? .65 : .8 : 1 }
   heal(amount: number) { if (this.alive) { const value = Math.min(amount, this.maxHp - this.hp); this.hp += value; if (value >= 3) this.scene.number(Math.ceil(value), this.x, this.y - 130, 0x9afaad) } }
   hurt(amount: number, from?: Point) {
     if (!this.alive) return
@@ -148,7 +148,7 @@ export class Hero {
     if (amount > 1) {
       this.hit = .16
       this.rig.hurt(); s.sfx('hero-hurt', this)
-      const dx = from ? this.x - from.x : -this.rig.facing, dy = from ? this.y - from.y : 0, length = Math.hypot(dx, dy) || 1
+      const dx = from ? this.x - from.x : -this.rig.facing, dy = from ? this.y - from.y : 0, length = hypot(dx, dy) || 1
       const weight = 6 + Math.min(20, amount * .45)
       Object.assign(this.reaction, { x: dx / length * weight, y: dy / length * weight, atX: this.x, atY: this.y, life: .28, stop: reducedMotion() ? 0 : amount >= 35 ? .04 : 0, flash: .1 })
       if (this.kit.trinket === 'smoke-puff' && this.smoke <= 0) {
@@ -178,7 +178,7 @@ export class Hero {
     if (this.rig.dancing) { this.rig.update(dt, 1, !s.presentationFrozen); return }
     let rate = 1
     if (!this.rig.busy) {
-      const dx = this.target.x - this.x, dy = this.target.y - this.y, distance = Math.hypot(dx, dy)
+      const dx = this.target.x - this.x, dy = this.target.y - this.y, distance = hypot(dx, dy)
       if (distance > 2 && !this.fear) {
         const speed = 110 * (this.kit.headgear === 'bareheaded' ? this.has('headgear') ? 1.2 : 1.05 : 1) * (this.slow ? .65 : 1)
         const move = Math.min(speed * dt, distance)
@@ -201,7 +201,7 @@ export class Hero {
       }
     }
     if (this.kit.headgear === 'oddity' && this.oddity <= 0 && this.near(350).length) { this.oddity = this.has('headgear') ? 4 : 8; this.oddityEffect() }
-    if (this.pep > 0 && Math.floor(s.clock * 2) !== Math.floor((s.clock - dt) * 2)) for (const t of s.towers) if (t && distanceSq(this, t) < 440 ** 2) this.fx('special', 'aura/0', { x: t.x, y: t.y - 95 }, .55, .8)
+    if (this.pep > 0 && Math.floor(s.clock * 2) !== Math.floor((s.clock - dt) * 2)) for (const t of s.towers) if (t && distanceSq(this, t) < 440 * 440) this.fx('special', 'aura/0', { x: t.x, y: t.y - 95 }, .55, .8)
     if (this.kit.trinket === 'heart' || !this.near(150).length) this.hp = Math.min(this.maxHp, this.hp + dt * (this.kit.trinket === 'heart' ? 6 : 3))
     this.rig.update(dt, this.rig.clip === 'walk' ? rate : this.rig.clip.startsWith('attack-') ? this.attackRate() : 1, !s.presentationFrozen && this.reaction.stop <= 0)
   }
@@ -210,7 +210,7 @@ export class Hero {
     const interval = WEAPONS[this.kit.weapon].interval / (1 + this.streak * .08) / (this.waveBuff === 'haste' ? 1.2 : 1) / (this.kit.weapon === 'slingshot' && this.has('weapon') ? 1.25 : 1)
     return Math.max(1, duration / interval)
   }
-  near(radius: number, point: Point = this) { return this.scene.enemies.filter(e => e.active && !e.returning && e.status.charm <= 0 && distanceSq(e, point) <= radius ** 2).sort((a, b) => b.distance - a.distance) }
+  near(radius: number, point: Point = this) { return this.scene.enemies.filter(e => e.active && !e.returning && e.status.charm <= 0 && distanceSq(e, point) <= radius * radius).sort((a, b) => b.distance - a.distance) }
   hitEnemy(e: Enemy, damage: number, magic = false, basic = false) {
     const s = this.scene
     let critical = false
@@ -287,7 +287,7 @@ export class Hero {
     }
   }
   lineTargets(target: Point, range: number, width: number) {
-    const dx = target.x - this.x, dy = target.y - this.y, length = Math.hypot(dx, dy) || 1
+    const dx = target.x - this.x, dy = target.y - this.y, length = hypot(dx, dy) || 1
     return this.near(range).filter(e => { const x = e.x - this.x, y = e.y - this.y; return e.visible && (x * dx + y * dy) / length >= 0 && Math.abs(x * dy - y * dx) / length <= width })
   }
   push(e: Enemy, amount: number) { if (!e.mods.includes('slippery')) { e.distance = Math.max(0, e.distance - amount); this.scene.routeFor(e).at(e.distance, e) } }
@@ -356,7 +356,7 @@ export class Hero {
       for (const e of enemies) { this.hitEnemy(e, 90, true); this.push(e, 340); s.status(e, talent ? 'freeze' : 'slow', talent ? 2 : 4) }
     } else if (family === 'twister') {
       this.fx('ult', 'twister/0', at, 2, 2.7)
-      for (const e of enemies) { if (distanceSq(e, at) < 650 ** 2) { e.distance = s.routeFor(e).nearest(at.x, at.y).distance; s.routeFor(e).at(e.distance, e); this.hitEnemy(e, 110, true); s.status(e, 'ground', 7); s.status(e, 'stun', talent ? 3 : 1.5) } }
+      for (const e of enemies) { if (distanceSq(e, at) < 650 * 650) { e.distance = s.routeFor(e).nearest(at.x, at.y).distance; s.routeFor(e).at(e.distance, e); this.hitEnemy(e, 110, true); s.status(e, 'ground', 7); s.status(e, 'stun', talent ? 3 : 1.5) } }
     } else if (family === 'vanish') {
       this.fx('ult', 'smoke/0', this, 1.5, 3); this.untargetable = 3
       for (const e of enemies) { e.attack = 3; s.status(e, 'confuse', 2) }
@@ -408,7 +408,7 @@ export class Hero {
         else if (z.kind === 'peel') { this.push(e, 20); this.scene.status(e, 'stun', .3); z.life = 0 }
         else { this.scene.status(e, 'slow', .7); this.hitEnemy(e, 5, true) }
       }
-      if (z.kind === 'rainbow' && this.has('passive')) for (const t of this.scene.towers) if (t) for (const g of t.guards) if (g.hp > 0 && distanceSq(g, z) < 110 ** 2) { g.hp = Math.min(g.maxHp, g.hp + 6); this.scene.effect('fx/heal/0', g.x, g.y - 35, .5, .6) }
+      if (z.kind === 'rainbow' && this.has('passive')) for (const t of this.scene.towers) if (t) for (const g of t.guards) if (g.hp > 0 && distanceSq(g, z) < 110 * 110) { g.hp = Math.min(g.maxHp, g.hp + 6); this.scene.effect('fx/heal/0', g.x, g.y - 35, .5, .6) }
     }
   }
   private oddityEffect() {

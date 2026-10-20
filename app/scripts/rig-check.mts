@@ -56,7 +56,41 @@ assert.equal(scoreFor({ kills: 45, jars: 20, stars: 3, earlyCalls: 2, seconds: 1
 assert.equal(scoreFor({ kills: 4, jars: 0, stars: 0, earlyCalls: 0, seconds: 20, won: false }), 400)
 assert.ok(canDance('floss', 'giggle', [1], dances.dances))
 assert.ok(!canDance('floss', 'giggle', [], dances.dances))
-console.log(`PASS: ${checked} sampled poses, maximum error ${max.toFixed(8)}; 12 Phaser eases; ${chogs.length} kits and Home bonuses; ${Object.keys(dances.dances).length} dance clips; scoring and owned-dance gate.`)
+// Co-op peers hash the simulation, so its code may use only arithmetic that rounds the same in every engine (data/config.ts).
+// Whole files are simulation; for the two mixed files, the listed functions are. A presentation-only line may say so.
+const banned = /\bMath\.(?:sin|cos|tan|asin|acos|atan2?|sinh|cosh|tanh|asinh|acosh|atanh|exp|expm1|log|log1p|log2|log10|pow|cbrt|hypot)\b|\*\*/
+const simulation: Record<string, string[] | null> = {
+  'world.ts': null, 'Consumables.ts': null, 'SpecialTowers.ts': null, 'hero/Hero.ts': null, 'hero/Legend.ts': null, 'hero/pose.ts': null,
+  'data/config.ts': null, 'data/endless.ts': null, 'data/traits.ts': null, 'data/kits.ts': null, 'data/talents.ts': null, 'data/level1.ts': null, 'data/bosses.ts': null,
+  'data/shop.ts': null, 'data/score.ts': null,
+  'SiegeScene.ts': ['create', 'createWorld', 'makePools', 'waveAt', 'healthScale', 'killCandyScale', 'routeFor', 'roadFor', 'nearestHero', 'networkStep', 'applyCommand',
+    'specialise', 'towerAttack', 'updateWorld', 'useProp', 'swarmAway', 'wildRoute', 'spawn', 'callWave', 'tick', 'summon', 'wall', 'updateAllies', 'updateHazards',
+    'updateEnemy', 'clash', 'updateTowers', 'towerBuff', 'target', 'fire', 'updateProjectiles', 'damage', 'removeEnemy', 'isLit', 'updateLights', 'light', 'status',
+    'income', 'earn', 'purse', 'spend', 'owns', 'build', 'upgrade', 'sell', 'guardsFor', 'cast', 'placeTrap', 'updateTraps', 'entrancePath', 'nearestPath',
+    'moveHero', 'chooseEmote', 'signature', 'finish', 'combo', 'after'],
+  'Boss.ts': ['load', 'preloadBoss', 'bossReady', 'setup', 'spawnBoss', 'guardsNear', 'startIntro', 'enrage', 'updateBoss', 'legendTick', 'legendMove', 'pumpkinTick',
+    'splitPumpkin', 'bossAbsorbs', 'bossRevives', 'bossDeath', 'releaseBoss'],
+}
+// The text of a method or function: its signature, then its body's braces.
+function body(source: string, name: string) {
+  const start = source.search(new RegExp(`^[ \\t]*(?:export[ \\t]+)?(?:private[ \\t]+)?(?:async[ \\t]+)?(?:function[ \\t]+)?${name}[ \\t]*\\(`, 'm'))
+  assert.ok(start >= 0, `simulation function ${name} not found`)
+  let i = source.indexOf('(', start), depth = 0
+  do { if (source[i] === '(') depth++; else if (source[i] === ')') depth--; i++ } while (depth)
+  i = source.indexOf('{', i)
+  do { if (source[i] === '{') depth++; else if (source[i] === '}') depth--; i++ } while (depth)
+  return source.slice(start, i)
+}
+let simLines = 0
+const found: string[] = []
+for (const [file, names] of Object.entries(simulation)) {
+  const source = readFileSync(new URL(`../src/siege/${file}`, import.meta.url), 'utf8')
+  const lines = (names ? names.map(name => body(source, name)).join('\n') : source).split('\n').filter(line => !line.includes('// presentation'))
+  for (const line of lines) if (banned.test(line.replace(/\/\/.*$/, ''))) found.push(`${file}: ${line.trim()}`)
+  simLines += lines.length
+}
+assert.deepEqual(found, [], 'Engine-dependent math in simulation code')
+console.log(`PASS: ${checked} sampled poses, maximum error ${max.toFixed(8)}; 12 Phaser eases; ${chogs.length} kits and Home bonuses; ${Object.keys(dances.dances).length} dance clips; scoring and owned-dance gate; ${simLines} simulation lines use engine-independent math.`)
 console.log(`Largest hero atlas set: Chog #${largestHero.id}, ${(largestHero.bytes / 1048576).toFixed(2)} MB RGBA (before shared textures and HUD).`)
 
 // The world shares one reproducible gameplay stream, independent of visual effects.

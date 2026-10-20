@@ -132,6 +132,38 @@ export function towerStats(t: { kind: TowerKind; level: number; rank: number; bo
   const base = TOWERS[t.kind].levels[t.level - 1], boost = t.boost ? BOOST : 1
   return { ...base, damage: base.damage * (1 + t.rank * .3) * boost, range: (base.range + t.rank * 15) * boost }
 }
+// Co-op peers hash what the simulation computes, so simulation code uses only arithmetic that rounds the same in every
+// JavaScript engine: + − × ÷, Math.sqrt, floor, round, abs, min and max. Math.sin, cos, atan2, exp, log, pow and `**` give
+// engine-specific last bits (JavaScriptCore, SpiderMonkey and V8 versions differ), and so does SpiderMonkey's Math.hypot.
+// rig-check.mts enforces this. sine and cosine: reduced to [−π/2, π/2], then their Taylor series (error under 1e-16).
+export function sine(x: number) {
+  const k = Math.round(x / Math.PI), r = x - k * Math.PI, r2 = r * r
+  let term = r, sum = r
+  for (let n = 2; n <= 20; n += 2) { term *= -r2 / (n * (n + 1)); sum += term }
+  return k % 2 ? -sum : sum
+}
+export function cosine(x: number) {
+  const k = Math.round(x / Math.PI), r = x - k * Math.PI, r2 = r * r
+  let term = 1, sum = 1
+  for (let n = 1; n <= 19; n += 2) { term *= -r2 / (n * (n + 1)); sum += term }
+  return k % 2 ? -sum : sum
+}
+// V8's and JavaScriptCore's Math.hypot for two numbers, bit for bit (their Kahan sum has nothing to compensate with two terms).
+export function hypot(x: number, y: number) {
+  const a = Math.abs(x), b = Math.abs(y), max = Math.max(a, b)
+  if (max === 0 || max === Infinity) return max
+  const p = a / max, q = b / max
+  return Math.sqrt(p * p + q * q) * max
+}
+// 2 to the power x: e to the fraction by its series, then exact doublings or halvings.
+export function power2(x: number) {
+  let n = Math.floor(x), term = 1, sum = 1
+  const f = (x - n) * Math.LN2
+  for (let k = 1; k <= 20; k++) { term *= f / k; sum += term }
+  for (; n > 0; n--) sum *= 2
+  for (; n < 0; n++) sum /= 2
+  return sum
+}
 // One gameplay stream per run; visual variation must never consume it.
 export function seededRandom(seed: number) {
   let state = seed >>> 0

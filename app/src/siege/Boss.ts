@@ -162,7 +162,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
   if (id === 561) { // Wildfire: a ring of flame scorches guards and the hero
     fx('special/0', e.x, e.y - 20, 1.2, 3)
     guardsNear(s, e.x, e.y, 290, g => { g.hp -= 70; s.effect('status/burn/0', g.x, g.y - 40, 1.6, 1.6) })
-    for (const hero of s.heroes) if (hero.alive && distanceSq(e, hero) < 290 ** 2) { hero.hurt(22, e); s.effect('status/burn/0', hero.x, hero.y - 70, 1.6, 2) }
+    for (const hero of s.heroes) if (hero.alive && distanceSq(e, hero) < 290 * 290) { hero.hurt(22, e); s.effect('status/burn/0', hero.x, hero.y - 70, 1.6, 2) }
     s.hud.toast('Wildfire! A ring of flame scorches your guards.')
   } else if (id === 900) { b.dash = .8; b.dashSpeed = 480; fx('ultimate/0', e.x, e.y - 40, .9, 1.6); s.hud.toast('Hell Ride! The Skull charges, flattening guards.') } // Hell Ride
   else if (id === 942) { s.missTime = 4; fx('ultimate/0', e.x, e.y - 100, 1.4, 3); s.warp(); s.hud.toast('The Scream! Your towers will miss half their shots.') }
@@ -185,7 +185,7 @@ function legendMove(s: SiegeScene, e: Enemy, b: BossState) {
     s.effect(s.textures.exists(b.atlas) ? art(b, 'ultimate/0') : 'fx/levelup/0', 960, 540, 1.1, 4.6); s.shake(.008); s.hud.toast('Final Panel! Time stops for your towers.')
   } else if (id === 1667) { // Sanctuary
     let shielded = 0
-    for (const o of s.enemies) if (o.active && !o.returning && o !== e && distanceSq(o, e) < 300 ** 2) { o.shield = 5; if (shielded++ < 8) s.effect('fx/levelup/0', o.x, o.y - 70, .8, 1.2) }
+    for (const o of s.enemies) if (o.active && !o.returning && o !== e && distanceSq(o, e) < 300 * 300) { o.shield = 5; if (shielded++ < 8) s.effect('fx/levelup/0', o.x, o.y - 70, .8, 1.2) }
     fx('special/0', e.x, e.y - 130, 1.2, 3.2); if (shielded) s.hud.toast('Sanctuary! Nearby enemies are shielded.')
   } else if (id === 1798) { b.blocks = 5; fx('special/0', e.x, e.y - 90, 1.4, 2.2); s.hud.toast('Testudo! The next five hits are blocked.') } // Testudo
   else if (id === 1881) { // Golden Touch

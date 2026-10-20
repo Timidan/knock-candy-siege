@@ -1,6 +1,7 @@
 import type { Hero } from './Hero'
 import type { Enemy } from '../world'
 import { distanceSq } from '../world'
+import { hypot } from '../data/config'
 import type { Point } from '../data/config'
 import { WEAPONS } from '../data/kits'
 import { haptic } from '../haptics'
@@ -20,7 +21,7 @@ export function legendAttack(h: Hero, target: Enemy) {
     for (const e of h.near(range * (talent ? 1.25 : 1)).filter(e => e.visible)) { h.hitEnemy(e, damage, false, true); fx(h, 'wpn/hit/0', e, .3, .8); if (id === 900) h.dot(e, 'burn', 2) }
   } else if (id === 942 || id === 1798) { // Echo and Spear pierce a whole line
     const end = { x: h.x + (target.x - h.x) * 1.5, y: h.y + (target.y - h.y) * 1.5 }, flight = s.effect(frame(h, 'wpn/proj'), h.x, h.y - 45, .55, id === 942 ? 1.8 : 1.4, 'travel', end.x, end.y - 45)
-    if (flight) flight.angle = Math.atan2(target.y - h.y, target.x - h.x)
+    if (flight) flight.angle = Math.atan2(target.y - h.y, target.x - h.x) // presentation: the effect's angle
     for (const e of h.lineTargets(target, range, id === 942 ? 80 : 55)) h.hitEnemy(e, damage, id === 942, true)
   } else if (id === 1002) shoot(target, 'wpn/proj', false, t => { s.status(t, 'slow', talent ? 4 : 2.5); t.slowPower = .45 }, .45, 110) // Brain Toss
   else if (id === 1481) { s.spriteBeam(frame(h, 'wpn/proj'), h, target, .25, 22); h.hitEnemy(target, damage, false, true); if (target.active) h.push(target, talent ? 140 : 90) } // Tongue Lash
@@ -44,14 +45,14 @@ export function legendSpecial(h: Hero, enemies: Enemy[], talent: boolean) {
   } else if (id === 1481) { fx(h, 'special/0', h, 1.4, 2); for (const e of h.near(330)) { s.status(e, 'slow', talent ? 7 : 5); e.slowPower = .2 } } // Feels Bad: a crawl
   else if (id === 1514) { // Speed Lines: blink to a spot, slashing everything on the way
     const to = clamp(target ? { x: target.x + (h.x < target.x ? -70 : 70), y: target.y + 40 } : { x: h.x + h.rig.facing * 260, y: h.y })
-    const length = Math.hypot(to.x - h.x, to.y - h.y)
+    const length = hypot(to.x - h.x, to.y - h.y)
     fx(h, 'special/0', { x: (h.x + to.x) / 2, y: (h.y + to.y) / 2 }, .8, 1.8)
     for (const e of h.lineTargets(to, length + 40, 90)) h.hitEnemy(e, 90, true)
     h.x = to.x; h.y = to.y; h.target = { x: h.x, y: h.y }
   } else if (id === 1667) { // Halo: heal the hero and every guard nearby
     fx(h, 'special/0', h, 1.2, 2); h.heal(h.maxHp * (talent ? .6 : .4))
-    for (const tower of s.towers) if (tower) for (const g of tower.guards) if (distanceSq(g, h) < 360 ** 2) { g.hp = Math.min(g.maxHp, g.hp + 70); s.effect('fx/heal/0', g.x, g.y - 35, .6, .7) }
-    for (const a of s.allies) if (distanceSq(a, h) < 360 ** 2) a.hp = Math.min(a.maxHp, a.hp + 70)
+    for (const tower of s.towers) if (tower) for (const g of tower.guards) if (distanceSq(g, h) < 360 * 360) { g.hp = Math.min(g.maxHp, g.hp + 70); s.effect('fx/heal/0', g.x, g.y - 35, .6, .7) }
+    for (const a of s.allies) if (distanceSq(a, h) < 360 * 360) a.hp = Math.min(a.maxHp, a.hp + 70)
   } else if (id === 1798) { const spot = s.nearestPath(target?.x ?? h.x, target?.y ?? h.y); s.wall(spot.x, spot.y, talent ? 6 : 4, frame(h, 'special/3')) } // Shield Wall
   else if (id === 1881) { // Golden Touch: frozen for 3 seconds, then triple candy
     const victim = enemies.slice().sort((a, b) => b.hp - a.hp)[0]
@@ -85,8 +86,8 @@ export function legendUltimate(h: Hero, enemies: Enemy[], talent: boolean) {
     s.after(1.1, () => { for (const e of s.enemies) if (e.active && !e.returning) h.hitEnemy(e, 260 * power, true); s.shake(.012) }, { id, owner: s.heroes.indexOf(h), power })
   } else if (id === 1667) enemies.slice(0, 12).forEach((e, i) => s.after(i * .08, () => { if (!e.active) return; fx(h, 'ultimate/0', e, .9, 1.6); h.hitEnemy(e, 120 * power, true) }, { id, owner: s.heroes.indexOf(h), target: s.enemies.indexOf(e), power })) // Judgement
   else if (id === 1798) { // Phalanx: a volley of spears on the busiest stretch of road
-    const crowd = enemies.reduce((best, e) => { const n = enemies.filter(o => distanceSq(o, e) < 220 ** 2).length; return n > best.n ? { e, n } : best }, { e: lead, n: -1 }).e
-    const near = crowd ? enemies.filter(o => distanceSq(o, crowd) < 260 ** 2) : []
+    const crowd = enemies.reduce((best, e) => { const n = enemies.filter(o => distanceSq(o, e) < 220 * 220).length; return n > best.n ? { e, n } : best }, { e: lead, n: -1 }).e
+    const near = crowd ? enemies.filter(o => distanceSq(o, crowd) < 260 * 260) : []
     for (let i = 0; i < 12 && near.length; i++) s.fire(near[i % near.length].x + (s.random() - .5) * 200, -60, near[i % near.length], 70 * power, 'hero', 90, { owner: s.heroes.indexOf(h), frame: frame(h, 'wpn/proj'), duration: .5 + i * .05, arc: 0, onHit: t => h.hitEnemy(t, 70 * power, false, true) })
   } else if (id === 1881) { // Midas Rain: gold everywhere, and candy for every hit
     fx(h, 'ultimate/0', { x: 960, y: 480 }, 1.8, 3.6)

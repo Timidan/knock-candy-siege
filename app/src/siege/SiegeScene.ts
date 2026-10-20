@@ -11,7 +11,7 @@ import { ShapePool, circle, plate, curbedMap, YOU, PARTNER, hex } from './render
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
-import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, COOP_STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES } from './data/config'
+import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, COOP_STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES, hypot, sine } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
 import { LEVELS, TUTORIAL, TIPS } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
@@ -311,7 +311,7 @@ export class SiegeScene extends Phaser.Scene {
     if (sw) {
       this.detour = new Route(sw.points, true)
       const base = this.options.assets.geometry.paths[sw.path]
-      let i = 0; while (i + 1 < Math.min(base.length, sw.points.length) && Math.hypot(base[i + 1][0] - sw.points[i + 1][0], base[i + 1][1] - sw.points[i + 1][1]) < 3) i++
+      let i = 0; while (i + 1 < Math.min(base.length, sw.points.length) && hypot(base[i + 1][0] - sw.points[i + 1][0], base[i + 1][1] - sw.points[i + 1][1]) < 3) i++
       this.fork = this.routes[sw.path].nearest(...base[i]).distance
     }
     this.drawMap()
@@ -587,7 +587,7 @@ export class SiegeScene extends Phaser.Scene {
     if (special !== undefined) return special
     if (!spec) return this.fire(t.x, t.y - 125, target, damage, t.kind, c.splash)
     if (spec === 'moon') {
-      const dx = target.x - t.x, dy = target.y - t.y, length = Math.hypot(dx, dy) || 1
+      const dx = target.x - t.x, dy = target.y - t.y, length = hypot(dx, dy) || 1
       const end = { x: t.x + dx / length * c.range, y: t.y + dy / length * c.range }
       this.spriteBeam('fx/moonbeam', t, end, .35, 30); this.effect('fx/moonbeam-end/0', end.x, end.y - 50, .35)
       for (const e of this.enemies) if (e.active && e.visible && !e.returning && !e.status.charm) {
@@ -609,7 +609,7 @@ export class SiegeScene extends Phaser.Scene {
         if (spec === 'tornado' && e.active && !e.mods.includes('slippery')) { const centre = this.routeFor(e).nearest(vortex.x, vortex.y).distance; e.distance = Math.max(0, e.distance + Phaser.Math.Clamp(centre - e.distance, -70 - rank * 15, 70 + rank * 15)); this.routeFor(e).at(e.distance, e) }
         if (spec === 'wisp') {
           let from: Point = e
-          const targets = this.enemies.filter(other => other.active && other !== e && other.visible && !other.returning && !other.status.charm && distanceSq(e, other) < 210 ** 2).slice(0, 3)
+          const targets = this.enemies.filter(other => other.active && other !== e && other.visible && !other.returning && !other.status.charm && distanceSq(e, other) < 210 * 210).slice(0, 3)
           for (const other of targets) { this.spriteBeam('fx/wisp-chain', from, other, .35, 18); this.damage(other, damage * .6, 'magic'); from = other }
         }
       },
@@ -1007,9 +1007,9 @@ export class SiegeScene extends Phaser.Scene {
       if (h.life <= 0) { this.hazards.splice(i, 1); continue }
       if (h.pulse > 0) continue
       h.pulse = .5; this.effect('status/burn/0', h.x, h.y - 20, .6, 1.3)
-      for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (guard.hp > 0 && distanceSq(guard, h) < h.r ** 2) guard.hp -= 14
-      for (const ally of this.allies) if (distanceSq(ally, h) < h.r ** 2) ally.hp -= 14
-      for (const hero of this.heroes) if (hero.alive && distanceSq(hero, h) < h.r ** 2) hero.hurt(5)
+      for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (guard.hp > 0 && distanceSq(guard, h) < h.r * h.r) guard.hp -= 14
+      for (const ally of this.allies) if (distanceSq(ally, h) < h.r * h.r) ally.hp -= 14
+      for (const hero of this.heroes) if (hero.alive && distanceSq(hero, h) < h.r * h.r) hero.hurt(5)
     }
   }
   // The Scream: the world wobbles for a moment.
@@ -1033,19 +1033,19 @@ export class SiegeScene extends Phaser.Scene {
     e.visible = (e.kind !== 'ghost' || e.status.reveal > 0) && (!this.dark || e.lit || e.status.reveal > 0 || !!e.boss)
     if (e.kind === 'ghost' && e.visible !== e.art.shown) { e.art.shown = e.visible; if (e.visible) this.sfx('ghost-reveal', e) }
     e.armour = e.mods.includes('metal')
-    for (const other of this.crowns) if (other.active && !other.returning && other !== e && distanceSq(e, other) < 160 ** 2) { e.armour = true; break }
+    for (const other of this.crowns) if (other.active && !other.returning && other !== e && distanceSq(e, other) < 160 * 160) { e.armour = true; break }
     if (e.skill <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear && !e.status.charm && !e.status.confuse) {
       if (e.kind === 'witch') {
         e.casting = .7
         this.effect('fx/heal/0', e.x, e.y - 50, .7); this.sfx('witch-heal', e)
-        for (const other of this.enemies) if (other.active && !other.returning && distanceSq(e, other) < 200 ** 2) { other.hp = Math.min(other.maxHp, other.hp + 45); this.effect('fx/heal/0', other.x, other.y - 45, .7, .65) }
+        for (const other of this.enemies) if (other.active && !other.returning && distanceSq(e, other) < 200 * 200) { other.hp = Math.min(other.maxHp, other.hp + 45); this.effect('fx/heal/0', other.x, other.y - 45, .7, .65) }
       }
       if (e.mods.includes('laser')) {
-        const tower = this.towers.find(t => t && distanceSq(e, t) < 350 ** 2)
+        const tower = this.towers.find(t => t && distanceSq(e, t) < 350 * 350)
         if (tower) { tower.stun = 1; this.addBeam(e, { x: tower.x, y: tower.y - 100 }, 0xff747f); this.effect('status/freeze/0', tower.x, tower.y - 120, 1, 1.4); this.sfx('laser-stun', tower) }
       }
       if (e.mods.includes('wizard') && !e.status.stun) { e.distance += 80; this.effect('fx/poof/0', e.x, e.y - 50, .6); this.sfx('wizard-blink', e) }
-      if (e.mods.includes('gum')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (distanceSq(e, guard) < 120 ** 2) { guard.slow = 3; this.effect('trap/gum/0', guard.x, guard.y, .7, .5); this.sfx('gum', guard) }
+      if (e.mods.includes('gum')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (distanceSq(e, guard) < 120 * 120) { guard.slow = 3; this.effect('trap/gum/0', guard.x, guard.y, .7, .5); this.sfx('gum', guard) }
       e.skill = 6
     }
     if (e.casting > 0) {
@@ -1059,31 +1059,31 @@ export class SiegeScene extends Phaser.Scene {
       return
     }
     let blocked = false
-    if (!ENEMIES[e.kind].flying || e.status.ground > 0) for (const item of this.items) if (item.kind === 'candy-cane' && distanceSq(e, item) < CONSUMABLES['candy-cane'].radius ** 2) { blocked = true; break }
+    if (!ENEMIES[e.kind].flying || e.status.ground > 0) for (const item of this.items) if (item.kind === 'candy-cane' && distanceSq(e, item) < CONSUMABLES['candy-cane'].radius * CONSUMABLES['candy-cane'].radius) { blocked = true; break }
     if ((!ENEMIES[e.kind].flying || e.status.ground > 0) && e.visible && !e.status.fear) {
       // Tower guards and temporary allies hold the road alike; a blocker is a wall that is only walked into.
       for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (this.clash(e, guard)) blocked = true
       for (const ally of this.allies) if (this.clash(e, ally)) blocked = true
-      for (const wall of this.blockers) if (distanceSq(e, wall) < wall.radius ** 2) blocked = true
+      for (const wall of this.blockers) if (distanceSq(e, wall) < wall.radius * wall.radius) blocked = true
     }
-    if (e.mods.includes('toxic')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (guard.hp > 0 && distanceSq(e, guard) < 110 ** 2) guard.hp -= dt * 12
+    if (e.mods.includes('toxic')) for (const tower of this.towers) if (tower) for (const guard of tower.guards) if (guard.hp > 0 && distanceSq(e, guard) < 110 * 110) guard.hp -= dt * 12
     const targetHero = this.nearestHero(e)
-    for (const hero of this.heroes) if (hero.alive && distanceSq(e, hero) < 90 ** 2 && e.mods.includes('toxic')) hero.hurt(10 * dt * hero.enemyDamage(e))
-    if (targetHero && distanceSq(e, targetHero) < 90 ** 2 && e.attack <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear) { targetHero.hurt((e.boss ? 24 : 11) * targetHero.enemyDamage(e), e); e.attack = 1 }
+    for (const hero of this.heroes) if (hero.alive && distanceSq(e, hero) < 90 * 90 && e.mods.includes('toxic')) hero.hurt(10 * dt * hero.enemyDamage(e))
+    if (targetHero && distanceSq(e, targetHero) < 90 * 90 && e.attack <= 0 && !e.status.stun && !e.status.freeze && !e.status.fear) { targetHero.hurt((e.boss ? 24 : 11) * targetHero.enemyDamage(e), e); e.attack = 1 }
     const slow = e.status.slow && !e.mods.includes('burning') ? e.slowPower : 1
     const candle = e.mods.includes('candle') ? (Math.floor(e.age / 3) % 2 ? .65 : 1.5) : 1
     if (candle > 1 && Math.floor(e.age / 3) !== Math.floor((e.age - dt) / 3)) this.sfx('candle-pump', e)
     // Radioactive Ridge: ground enemies inside a toxic pool move 30% faster.
     let toxic = 1
-    if (!e.route && !ENEMIES[e.kind].flying) for (const z of this.zones) if (distanceSq(e, z) < z.r ** 2) { toxic = 1.3; break }
-    const decoy = !e.boss && !ENEMIES[e.kind].flying && !e.mods.includes('visor') && !e.status.fear ? this.items.find(item => item.kind === 'scarecrow' && item.hp > 0 && distanceSq(e, item) < CONSUMABLES.scarecrow.radius ** 2) : undefined
+    if (!e.route && !ENEMIES[e.kind].flying) for (const z of this.zones) if (distanceSq(e, z) < z.r * z.r) { toxic = 1.3; break }
+    const decoy = !e.boss && !ENEMIES[e.kind].flying && !e.mods.includes('visor') && !e.status.fear ? this.items.find(item => item.kind === 'scarecrow' && item.hp > 0 && distanceSq(e, item) < CONSUMABLES.scarecrow.radius * CONSUMABLES.scarecrow.radius) : undefined
     const lure = decoy ? this.routeFor(e).nearest(decoy.x, decoy.y).distance : 0, from = e.distance
     if (decoy && !blocked && !e.status.stun && !e.status.freeze && !e.status.root) {
       e.distance += Phaser.Math.Clamp(lure - e.distance, -dt * e.speed * slow, dt * e.speed * slow)
       if (Math.abs(e.distance - lure) < 55 && e.attack <= 0) { decoy.hp -= 24; e.attack = .8; this.effect('item/scarecrow/fx/0', decoy.x, decoy.y - 50, .3, .6); this.sfx('decoy-hit', decoy) }
     }
     const held = !!decoy || !!e.boss && (e.boss.casting > 0 || e.boss.intro > 0 || e.boss.dash > 0)
-    if (!e.status.stun && !e.status.freeze && !e.status.root && (!blocked || e.status.fear) && !held) e.distance += dt * e.speed * slow * candle * toxic * Math.min(...this.heroes.map(hero => hero.enemySpeed(e))) * (e.status.fear ? -1.25 : e.status.confuse ? Math.sin(e.age * 3) : 1)
+    if (!e.status.stun && !e.status.freeze && !e.status.root && (!blocked || e.status.fear) && !held) e.distance += dt * e.speed * slow * candle * toxic * Math.min(...this.heroes.map(hero => hero.enemySpeed(e))) * (e.status.fear ? -1.25 : e.status.confuse ? sine(e.age * 3) : 1)
     e.distance = Math.max(0, e.distance)
     if (from < ENTRANCE && e.distance >= ENTRANCE && !e.route && !e.boss) this.sfx('arrive', e, KIND_PITCH[e.kind])
     // Mon Manor: walking into a portal comes out of its twin further along; flyers pass over.
@@ -1103,11 +1103,11 @@ export class SiegeScene extends Phaser.Scene {
     }
   }
   private clash(e: Enemy, guard: Guard) {
-    if (guard.hp <= 0 || distanceSq(e, guard) >= 66 ** 2) return false
+    if (guard.hp <= 0 || distanceSq(e, guard) >= 66 * 66) return false
     e.art.blockUntil = this.presentationTime + .08; e.art.blockX = guard.x; e.art.blockY = guard.y; guard.blockUntil = this.presentationTime + .08
     if (e.attack <= 0 && !e.status.stun && !e.status.freeze) {
       guard.hp -= (e.mods.includes('knife') ? 45 : e.boss ? 48 : 16) * Math.min(...this.heroes.map(hero => hero.enemyDamage(e))); e.attack = .8
-      const dx = guard.x - e.x, dy = guard.y - e.y, length = Math.hypot(dx, dy) || 1
+      const dx = guard.x - e.x, dy = guard.y - e.y, length = hypot(dx, dy) || 1
       guard.poseUntil = this.presentationTime + .24; guard.recoilX = dx / length * 5; guard.recoilY = dy / length * 5
       this.kick(e.art.reaction, e, -dx / length * 9, -dy / length * 9, 0)
       this.effect('combat/block/0', (e.x + guard.x) / 2, (e.y + guard.y) / 2 - 48, .24, .72)
@@ -1127,7 +1127,7 @@ export class SiegeScene extends Phaser.Scene {
       tower.stun = Math.max(0, tower.stun - dt); tower.gold = Math.max(0, tower.gold - dt); tower.cooldown -= dt * Math.max(...this.heroes.map(hero => hero.towerSpeed(tower))) * (this.sugarRush > 0 ? 1.6 : 1)
       const config = towerStats(tower)
       if (tower.stun) continue
-      if (tower.kind === 'lantern') for (const e of this.enemies) if (e.active && distanceSq(tower, e) <= config.range ** 2) { this.status(e, 'reveal', .2); e.visible = true }
+      if (tower.kind === 'lantern') for (const e of this.enemies) if (e.active && distanceSq(tower, e) <= config.range * config.range) { this.status(e, 'reveal', .2); e.visible = true }
       if (tower.kind === 'patch') {
         for (const guard of tower.guards) {
           guard.slow = Math.max(0, guard.slow - dt); guard.cooldown -= dt * (guard.slow ? .5 : 1) * Math.max(...this.heroes.map(hero => hero.towerSpeed(tower))) * (this.sugarRush > 0 ? 1.6 : 1)
@@ -1140,7 +1140,7 @@ export class SiegeScene extends Phaser.Scene {
         const target = this.target(tower, config.range, tower.targeting, tower.kind === 'cauldron' || tower.kind === 'catapult', tower.kind === 'roost', tower.kind === 'lighthouse')
         // Explain the exact hidden-target rejection only while an otherwise ready tower is idle.
         if (!target && tower.kind !== 'roost' && tower.kind !== 'lighthouse') {
-          const ghost = this.enemies.find(e => e.active && !e.returning && e.kind === 'ghost' && !e.visible && !e.status.reveal && !e.status.charm && distanceSq(tower, e) <= config.range ** 2)
+          const ghost = this.enemies.find(e => e.active && !e.returning && e.kind === 'ghost' && !e.visible && !e.status.reveal && !e.status.charm && distanceSq(tower, e) <= config.range * config.range)
           if (ghost) this.hud.ruleMoment('hidden', ghost, 'enemy/ghost/walk/0', 'HIDDEN · light it with a lantern')
         }
         // The Scream: half the shots go wide.
@@ -1180,14 +1180,14 @@ export class SiegeScene extends Phaser.Scene {
       p.life += dt
       if (p.target?.active && p.target.generation === p.generation) { p.endX = p.target.x; p.endY = p.target.y - 45 }
       const t = Math.min(1, p.life / p.duration)
-      p.x = Phaser.Math.Linear(p.fromX, p.endX, t); p.y = Phaser.Math.Linear(p.fromY, p.endY, t) - Math.sin(t * Math.PI) * (p.arc ?? 30)
+      p.x = Phaser.Math.Linear(p.fromX, p.endX, t); p.y = Phaser.Math.Linear(p.fromY, p.endY, t) - sine(t * Math.PI) * (p.arc ?? 30)
       if (t >= 1) {
         p.active = false
         const validTarget = p.target?.active && p.target.generation === p.generation
         const hit = (e: Enemy) => {
           if (!e.visible || e.status.charm > 0) return
           const egg = p.kind === 'egg' || p.kind === 'hero' && this.heroes[p.owner ?? 0].kit.weapon === 'egg-lob'
-          if (egg && e.status.wrap > 0) { e.status.wrap = 0; this.combo('eggsplosion', e); this.effect('fx/eggsplosion/0', e.x, e.y - 40, .7, 1.8); for (const other of this.enemies) if (other.active && other !== e && distanceSq(other, e) < (Math.max(75, p.splash) * 2) ** 2) this.damage(other, p.damage, 'magic', true, p.kind === 'hero' ? this.heroes[p.owner ?? 0] : false) }
+          if (egg && e.status.wrap > 0) { e.status.wrap = 0; this.combo('eggsplosion', e); this.effect('fx/eggsplosion/0', e.x, e.y - 40, .7, 1.8); const reach = Math.max(75, p.splash) * 2; for (const other of this.enemies) if (other.active && other !== e && distanceSq(other, e) < reach * reach) this.damage(other, p.damage, 'magic', true, p.kind === 'hero' ? this.heroes[p.owner ?? 0] : false) }
           if (p.onHit) { p.onHit(e); return }
           const landed = this.damage(e, p.damage, p.kind === 'lantern' ? 'magic' : p.kind === 'egg' ? 'egg' : 'physical')
           if (!landed || !e.active) return
@@ -1196,7 +1196,7 @@ export class SiegeScene extends Phaser.Scene {
         }
         this.impactProjectile = p; this.impactSound = null
         try {
-          if (p.splash) for (const e of this.enemies) { if (e.active && distanceSq(e, { x: p.endX, y: p.endY + 45 }) <= p.splash ** 2) hit(e) }
+          if (p.splash) for (const e of this.enemies) { if (e.active && distanceSq(e, { x: p.endX, y: p.endY + 45 }) <= p.splash * p.splash) hit(e) }
           else if (p.target?.active && p.target.generation === p.generation) hit(p.target)
           if (validTarget) p.after?.()
         } finally { this.impactProjectile = null }
@@ -1383,7 +1383,7 @@ export class SiegeScene extends Phaser.Scene {
   updateLights() {
     this.lightCount = 0
     if (!this.dark) { this.sources.length = 0; return }
-    const flicker = 1 + Math.sin(this.clock * 5) * .02
+    const flicker = 1 + sine(this.clock * 5) * .02
     for (const light of this.options.assets.geometry.lights ?? []) this.light(light.x, light.y, light.r * flicker)
     for (const t of this.towers) if (t?.kind === 'lantern') this.light(t.x, t.y - 60, towerStats(t).range)
     for (const e of this.enemies) if (e.active && e.status.reveal > 0) this.light(e.x, e.y - 45, 85)
@@ -1496,7 +1496,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.spellCooldown[kind] > 0) return
     const spell = SPELLS[kind]
     this.spellCooldown[kind] = spell.cooldown * hero.spellFactor
-    for (const e of this.enemies) if (e.active && distanceSq({ x, y }, e) <= spell.radius ** 2) {
+    for (const e of this.enemies) if (e.active && distanceSq({ x, y }, e) <= spell.radius * spell.radius) {
       if (kind === 'rain') this.damage(e, spell.damage, 'magic')
       else this.status(e, 'fear', 2)
     }
@@ -1518,7 +1518,7 @@ export class SiegeScene extends Phaser.Scene {
     for (let i = this.traps.length - 1; i >= 0; i--) {
       const trap = this.traps[i], config = TRAPS[trap.kind]
       let triggered = false
-      for (const e of this.enemies) if (e.active && distanceSq(e, trap) < config.radius ** 2) {
+      for (const e of this.enemies) if (e.active && distanceSq(e, trap) < config.radius * config.radius) {
         if (ENEMIES[e.kind].flying) { this.hud.ruleMoment('flying', e, 'enemy/bat/walk/0', "FLYING · traps can't reach"); continue }
         if (trap.kind === 'bowl' && e.mods.includes('visor')) continue
         triggered = true

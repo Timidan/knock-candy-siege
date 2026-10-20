@@ -1,3 +1,5 @@
+import { cosine, power2, sine } from '../data/config.ts'
+// Rig.ts measures each costume's stride from these poses, and the stride is simulation state: engine-independent math only.
 export type Transform = { x: number; y: number; r: number; sx: number; sy: number; a: number }
 export type Keyframe = [number, Partial<Transform>, string?]
 export type Clip = { loop: boolean; ms: number; events: Record<string, number | number[]>; tracks: Record<string, Keyframe[]> }
@@ -6,17 +8,17 @@ export const REST: Transform = { x: 0, y: 0, r: 0, sx: 1, sy: 1, a: 1 }
 export function ease(name: string, v: number): number {
   switch (name) {
     case 'linear': return v
-    case 'sineIn': return 1 - Math.cos(v * Math.PI / 2)
-    case 'sineOut': return Math.sin(v * Math.PI / 2)
-    case 'sineInOut': return (1 - Math.cos(v * Math.PI)) / 2
+    case 'sineIn': return 1 - cosine(v * Math.PI / 2)
+    case 'sineOut': return sine(v * Math.PI / 2)
+    case 'sineInOut': return (1 - cosine(v * Math.PI)) / 2
     case 'quadIn': return v * v
     case 'quadOut': return v * (2 - v)
-    case 'quadInOut': return v < .5 ? 2 * v * v : 1 - 2 * (1 - v) ** 2
-    case 'cubicOut': return (v - 1) ** 3 + 1
+    case 'quadInOut': return v < .5 ? 2 * v * v : 1 - 2 * (1 - v) * (1 - v)
+    case 'cubicOut': return (v - 1) * (v - 1) * (v - 1) + 1
     case 'backIn': return v * v * (2.70158 * v - 1.70158)
-    case 'backOut': return (v - 1) ** 2 * (2.70158 * (v - 1) + 1.70158) + 1
-    case 'bounceOut': return v < 1 / 2.75 ? 7.5625 * v * v : v < 2 / 2.75 ? 7.5625 * (v - 1.5 / 2.75) ** 2 + .75 : v < 2.5 / 2.75 ? 7.5625 * (v - 2.25 / 2.75) ** 2 + .9375 : 7.5625 * (v - 2.625 / 2.75) ** 2 + .984375
-    case 'elasticOut': return v === 0 || v === 1 ? v : 2 ** (-10 * v) * Math.sin((v - .025) * 2 * Math.PI / .1) + 1
+    case 'backOut': return (v - 1) * (v - 1) * (2.70158 * (v - 1) + 1.70158) + 1
+    case 'bounceOut': { const [u, lift] = v < 1 / 2.75 ? [v, 0] : v < 2 / 2.75 ? [v - 1.5 / 2.75, .75] : v < 2.5 / 2.75 ? [v - 2.25 / 2.75, .9375] : [v - 2.625 / 2.75, .984375]; return 7.5625 * u * u + lift }
+    case 'elasticOut': return v === 0 || v === 1 ? v : power2(-10 * v) * sine((v - .025) * 2 * Math.PI / .1) + 1
     default: throw new Error(`Unknown rig ease: ${name}`)
   }
 }
@@ -46,8 +48,8 @@ export function localPose(rig: RigData, costume: string, clipName: string, time:
   return parts
 }
 export function compose(parent: Transform, local: Transform, out: Transform = { ...REST }): Transform {
-  const r = parent.r * Math.PI / 180, x = local.x * parent.sx, y = local.y * parent.sy
-  out.x = parent.x + Math.cos(r) * x - Math.sin(r) * y; out.y = parent.y + Math.sin(r) * x + Math.cos(r) * y
+  const r = parent.r * Math.PI / 180, x = local.x * parent.sx, y = local.y * parent.sy, cos = cosine(r), sin = sine(r)
+  out.x = parent.x + cos * x - sin * y; out.y = parent.y + sin * x + cos * y
   out.r = parent.r + local.r; out.sx = parent.sx * local.sx; out.sy = parent.sy * local.sy; out.a = parent.a * local.a
   return out
 }
