@@ -3,7 +3,8 @@ import { GAUNTLET_WAVES } from './gauntlet.ts'
 
 // A boss is a legend's token id or the Great Pumpkin; it walks the road beside the wave's ordinary groups.
 export type BossId = number | 'pumpkin'
-export type BossSpawn = { id: BossId; delay?: number; hp?: number }
+// hp: base health in place of data/bosses.ts; revive: the share of health Hellfire Skull rises with (.45 unless set).
+export type BossSpawn = { id: BossId; delay?: number; hp?: number; revive?: number }
 // edge: the group pours in from the edges of the view on the porch's far side instead of a road (Witching Hour swarms).
 export type WaveGroup = { type: EnemyKind; count: number; interval: number; delay?: number; path?: number; edge?: boolean }
 export type Wave = { name: string; groups: WaveGroup[]; bonus: number; countdown: number; witching?: boolean; boss?: BossSpawn }

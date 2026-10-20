@@ -1,20 +1,21 @@
 import type { EnemyKind } from './config.ts'
-import type { Wave, WaveGroup } from './level1.ts'
+import type { BossSpawn, Wave, WaveGroup } from './level1.ts'
 
-// Legend Gauntlet (Town Square, road 0): the ten legends, one per round, each with its own boss move. The slow walkers come first;
-// Hellfire Skull, Midas, Seraph and Manga follow, and Lil' Devil's Pact (three jars, returned if it falls) closes the run.
+// Legend Gauntlet (Town Square, road 0): the ten legends, one per round, each with its own boss move. The slow walkers come first,
+// and Hellfire Skull, who revives once and charges, is the finale.
 // A short escort wave walks ahead of each legend, and each legend brings a small crowd. The run ends when the jars run out;
 // getting through the tenth legend is a victory. Health climbs per wave (GAUNTLET_HEALTH in config.ts).
-export const GAUNTLET_LEGENDS = [1002, 561, 1481, 1798, 942, 900, 1881, 1667, 1514, 1884]
+export const GAUNTLET_LEGENDS = [1002, 561, 1481, 1798, 942, 1881, 1667, 1514, 1884, 900]
 const ESCORTS: EnemyKind[] = ['treater', 'ghost', 'pumpkin', 'bat', 'goblin', 'skeleton', 'witch', 'mummy', 'pumpkin', 'goblin']
 const NAMES = ['The procession forms', 'Heralds at the gate', 'The fan club', 'Roadies', 'Bodyguards', 'The entourage', 'Paparazzi', 'Backup dancers', 'The honour guard', 'The final parade']
-// The first legend comes before there is much of a defence, so it walks in with about a third of its usual health (data/bosses.ts).
-const FIRST_LEGEND_HP = 1100
+// Gauntlet-only boss tuning: the first legend comes before there is much of a defence, and the finale's revive and charge
+// cross Town Square's short road too fast to answer at its usual health, so it rises with less of its health.
+const TUNING: Record<number, Partial<BossSpawn>> = { 1002: { hp: 1100 }, 900: { hp: 1000, revive: .15 } }
 // Skeletons come in crews of five, so their count is crews.
 const crowd = (type: EnemyKind, count: number, interval: number, delay = 0): WaveGroup => ({ type, count: type === 'skeleton' ? Math.max(1, Math.round(count / 5)) : count, interval, ...(delay ? { delay } : {}) })
 export const GAUNTLET_WAVES: Wave[] = GAUNTLET_LEGENDS.flatMap((id, round): Wave[] => [
   { name: NAMES[round], bonus: 40 + round * 8, countdown: round ? 20 : 0, groups: [crowd('treater', 6 + round, 1), crowd(ESCORTS[round], 3 + Math.floor(round / 2), 1.4, 3)] },
-  { name: `Legend ${round + 1} of 10`, bonus: 70 + round * 12, countdown: round ? 12 : 18, boss: { id, delay: 4, ...(round ? {} : { hp: FIRST_LEGEND_HP }) }, groups: [crowd(ESCORTS[round], 3 + round, 1.2, 8)] },
+  { name: `Legend ${round + 1} of 10`, bonus: 70 + round * 12, countdown: round ? 12 : 18, boss: { id, delay: 4, ...TUNING[id] }, groups: [crowd(ESCORTS[round], 3 + round, 1.2, 8)] },
 ])
 // Legends defeated first, then jars kept (at most 20 × 25 = 500, under one legend's 1,000).
 export const gauntletScore = (legends: number, jars: number) => legends * 1000 + jars * 25

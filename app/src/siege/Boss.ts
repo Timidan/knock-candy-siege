@@ -18,7 +18,7 @@ import type { AssetPack } from './assets'
 export type BossState = {
   id: BossId; name: string; holder: Phaser.GameObjects.Container | null; rig?: Rig; aura?: Phaser.GameObjects.Image; sprite?: Phaser.GameObjects.Image
   atlas: string; cast: number; casting: number; phase: 1 | 2; started: boolean; intro: number
-  dash: number; dashSpeed: number; blocks: number; revived: boolean; trail: number; total: number; stolen: number
+  dash: number; dashSpeed: number; blocks: number; revived: boolean; revive: number; trail: number; total: number; stolen: number
   child: boolean; state: 'walk' | 'roll' | 'summon' | 'split'; stateTime: number; roll: number; shared: { summoned: boolean }; split: boolean; immune: number; scale: number
   // Presentation only (never read by the simulation): when the last move landed, the trail clock, what the last frame showed, where a Pumpkin half came from.
   castAt?: number; fxAt?: number; fxBlocks?: number; fxDash?: boolean; portal?: { x: number; y: number }; bornAt?: number; fromX?: number; fromY?: number
@@ -86,7 +86,7 @@ function setup(s: SiegeScene, e: Enemy, spec: BossSpawn, wave: number, hp: numbe
     holder = s.add.container(0, 0, [sprite])
   }
   e.boss = half ? { ...half, holder, sprite, child: true, state: 'walk', stateTime: 0, roll: s.clock + 5 + s.random() * 3, started: true, intro: 0, immune: 0, casting: 0 }
-    : { id: spec.id, name: bossName(s, spec.id), holder, rig, aura, sprite, atlas: bossAtlasKey(spec.id), cast: cfg.cast * .6, casting: 0, phase: 1, started: false, intro: 1.9, dash: 0, dashSpeed: 0, blocks: 0, revived: false, trail: 0, total: hp, stolen: 0, child: false, state: 'walk', stateTime: 0, roll: s.clock + 6, shared: { summoned: false }, split: false, immune: 0, scale: 1 }
+    : { id: spec.id, name: bossName(s, spec.id), holder, rig, aura, sprite, atlas: bossAtlasKey(spec.id), cast: cfg.cast * .6, casting: 0, phase: 1, started: false, intro: 1.9, dash: 0, dashSpeed: 0, blocks: 0, revived: false, revive: spec.revive ?? .45, trail: 0, total: hp, stolen: 0, child: false, state: 'walk', stateTime: 0, roll: s.clock + 6, shared: { summoned: false }, split: false, immune: 0, scale: 1 }
 }
 
 export function spawnBoss(s: SiegeScene, spec: BossSpawn, wave: number): boolean {
@@ -243,7 +243,7 @@ export function bossAbsorbs(_s: SiegeScene, e: Enemy, hit: boolean): boolean {
 export function bossRevives(s: SiegeScene, e: Enemy): boolean {
   const b = e.boss!
   if (b.id !== 900 || b.revived) return false
-  b.revived = true; e.hp = e.maxHp * .45; b.cast = 1.2; b.dash = 0
+  b.revived = true; e.hp = e.maxHp * b.revive; b.cast = 1.2; b.dash = 0
   s.effect('status/burn/0', e.x, e.y - 90, 1.2, 4); s.shake(.01); s.sfx('boss-revive', e); s.hud.toast('Hellfire Skull rises again!')
   return true
 }
