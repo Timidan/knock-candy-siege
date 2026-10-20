@@ -492,13 +492,12 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   }
   const plainInvite = (reason: string) => /^(Invalid room or build|Room unavailable or full|Room expired)$/.test(reason) ? 'This invite is no longer available. Ask your friend for a new one, or start your own Porch Party.' : reason === 'Could not connect to room' || reason === 'Room connection timed out' ? 'Couldn’t reach the Porch Party. Check your connection and try again.' : reason
   // Porch Party needs a Chog you own, or the holder demo's. A string is the note to show instead.
-  // boost: the host's Candy Crate candy, their own in the room's per-player starting candy.
-  const partySelection = async (boost = 0): Promise<HeroSelection | string> => {
+  const partySelection = async (): Promise<HeroSelection | string> => {
     const account = activeWallet.account, id = Number(hero)
     const [ownedHero, perks] = await Promise.all([readHomeAdvantage(id, account, activeWallet.sandbox), readHolderBonuses(id, account, activeWallet.sandbox)])
     if (!ownedHero) return 'Porch Party needs a Chog you own. Pick one of yours, or tap Try as a holder.'
     if (perks.status === 'unavailable') return 'Could not check your holder perks. Please try again.'
-    return { id, home: ownedHero, costume, owned: [...shop.owned], victoryDance, stars: { ...saveRef.current.stars }, street: { ...perks.bonuses, candy: perks.bonuses.candy + boost } }
+    return { id, home: ownedHero, costume, owned: [...shop.owned], victoryDance, stars: { ...saveRef.current.stars }, street: perks.bonuses }
   }
   // Host and friend both land here once seated: the lobby follows the roster, and both Chogs load once both are picked.
   // Only leaving (the abort) ends it; a wallet change while the friend picks must not.
@@ -550,15 +549,15 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     setStarting(true); setPartyError('')
     const token = ++startToken.current, controller = new AbortController()
     partyAbort.current?.abort(); partyAbort.current = controller
-    const boost = crateBoost
+    // Crates are solo-only: a room keeps each player's pick for every Next night round.
     try {
-      const selection = await partySelection(boost)
+      const selection = await partySelection()
       if (token !== startToken.current || controller.signal.aborted) return
       if (typeof selection === 'string') { setPartyError(selection); return }
       const ticket = await createRoom(COOP_RELAY, __COOP_BUILD__, level, controller.signal)
       const client = await RoomClient.connect(COOP_RELAY, ticket.room.code, __COOP_BUILD__, ticket.hostToken)
       if (token !== startToken.current || controller.signal.aborted) { client.close(); return }
-      client.pick(selection); if (boost) spendCrate(); enterParty(client, controller)
+      client.pick(selection); enterParty(client, controller)
     } catch (error) { if (!controller.signal.aborted) { setPartyError(plainInvite(error instanceof Error ? error.message : 'Could not open the room.')); setMenu('party-error') } }
     finally { if (token === startToken.current) setStarting(false) }
   }
