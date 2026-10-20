@@ -14,6 +14,17 @@ const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome-
 const pages = [], errors = [], modes = process.argv.slice(2).length ? process.argv.slice(2) : ['finish', 'desync', 'disconnect']
 const benchmark = modes.includes('crowd60')
 const word = value => `0x${BigInt(value).toString(16).padStart(64, '0')}`
+// Each page's relay sockets, so a mode can cut one player's link: 'close' closes both ends (the relay sees it), 'blackhole'
+// stops every frame and closes nothing (a dead network). While cut, a new socket opens to nobody and is closed at once.
+const links = [[], []], cutUntil = [0, 0], cutting = modes.some(mode => ['reconnect', 'drop40'].includes(mode))
+const quietly = promise => Promise.resolve(promise).catch(() => {})
+const cut = (player, ms, how) => {
+  cutUntil[player] = Date.now() + ms
+  for (const link of links[player].splice(0)) {
+    link.live = false
+    if (how === 'close') { quietly(link.socket.close({ code: 4999, reason: 'Offline' })); quietly(link.server.close({ code: 4999, reason: 'Offline' })) }
+  }
+}
 try {
   for (let player = 0; player < 2; player++) {
     const account = `0x${String(player + 1).repeat(40)}`, id = player + 1
@@ -27,12 +38,14 @@ try {
       const pump = () => { timer = null; while (queue.length && queue[0].due <= Date.now()) queue.shift().send(); if (queue.length) timer = setTimeout(pump, queue[0].due - Date.now()) }
       return send => { last = Math.max(last, Date.now() + latency + (Math.random() * 2 - 1) * jitter); queue.push({ due: last, send }); timer ??= setTimeout(pump, last - Date.now()) }
     }
-    if (latency || jitter) await page.routeWebSocket(/\/rooms\/.*\/ws/, socket => {
-      const server = socket.connectToServer(), up = lane(), down = lane()
-      socket.onMessage(message => up(() => server.send(message)))
-      server.onMessage(message => down(() => socket.send(message)))
-      socket.onClose((code, reason) => up(() => server.close({ code, reason })))
-      server.onClose((code, reason) => down(() => socket.close({ code, reason })))
+    if (latency || jitter || cutting) await page.routeWebSocket(/\/rooms\/.*\/ws/, socket => {
+      if (Date.now() < cutUntil[player]) { quietly(socket.close({ code: 4999, reason: 'Offline' })); return }
+      const server = socket.connectToServer(), up = lane(), down = lane(), link = { socket, server, live: true }
+      links[player].push(link)
+      socket.onMessage(message => up(() => link.live && server.send(message)))
+      server.onMessage(message => down(() => link.live && socket.send(message)))
+      socket.onClose((code, reason) => up(() => link.live && quietly(server.close({ code, reason }))))
+      server.onClose((code, reason) => down(() => link.live && quietly(socket.close({ code, reason }))))
     })
     page.on('pageerror', error => errors.push({ player, message: error.message }))
     // Read-only NFT/holder fixtures; no signing, transactions, grants or chain mutations.
@@ -115,7 +128,8 @@ try {
       window.partyHashes = []; window.partyStart = performance.now(); window.partyLast = 0
       window.partyRtt = []; window.partyEvents = []; const pending = new Map(), send = s.options.coop.client.send.bind(s.options.coop.client)
       s.options.coop.client.send = message => { if (message.type === 'input') pending.set(message.tick, performance.now()); send(message) }
-      s.options.coop.client.subscribe(message => { if (['disconnected', 'error', 'desync'].includes(message.type)) window.partyEvents.push(message); if (message.type === 'input' && message.player === s.options.coop.client.player && pending.has(message.tick)) { window.partyRtt.push(performance.now() - pending.get(message.tick)); pending.delete(message.tick) } })
+      window.partyAway = []
+      s.options.coop.client.subscribe(message => { if (['disconnected', 'error', 'desync'].includes(message.type)) window.partyEvents.push(message); if (message.type === 'away' || message.type === 'back') window.partyAway.push([Math.round(performance.now() - window.partyStart), message.type, message.player, window.__siege.net.tick]); if (message.type === 'input' && message.player === s.options.coop.client.player && pending.has(message.tick)) { window.partyRtt.push(performance.now() - pending.get(message.tick)); pending.delete(message.tick) } })
       s.net.options.onHash = (tick, hash) => window.partyHashes.push({ tick, hash })
       // Tap to action: an accepted command until the simulation applies it for this player. A stall: a due turn that cannot run.
       const net = s.net, local = s.options.coop.client.player, queued = [], enqueue = net.enqueue.bind(net), apply = net.simulation.command, advance = net.advance.bind(net)
@@ -138,12 +152,27 @@ try {
     return { tick: s.net.tick, verified: s.net.verifiedTick, status: s.net.state, detail: s.net.detail, seconds: s.clock, wave: s.wave, jars: s.jars, candy: s.candy, kills: s.kills, talents: s.heroes.map(h => h.talentLevels), ended: s.ended, result: s.coopResult, hashes: window.partyHashes, rtt: window.partyRtt, elapsedMs: performance.now() - window.partyStart, snapshot: JSON.stringify(s.net.simulation.snapshot(), (_key, value) => value instanceof Set ? [...value] : value) }
   })
   // Ends the current night on both peers at the same turn, so the shortcut is part of the agreed simulation: jars decide the stars.
-  const endAt = (page, jars) => page.evaluate(jars => {
+  const endAt = (page, jars, at = 450) => page.evaluate(([jars, at]) => {
     const s = window.__siege, step = s.networkStep.bind(s)
     window.partyHashes = []; s.net.options.onHash = (tick, hash) => window.partyHashes.push({ tick, hash })
-    s.networkStep = (dt, turn) => { step(dt, turn); if (turn === 450) { s.jars = jars; s.finish(jars > 0) } }
+    s.networkStep = (dt, turn) => { step(dt, turn); if (turn === at) { s.jars = jars; s.finish(jars > 0) } }
     return { tick: s.net.tick, level: s.options.level, seed: s.options.coop.client.room.seed, stars: s.heroes.map(hero => hero.selection.stars) }
-  }, jars)
+  }, [jars, at])
+  // One round of both players building, upgrading, moving and sending waves through the scene's command path.
+  const act = round => Promise.all(pages.map((page, player) => page.evaluate(({ player, round }) => {
+    const s = window.__siege
+    if (s.net.state !== 'running' || s.ended) return { state: s.net.state, ended: s.ended, detail: s.net.detail }
+    if (s.localHero.choices) s.command({ type: 'talent', index: player })
+    else if (!s.talentWaiting) {
+      const mine = s.pads.map((_, pad) => pad).filter(pad => pad % 2 === player), empty = mine.find(pad => !s.towers[pad])
+      if (empty !== undefined) s.command({ type: 'build', pad: empty, kind: ['egg', 'lantern', 'tp', 'lantern'][empty % 4] })
+      else s.command({ type: 'upgrade', pad: mine[round % mine.length] })
+      s.command({ type: 'move', x: player ? 1150 : 900, y: round % 2 ? 600 : 700 })
+      if (!s.wave && player === 0 && s.towers.filter(Boolean).length >= 2) s.command({ type: 'wave' })
+    }
+    return { state: s.net.state, tick: s.net.tick, wave: s.wave, jars: s.jars }
+  }, { player, round })))
+  const ticks = () => Promise.all(pages.map(page => page.evaluate(() => ({ tick: window.__siege.net.tick, verified: window.__siege.net.verifiedTick, state: window.__siege.net.state }))))
   const saved = page => page.evaluate(() => { const save = JSON.parse(localStorage.getItem('knock-siege-v1')); return { stars: save.stars, scores: save.scores } })
   const card = page => page.locator('dialog.siege-modal--result').innerText()
   // Both pages leave the result card for a new scene that is running.
@@ -307,19 +336,7 @@ try {
       // About a minute of both players building, upgrading, moving and sending waves through the scene's command path.
       const started = Date.now()
       for (let round = 0; Date.now() - started < PLAY_MS; round++) {
-        const step = await Promise.all(pages.map((page, player) => page.evaluate(({ player, round }) => {
-          const s = window.__siege
-          if (s.net.state !== 'running' || s.ended) return { state: s.net.state, ended: s.ended, detail: s.net.detail }
-          if (s.localHero.choices) s.command({ type: 'talent', index: player })
-          else if (!s.talentWaiting) {
-            const mine = s.pads.map((_, pad) => pad).filter(pad => pad % 2 === player), empty = mine.find(pad => !s.towers[pad])
-            if (empty !== undefined) s.command({ type: 'build', pad: empty, kind: ['egg', 'lantern', 'tp', 'lantern'][empty % 4] })
-            else s.command({ type: 'upgrade', pad: mine[round % mine.length] })
-            s.command({ type: 'move', x: player ? 1150 : 900, y: round % 2 ? 600 : 700 })
-            if (!s.wave && player === 0 && s.towers.filter(Boolean).length >= 2) s.command({ type: 'wave' })
-          }
-          return { state: s.net.state, tick: s.net.tick, wave: s.wave, jars: s.jars }
-        }, { player, round })))
+        const step = await act(round)
         assert.ok(step.every(r => r.state === 'running'), JSON.stringify(step))
         if (round % 15 === 0) console.log('play', Math.round((Date.now() - started) / 1000), 's', JSON.stringify(step))
         await pages[0].waitForTimeout(1000)
@@ -394,6 +411,72 @@ try {
       await pages[0].screenshot({ path: `${evidence}/desync.png` })
       await writeFile(`${evidence}/desync.json`, JSON.stringify({ initial, results: await Promise.all(pages.map(state)), errors }, null, 2))
       console.log('PASS: both production overlays detect forced desync')
+    } else if (mode === 'reconnect') {
+      // Player 1's link is cut mid-game: closed at both ends for 5 s, then 15 s, then silent for 12 s (nothing flows or
+      // closes, so only the client's stale check and the relay's resume of a seat whose old socket looks open notice).
+      // Then a phone in the background: the page reports hidden while nothing flows for 6 s, and showing it resumes at once.
+      const [host, friend] = pages, drops = []
+      const hide = hidden => friend.evaluate(hidden => { Object.defineProperty(document, 'hidden', { configurable: true, get: () => hidden }); document.dispatchEvent(new Event('visibilitychange')); return performance.now() - window.partyStart }, hidden)
+      let round = 0
+      const playFor = async ms => { for (const until = Date.now() + ms; Date.now() < until; round++) { const step = await act(round); assert.ok(step.every(r => r.state === 'running'), JSON.stringify(step)); await host.waitForTimeout(700) } }
+      await playFor(8000)
+      for (const [ms, how] of [[5000, 'close'], [15000, 'close'], [12000, 'blackhole'], [6000, 'background']]) {
+        const before = await ticks(), at = Date.now(), mark = await friend.evaluate(() => performance.now() - window.partyStart)
+        cut(1, ms, how === 'background' ? 'blackhole' : how)
+        const seen = {}
+        if (how === 'background') {
+          await hide(true); await host.waitForTimeout(ms)
+          const shown = await hide(false)
+          await friend.waitForFunction(shown => window.partyAway.some(([at, type]) => type === 'back' && at > shown), shown, { timeout: 10000 })
+          seen.backAfterShownMs = Math.round((await friend.evaluate(() => window.partyAway.findLast(([, type]) => type === 'back')[0])) - shown)
+        } else {
+          if (how === 'close') {
+            await host.getByText('Partner reconnecting…', { exact: true }).waitFor({ timeout: 5000 }); seen.host = Date.now() - at
+            await host.screenshot({ path: `${evidence}/reconnect-${TAG}-${ms}-host.png` })
+          }
+          // The friend's own drop, by event: a silent link is noticed by the stale check (8–11 s), as it gets close to the end of the cut.
+          await friend.waitForFunction(mark => window.partyAway.some(([at, type, player]) => type === 'away' && player === 1 && at >= mark), mark, { timeout: 15000 }); seen.friend = Date.now() - at
+          await friend.screenshot({ path: `${evidence}/reconnect-${TAG}-${ms}-${how}-friend.png` })
+          await host.waitForTimeout(Math.max(0, at + ms - Date.now()))
+        }
+        // Both run on from their own state: the next checkpoint after the stall is verified by the relay and on both pages.
+        const stalled = await ticks(), target = Math.max(...stalled.map(t => t.tick)) + 90
+        await Promise.all(pages.map(page => page.waitForFunction(target => window.__siege.net.verifiedTick >= target, target, { timeout: 30000 })))
+        assert.ok((await Promise.all(pages.map(page => page.getByText(/reconnecting…/i).count()))).every(n => n === 0), 'reconnecting notes cleared')
+        drops.push({ ms, how, before, stalled, statusAfterMs: seen, recoveredAfterMs: Date.now() - at - ms, after: await ticks() })
+        console.log('reconnect', TAG, JSON.stringify(drops.at(-1)))
+        await playFor(5000)
+      }
+      const lists = await Promise.all(pages.map(page => page.evaluate(() => window.partyHashes))), peer = new Map(lists[1].map(({ tick, hash }) => [tick, hash])), common = lists[0].filter(({ tick }) => peer.has(tick))
+      assert.ok(common.length >= 10 && common.every(({ tick, hash }) => peer.get(tick) === hash), 'checkpoints match across the drops')
+      const away = await Promise.all(pages.map(page => page.evaluate(() => window.partyAway)))
+      // The night ends at the same turn on both, a few seconds ahead.
+      const turn = Math.max(...(await ticks()).map(t => t.tick)) + 270
+      await Promise.all(pages.map(page => endAt(page, 12, turn)))
+      await finished()
+      const events = await Promise.all(pages.map(page => page.evaluate(() => window.partyEvents)))
+      assert.deepEqual(events, [[], []])
+      // On the result card too: a 4 s drop, then both vote and the next night starts.
+      cut(1, 4000, 'close')
+      await host.getByText('Partner reconnecting…', { exact: true }).waitFor({ timeout: 5000 })
+      await Promise.all(pages.map((page, i) => page.screenshot({ path: `${evidence}/reconnect-${TAG}-result-${i}.png` })))
+      await host.getByText('Partner reconnecting…', { exact: true }).waitFor({ state: 'detached', timeout: 20000 })
+      for (const page of pages) await page.getByRole('button', { name: /Next night →|Play again →/ }).click()
+      await nextScene()
+      await writeFile(`${evidence}/reconnect-${TAG}.json`, JSON.stringify({ injected: { rttMs: Number(process.env.PARTY_RTT_MS ?? 0), jitterMs: Number(process.env.PARTY_JITTER_MS ?? 0) }, initial, drops, checkpointsCompared: common.length, away, finishedAtTurn: turn, errors }, null, 2))
+      console.log('PASS: 5 s and 15 s closed drops, a 12 s silent drop and a 6 s background rejoin, checkpoints match, the night finishes; a drop on the result card resumes and the next night starts', common.length, 'checkpoints')
+    } else if (mode === 'drop40') {
+      // Longer than the 30 s grace: the room ends as before a reconnect existed, with the same heading for both.
+      for (let round = 0; round < 6; round++) { await act(round); await pages[0].waitForTimeout(700) }
+      const at = Date.now()
+      cut(1, 40000, 'close')
+      await pages[0].getByText('Partner reconnecting…', { exact: true }).waitFor({ timeout: 5000 })
+      const ended = await Promise.all(pages.map(async page => { await page.getByRole('heading', { name: 'Partner disconnected' }).waitFor({ timeout: 45000 }); return Date.now() - at }))
+      assert.ok(ended.every(ms => ms >= 28000 && ms < 40000), JSON.stringify(ended))
+      cutUntil[1] = 0 // The network is back for the next mode.
+      await Promise.all(pages.map((page, i) => page.screenshot({ path: `${evidence}/drop40-${i}.png` })))
+      await writeFile(`${evidence}/drop40.json`, JSON.stringify({ initial, endedAfterMs: ended, details: await Promise.all(pages.map(page => page.evaluate(() => window.__siege?.net?.detail ?? null))), errors }, null, 2))
+      console.log('PASS: a 40 s drop ends the room for both after the grace', ended)
     } else if (mode === 'disconnect') {
       await pages[1].evaluate(() => window.__siege.options.coop.client.close())
       await pages[0].getByRole('heading', { name: 'Partner disconnected' }).waitFor({ timeout: 10000 })
@@ -409,7 +492,7 @@ try {
   }
   assert.deepEqual(errors, [])
 } catch (error) {
-  await writeFile(`${evidence}/failure-state.json`, JSON.stringify(await Promise.all(pages.map(page => page.evaluate(() => { const s = window.__siege; return { tick: s?.net?.tick, state: s?.net?.state, detail: s?.net?.detail, events: window.partyEvents, rtt: window.partyRtt, hashes: window.partyHashes } }).catch(() => null))), null, 2))
+  await writeFile(`${evidence}/failure-state.json`, JSON.stringify(await Promise.all(pages.map(page => page.evaluate(() => { const s = window.__siege; return { tick: s?.net?.tick, state: s?.net?.state, verified: s?.net?.verifiedTick, status: document.querySelector('.siege-party-status')?.textContent ?? null, away: window.partyAway, ended: s?.ended, events: window.partyEvents, rtt: window.partyRtt, hashes: window.partyHashes } }).catch(() => null))), null, 2))
   await Promise.all(pages.map(async (page, i) => { await page.screenshot({ path: `${evidence}/failure-${i}.png` }).catch(() => {}); await writeFile(`${evidence}/failure-${i}.txt`, await page.locator('body').innerText().catch(() => '') ) }))
   console.error('Browser errors', errors); throw error
 } finally { await browser.close() }
