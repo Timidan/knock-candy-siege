@@ -133,7 +133,9 @@ export async function loadLevelAssets(pack: AssetPack, level: number, signal: Ab
   // props3 carries the batch 3 props, the portal, the map effects, the darkness light and the daily icons.
   const newProps = !!(geometry.portals || geometry.zones || geometry.dark || geometry.props.some(p => p.kind === 'bell' || p.kind === 'grate' || p.kind === 'bonfire'))
   const keys = ['units2', 'fx2', 'fx3', 'towers3', 'items', ...(geometry.props.some(p => p.use) || geometry.ambient ? ['props'] : []), ...(newProps || daily ? ['props3'] : [])]
-  const normal = `/siege/levels/${geometry.background}`, wide = normal.replace(/\.webp$/, '-wide.webp')
+  // Touch screens get the same wide map at web quality: about 300 KB instead of 2.6 MB on mobile data.
+  const touch = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches
+  const normal = `/siege/levels/${geometry.background}`, wide = normal.replace(/\.webp$/, touch ? '-wide-m.webp' : '-wide.webp')
   const backgroundImage = loadImage(wide, signal).catch(() => loadImage(normal, signal))
   const [background, ...atlases] = await Promise.all([backgroundImage, ...keys.map(key => loadAtlas(key, signal))])
   return { ...pack, geometry, background, atlases: [...pack.atlases, ...atlases] }
