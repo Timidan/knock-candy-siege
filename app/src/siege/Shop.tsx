@@ -9,7 +9,7 @@ import { hasAsset, loadAtlas, loadHeroAssets, type AssetPack } from './assets'
 import type { Kit } from './data/kits'
 import { SHOP_ITEMS, CRYPTO_EMOTES } from './data/shop'
 import { HeroPreview } from './hero/HeroPreview'
-import { reducedMotion } from './data/save'
+import { reducedMotion, CRATE_CANDY } from './data/save'
 import { CRATE_PRICE, SHOP_ADDRESS, knockAmount } from './shopChain'
 import type { ShopState } from './useShop'
 import './shop-vault.css'
@@ -71,7 +71,7 @@ export function Shop({ assets, kit, shop, wallet, bank, crates, onBack, inLevel 
       </section>
     </div>
     <section className="siege-crate" aria-label="Candy Crate">
-      <p><strong>Candy Crate</strong> +100 candy at the start of one night. Switch it on in the hero picker; not for the Daily or challenges.{crates > 0 && <b> You have {crates}.</b>}</p>
+      <p><strong>Candy Crate</strong> +{CRATE_CANDY} candy at the start of one night. Switch it on in the hero picker; not for the Daily or challenges.{crates > 0 && <b> You have {crates}.</b>}</p>
       <Sticker tone="gold" sound="ui-confirm" disabled={!SHOP_ADDRESS || isSandbox || shop.busy || shop.pending || !shop.account || !shop.network || shop.balance === null || crateShort || shop.gas === null || shop.gas === 0n} onClick={() => void shop.buyCrate()}>{!SHOP_ADDRESS ? 'Shop opens soon' : crateShort ? 'Not enough $KNOCK' : shop.gas === 0n ? 'Get test ETH for gas' : `Buy for ${knockAmount(CRATE_PRICE)} $KNOCK`}</Sticker>
     </section>
     {(shop.status || shop.error || error) && <div className="siege-shop-status" role="status">{shop.status && <p>{shop.status}</p>}{(shop.error || error) && <p>{shop.error || error}</p>}</div>}

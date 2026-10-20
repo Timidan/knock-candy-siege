@@ -25,7 +25,7 @@ export function writeSave(save: Save): boolean {
   try { localStorage.setItem('knock-siege-v1', JSON.stringify(save)); return true } catch { return false }
 }
 // Candy Crates bought with $KNOCK: each purchase's transaction hash is credited once; count is how many are left to use.
-export const CRATE_CANDY = 100
+export const CRATE_CANDY = 80
 export function creditCrate(save: Save, hash: string): Save | null {
   const key = hash.toLowerCase()
   return save.crates.hashes.includes(key) ? null : { ...save, crates: { count: save.crates.count + 1, hashes: [...save.crates.hashes, key] } }

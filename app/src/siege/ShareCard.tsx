@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Sticker, playUi } from '../ui'
 import type { AssetPack } from './assets'
 import { loadImage } from './assets'
-import { reducedMotion } from './data/save'
+import { reducedMotion, CRATE_CANDY } from './data/save'
 import { thumb } from '../images'
 import type { Kit } from './data/kits'
 import type { Outcome } from './SiegeScene'
@@ -123,7 +123,7 @@ export async function renderShareCard(assets: AssetPack, kit: Kit, costume: stri
   }
   pill(award, 754, face, lip, proud ? NIGHT : '#eadff2', proud ? NIGHT : '#d7c1e3')
   if (featured) pill('CHOG OF THE DAY', 852, GOLD, '#c48a0c', NIGHT, NIGHT)
-  if (crate) pill('CANDY CRATE +100', featured ? 950 : 852, DUSK, '#140a22', '#eadff2', PUMPKIN)
+  if (crate) pill(`CANDY CRATE +${CRATE_CANDY}`, featured ? 950 : 852, DUSK, '#140a22', '#eadff2', PUMPKIN)
   // Footer: the original NFT stays identifiable beside its number.
   ctx.fillStyle = '#12091fdd'; ctx.strokeStyle = frame; ctx.lineWidth = 4; ctx.beginPath(); ctx.roundRect(52, 1186, 976, 112, 30); ctx.fill(); ctx.stroke()
   ctx.save(); ctx.beginPath(); ctx.arc(116, 1242, 42, 0, Math.PI * 2); ctx.clip(); ctx.drawImage(portrait, 74, 1200, 84, 84); ctx.restore()
