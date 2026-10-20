@@ -86,7 +86,7 @@ const CUE_TABLE = {
   witching: beat([['wave', .6, 1], ['boo', .55, .8], ['hit', .5, .4]]), victory: beat([['victory', 1, .8]]), defeat: beat([['defeat', 1, .8]]),
   // Props: the bridge's raise, lower and ready, and each map's own.
   'prop-lamp': beat([['jar-stolen', .8, .5], ['hit', .7, .45], ['armor', 1.2, .5]]), 'prop-shop': beat([['coin', 1.2, .65], ['candy-cascade', 1.1, .65], ['upgrade', 1.6, .25]]),
-  'prop-bell': beat([['armor', .5, .8], ['armor', .53, .5]]), 'prop-grate': beat([['trap', .7, .55], ['armor', .8, .55], ['splat', .7, .3]]), 'prop-bonfire': beat([['boo', .55, .8], ['hit', .6, .3]]),
+  'prop-bell': beat([['armor', .5, .8], ['armor', .53, .5]]), 'prop-grate': beat([['trap', .7, .55], ['armor', .8, .55], ['splat', .7, .3]]), 'prop-bonfire': beat([['boo', .55, .8], ['hit', .6, .3]]), 'prop-cannon': beat([['hit', .55, .75], ['build', .8, .4], ['splat', .9, .35]]),
   'prop-bridge': beat([['trap', .6, .55], ['build', .7, .45], ['armor', .6, .6]]), 'bridge-down': beat([['build', .55, .55], ['armor', .55, .6]]),
   'prop-ready': { layers: [['ui-confirm', 1.3, .25], ['coin', 1.5, .2]], important: true, gap: .3 },
   // HUD cues (Hud.ts and the result card).

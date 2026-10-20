@@ -65,6 +65,8 @@ export type SceneOptions = { coop?: CoopSession; assets: AssetPack; level: numbe
 // Decorative cadence and amplitude, in seconds and design pixels, per tower family.
 const TOWER_IDLE: Record<TowerKind, readonly [number, number]> = { egg: [2.4, .8], tp: [1.8, 1.2], lantern: [1.2, 2.4], patch: [1.5, .5], roost: [2.1, 1.4], cauldron: [1.7, .7], catapult: [1.1, .4], lighthouse: [.9, 1.5], organ: [1.4, .9] }
 const WITCHING_WARNING = 3
+// Rosie Row's candy cannon: its art, shots per volley and damage per shot (times the wave's health).
+const CANNON = 'tower/catapult/3', CANNON_SHOTS = 5, CANNON_DAMAGE = 75
 // Compass names for swarmSide, by eighths of a turn from screen right, clockwise.
 const SIDES = ['right', 'bottom right', 'bottom', 'bottom left', 'left', 'top left', 'top', 'top right']
 // Road routes start with a 450px off-screen run-up (Route); crossing it is an enemy's arrival at the entrance.
@@ -629,7 +631,7 @@ export class SiegeScene extends Phaser.Scene {
     }
     for (const z of geometry.zones ?? []) this.zones.push({ ...z, image: this.art.image(z.x, z.y, 'fx/toxic/0').setDisplaySize(z.r * 2.35, z.r * 2.35).setDepth(3) })
     for (const data of geometry.props) if (data.use && data.kind) {
-      const image = this.art.image(data.x, data.y, data.kind === 'bridge' ? 'prop/bridge/down' : `prop/${data.kind}/0`).setOrigin(.5, 1).setDepth(data.y)
+      const image = this.art.image(data.x, data.y, data.kind === 'bridge' ? 'prop/bridge/down' : data.kind === 'cannon' ? CANNON : `prop/${data.kind}/0`).setOrigin(.5, 1).setDepth(data.y)
       const label = this.add.text(data.x, data.y + 12, '', { fontFamily: '"Patrick Hand", sans-serif', fontSize: '30px', color: '#fff0d5', backgroundColor: '#241b30', padding: { x: 10, y: 4 } }).setOrigin(.5, 0).setDepth(2800)
       const index = this.props.length
       image.setInteractive().on('pointerdown', (p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); if (this.mode) this.worldDown(p); else if (!this.focus.active) this.command({ type: 'prop', index }); else this.focus.input(this.viewToWorld(p), true) })
@@ -677,6 +679,7 @@ export class SiegeScene extends Phaser.Scene {
       p.animation = Math.max(0, p.animation - dt)
       if (this.presentationFrozen) continue
       const kind = p.data.kind!, step = (n: number) => Math.min(n - 1, Math.floor((1 - p.animation) * n))
+      if (kind === 'cannon') { p.image.setScale(.8 * (1 + .12 * p.animation), .8 * (1 - .1 * p.animation)); p.label.setText(p.cooldown > 0 ? `${Math.ceil(p.cooldown)}s` : 'Fire the cannon'); continue }
       const name = kind === 'lamp' ? p.animation ? `fall/${step(4)}` : p.used ? 'down' : '0' : kind === 'shop' ? p.animation ? `use/${step(6)}` : String(Math.floor(idleTime * 5) % 4)
         : kind === 'bell' ? p.animation ? `ring/${step(6)}` : '0' : kind === 'grate' ? p.animation ? `open/${step(4)}` : '0' : kind === 'bonfire' ? this.bonfire > 0 ? `burn/${Math.floor(idleTime * 8) % 6}` : '0'
         : p.animation ? `move/${step(4)}` : this.bridgeUp ? 'up' : 'down'
@@ -723,6 +726,18 @@ export class SiegeScene extends Phaser.Scene {
         e.distance = this.routeFor(e).nearest(back[0], back[1]).distance; this.routeFor(e).at(e.distance, e); dropped++
       }
       p.cooldown = dropped ? 16 * slow : 1.5; this.hud.toast(dropped ? `${dropped} dropped down the grate. They climb out upstream in 5 seconds.` : 'Nobody is standing on the grate.')
+    } else if (p.data.kind === 'cannon') {
+      // Rosie Row: a volley of candy corn at the leading ground enemies on the road it covers; an empty road costs nothing.
+      const reach = new Route(p.data.reach!), from = { x: p.data.x, y: p.data.y - 120 }
+      const leaders = this.enemies.filter(e => e.active && e.visible && !e.returning && !ENEMIES[e.kind].flying && reach.nearest(e.x, e.y).gap < 110)
+        .sort((a, b) => b.distance / this.routeFor(b).length - a.distance / this.routeFor(a).length).slice(0, CANNON_SHOTS)
+      if (!leaders.length) { if (this.mine(player)) this.hud.toast('The cannon has nothing to aim at yet.'); return }
+      const damage = CANNON_DAMAGE * this.healthScale(Math.max(0, this.wave - 1))
+      for (let i = 0; i < CANNON_SHOTS; i++) {
+        const target = leaders[i % leaders.length]
+        this.fire(from.x, from.y, target, damage, 'catapult', 70, { frame: 'proj/candycorn', duration: .7 + i * .09, arc: 220 + i * 25, onHit: e => { if (!ENEMIES[e.kind].flying) this.damage(e, damage, 'physical') }, after: () => { this.effect('fx/candycorn/0', target.x, target.y - 35, .6, 1.1) } })
+      }
+      p.cooldown = 25; this.effect('fx/poof/0', from.x, from.y, .5, 1.3); this.shake(.004); this.hud.toast('Candy cannon! A volley at the leaders.')
     } else if (p.data.kind === 'bonfire') {
       // Rare Row: the whole map is lit, and every ghost revealed, for 20 seconds.
       this.bonfire = 20; p.cooldown = 45 * slow; this.hud.toast('The bonfire roars! Everything is lit for 20 seconds.')

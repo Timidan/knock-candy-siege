@@ -7,7 +7,7 @@ export type BossSpawn = { id: BossId; delay?: number; hp?: number }
 // edge: the group pours in from the edges of the view on the porch's far side instead of a road (Witching Hour swarms).
 export type WaveGroup = { type: EnemyKind; count: number; interval: number; delay?: number; path?: number; edge?: boolean }
 export type Wave = { name: string; groups: WaveGroup[]; bonus: number; countdown: number; witching?: boolean; boss?: BossSpawn }
-export type LevelProp = Point & { kind?: 'lamp' | 'shop' | 'bridge' | 'bell' | 'grate' | 'bonfire'; use?: boolean; reach?: [number, number][]; return?: [number, number]; frame?: string; scale?: number }
+export type LevelProp = Point & { kind?: 'lamp' | 'shop' | 'bridge' | 'bell' | 'grate' | 'bonfire' | 'cannon'; use?: boolean; reach?: [number, number][]; return?: [number, number]; frame?: string; scale?: number }
 export type LevelPad = Point & { boost?: boolean }
 export type Portal = { path: number; enter: [number, number]; exit: [number, number] }
 export type Zone = Point & { kind: 'toxic'; r: number }
@@ -53,7 +53,7 @@ export function readGeometry(value: unknown): LevelGeometry | null {
   if (v.fly && (!Array.isArray(v.fly) || !v.fly.length || !v.fly.every(pathValid))) return null
   if (v.switch && (!Number.isInteger(v.switch.path) || !v.paths[v.switch.path] || !pathValid(v.switch.points))) return null
   const pair = (p: unknown) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite)
-  if (Array.isArray(v.props) && v.props.some(p => p.use && (!['lamp', 'shop', 'bridge', 'bell', 'grate', 'bonfire'].includes(p.kind ?? '') || !pathValid(p.reach) || (p.kind === 'grate' && !pair(p.return))))) return null
+  if (Array.isArray(v.props) && v.props.some(p => p.use && (!['lamp', 'shop', 'bridge', 'bell', 'grate', 'bonfire', 'cannon'].includes(p.kind ?? '') || !pathValid(p.reach) || (p.kind === 'grate' && !pair(p.return))))) return null
   if (v.portals && (!Array.isArray(v.portals) || !v.portals.every(p => Number.isInteger(p.path) && !!v.paths[p.path] && pair(p.enter) && pair(p.exit)))) return null
   if (v.zones && (!Array.isArray(v.zones) || !v.zones.every(z => z.kind === 'toxic' && point(z) && Number.isFinite(z.r) && z.r > 0))) return null
   if (v.lights && (!Array.isArray(v.lights) || !v.lights.every(l => point(l) && Number.isFinite(l.r) && l.r > 0))) return null

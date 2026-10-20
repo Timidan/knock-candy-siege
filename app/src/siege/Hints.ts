@@ -43,6 +43,8 @@ export class Hints {
           for (const e of s.enemies) if (onField(e) && !e.visible) { hidden++; if (e.kind === 'ghost') ghosts++ }
           return ghosts ? 'Light the bonfire to reveal ghosts' : s.dark && hidden >= 3 ? 'Light the bonfire to see them' : null
         }
+        // The cannon aims at ground enemies on its stretch of road (useProp's own test).
+        : kind === 'cannon' ? () => count(e => !ENEMIES[e.kind].flying && e.visible && !!reach && reach.nearest(e.x, e.y).gap < 110) >= 2 ? 'Fire the candy cannon' : null
         : kind === 'bell' ? () => count(() => true) >= 10 || count(e => distanceSq(e, geometry.porch) < 300 ** 2) ? 'Ring the bell to freeze them' : null
         : () => { // shop: Sugar Rush costs 50 candy (useProp) and only helps while towers have targets
           if (s.localCandy < 50) return null
