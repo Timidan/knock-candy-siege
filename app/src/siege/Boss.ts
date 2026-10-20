@@ -67,7 +67,7 @@ export function bossFraction(s: SiegeScene, e: Enemy) {
 
 function setup(s: SiegeScene, e: Enemy, spec: BossSpawn, wave: number, hp: number, distance: number, half?: BossState) {
   const cfg = bossConfig(spec.id), legend = spec.id !== 'pumpkin', a = s.options.assets
-  Object.assign(e, { active: true, generation: e.generation + 1, wave, kind: legend ? 'treater' : 'pumpkin', id: legend ? spec.id : 1, mods: [], path: s.roadFor('treater', 0), route: undefined, distance, returning: 0, casting: 0, poisonStacks: 0, speed: cfg.speed, hp, maxHp: hp, candy: cfg.candy, jars: half ? Math.ceil(cfg.jars / 2) : cfg.jars, age: 0, hit: 0, attack: .5, skill: 99, lucky: false, revived: false, armour: false, visible: true, slowPower: .5, heroDot: false, sigCooldown: 0, shield: 0, gold: 0, lit: true })
+  Object.assign(e, { active: true, generation: e.generation + 1, wave, kind: legend ? 'treater' : 'pumpkin', id: legend ? spec.id : 1, mods: [], path: s.roadFor('treater', spec.path ?? 0), route: undefined, distance, returning: 0, casting: 0, poisonStacks: 0, speed: cfg.speed, hp, maxHp: hp, candy: cfg.candy, jars: half ? Math.ceil(cfg.jars / 2) : cfg.jars, age: 0, hit: 0, attack: .5, skill: 99, lucky: false, revived: false, armour: false, visible: true, slowPower: .5, heroDot: false, sigCooldown: 0, shield: 0, gold: 0, lit: true })
   for (const key of Object.keys(e.status) as (keyof typeof e.status)[]) e.status[key] = 0
   e.art.root.setVisible(false)
   s.resetReaction(e)

@@ -870,7 +870,7 @@ export class SiegeScene extends Phaser.Scene {
       this.previewWave = this.wave; this.previewBridge = this.bridgeUp
       // Edge-swarm paths do not exist until spawn's random draw; never invent a road or advance that RNG here.
       const paths = new Set(wave?.groups.filter(g => !g.edge && g.count > 0).map(g => this.roadFor(g.type, g.path ?? 0)))
-      if (wave?.boss) paths.add(this.roadFor('treater', 0))
+      if (wave?.boss) paths.add(this.roadFor('treater', wave.boss.path ?? 0))
       for (const entry of this.pathPreview) { entry.selected = paths.has(entry.path); entry.cueAge = 0 }
     }
     const preparing = !!wave && !this.ended && this.presentationTime >= this.previewHideUntil && (this.wave === 0 || this.countdown > 0 && !this.schedule.some(e => e.wave === this.wave - 1))
