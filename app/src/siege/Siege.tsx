@@ -396,10 +396,10 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       onEnd: result => {
         endRun({ ...result, quit: false })
         setOutcome(result); setDefeatTip(result.won ? '' : counterTip(result, world)); setMenu('result'); setOpened(0); setFeedback('')
-        if (run.coop) return
+        if (run.coop) partyResult(run.coop.client)
         const now = saveRef.current
-        // A challenge on a night still locked here plays unsaved: no stars, scores or unlocks.
-        if (!isOpen(now, nightOf(run))) return
+        // A challenge on a night still locked here plays unsaved: no stars, scores or unlocks. A Porch Party saves for both players, locked or not.
+        if (!run.coop && !isOpen(now, nightOf(run))) return
         // Each mode keeps its own best: stars and score per level, the best endless wave, and the best score of each daily.
         if (run.mode === 'endless') persist({ ...now, endless: { wave: Math.max(now.endless.wave, result.wave), score: Math.max(now.endless.score, result.score) } })
         else if (run.mode === 'daily' && run.daily) persist({ ...now, daily: { ...now.daily, [run.daily.day]: Math.max(now.daily[run.daily.day] ?? 0, result.score) } })
@@ -460,13 +460,15 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   // Retry only the stage that failed: the base pack, the hero and level art, or the scene (a fresh run object rebuilds the game).
   const retry = () => { const stage = failed; setFailed(null); if (stage === 'candy') setLoadAttempt(n => n + 1); else if (stage === 'lanterns') setRun(r => r && { ...r }); else setPrepAttempt(n => n + 1) }
   // A story win with a playable level after it leads on to that night's hero picker, keeping the hero and costume.
-  const nextLevel = outcome?.won && run?.mode === 'level' && LEVELS[run.level]?.waves.length && isOpen(save, run.level + 1) ? run.level + 1 : 0
+  // A Porch Party goes by the host's stars as picked plus this result, which both players know, so both offer the same night.
+  const hostStars = run?.coop?.players[0].stars, progress = run && hostStars ? { ...save, scores: {}, stars: { ...hostStars, [run.level]: Math.max(hostStars[run.level] ?? 0, outcome?.stars ?? 0) } } : save
+  const nextLevel = outcome?.won && run?.mode === 'level' && LEVELS[run.level]?.waves.length && isOpen(progress, run.level + 1) ? run.level + 1 : 0
   // The result card's optional feedback link, on the share button's line when there is one.
   const feedbackLink = STATS_URL ? (feedback === 'sent' ? <p className="siege-feedback-thanks" role="status">Thanks! The porch heard you.</p> : <button className="siege-text-button siege-feedback-open" onClick={() => { setFeedback('open'); playUi('ui-open') }}>Send feedback</button>) : null
   // A win short of UNLOCK_STARS names what the next night needs.
   // A challenge run on a night still locked here saved nothing; the result card says so.
   const unsaved = !!run && !run.coop && !isOpen(save, nightOf(run))
-  const starsShort = outcome?.won && !outcome.party && !unsaved && run?.mode === 'level' && LEVELS[run.level]?.waves.length && !isOpen(save, run.level + 1) ? run.level + 1 : 0
+  const starsShort = outcome?.won && !unsaved && run?.mode === 'level' && LEVELS[run.level]?.waves.length && !isOpen(save, run.level + 1) ? run.level + 1 : 0
   // From the result card to a night's hero picker, keeping the hero and costume.
   const toPicker = (night: number) => { if (!run) return; const id = run.id; leaveLevel(); setLevel(night); setHero(String(id)); setMenu('hero') }
   // A locked tablet shakes and says which night opens it; an open one leads to the hero picker.
@@ -490,8 +492,9 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
   }
   // Host and friend both land here once seated: the lobby follows the roster, and both Chogs load once both are picked.
   // Only leaving (the abort) ends it; a wallet change while the friend picks must not.
-  const enterParty = (client: RoomClient, controller: AbortController) => {
-    partyClient.current = client; setLevel(client.room.level); setMenu('party')
+  // lobby: false keeps the result card up while the next round prepares.
+  const enterParty = (client: RoomClient, controller: AbortController, lobby = true) => {
+    partyClient.current = client; setLevel(client.room.level); if (lobby) setMenu('party')
     let preparing = false, friendHere = false
     const show = () => {
       setParty({ code: client.room.code, players: client.roster, joined: client.joined, player: client.player })
@@ -512,6 +515,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
       } catch (error) { if (!controller.signal.aborted) { setPartyError(error instanceof Error ? error.message : 'Could not prepare the room.'); setMenu('party-error'); client.close() } }
     }
     show()
+    lobbyUnsubscribe.current?.()
     lobbyUnsubscribe.current = client.subscribe(message => {
       if (message.type === 'roster') { show(); void prepare() }
       if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') {
@@ -521,6 +525,15 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
     })
     void prepare()
   }
+  // The Porch Party result card: both players vote for the next night (or the same one again), and the room starts it once both have.
+  const partyResult = (client: RoomClient) => {
+    lobbyUnsubscribe.current?.()
+    lobbyUnsubscribe.current = client.subscribe(message => {
+      if (message.type === 'round' && partyAbort.current) enterParty(client, partyAbort.current, false)
+      if (message.type === 'error' || message.type === 'disconnected' || message.type === 'desync') { setPartyStatus(''); setPartyError(message.type === 'disconnected' && message.reason.startsWith('Partner') ? 'Your partner left the Porch Party.' : 'This Porch Party has ended.') }
+    })
+  }
+  const voteNext = (night: number) => { partyClient.current?.send({ type: 'next', level: night, stars: { ...saveRef.current.stars } }); setPartyStatus('Waiting for your partner…') }
   // The host's Porch Party: the Chog is checked before any room exists, so a note stays on the hero picker.
   const startParty = async () => {
     if (starting || !assets || !valid || mode !== 'level' || !isOpen(saveRef.current, level)) return
@@ -758,7 +771,7 @@ export default function Siege({ wallet, onBack }: { wallet: WalletState; onBack?
         <p>{outcome.mode === 'endless' ? 'You held the porch as long as you could. The waves never stop.' : outcome.won ? <>{outcome.jars} jars saved. {opened ? <b className="siege-unlocked" style={{ animationDelay: `${SLAMS[Math.max(1, outcome.stars) - 1] + IMPACT + 150}ms` }}><img src="/art/icons/key.svg" alt="" />Night {String(opened).padStart(2, '0')} unlocked!</b> : starsShort ? `Win with ${UNLOCK_STARS}★ to unlock Night ${String(starsShort).padStart(2, '0')}.` : 'The porch is yours.'}</> : defeatTip}</p>
         <p className="siege-score"><CountUp value={outcome.score} ms={outcome.won && outcome.stars ? SLAMS[outcome.stars - 1] + IMPACT : 0} /> points<small>{outcome.party ? 'Team score' : run?.rival ? <>You {outcome.score.toLocaleString()} · Them {run.rival.score.toLocaleString()} · <b>{outcome.score > run.rival.score ? 'You beat them!' : 'So close!'}</b></> : outcome.mode === 'endless' ? `Best wave: ${save.endless.wave} · best score ${save.endless.score.toLocaleString()}` : outcome.mode === 'daily' && run?.daily ? `Best on Daily #${outcome.daily}: ${(save.daily[run.daily.day] ?? outcome.score).toLocaleString()}` : `Best on ${LEVELS[(run?.level ?? level) - 1].name}: ${(save.scores[run?.level ?? level] ?? outcome.score).toLocaleString()}`}</small></p>
         <div className="siege-result-stats"><span><b>{outcome.kills}</b> Chogs stopped</span><span><b>{outcome.mode === 'endless' ? outcome.wave : `${outcome.wave}/${LEVELS[(run?.level ?? level) - 1].waves.length}`}</b> {outcome.mode === 'endless' ? 'wave reached' : 'waves called'}</span><span><b>{outcome.heroLevel}</b> hero level</span></div>
-        <div className="row">{outcome.party ? <Sticker tone="orange" onClick={() => leaveLevel()}>New Porch Party →</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => toPicker(nextLevel)}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>Level select</Sticker></div>
+        <div className="row">{outcome.party ? partyError ? <p role="alert">{partyError}</p> : partyStatus ? <p role="status">{partyStatus}</p> : <Sticker tone="orange" sound="ui-confirm" onClick={() => voteNext(nextLevel || outcome.level)}>{nextLevel ? 'Next night →' : 'Play again →'}</Sticker> : nextLevel ? <><Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => toPicker(nextLevel)}>Next night →</Sticker><Sticker sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>Play again</Sticker></> : <Sticker tone="orange" sound="ui-confirm" disabled={starting} onClick={() => void start(false)}>{outcome.won ? 'Another night?' : 'Try again →'}</Sticker>}<Sticker sound="ui-back" onClick={() => leaveLevel()}>{outcome.party ? 'Leave room' : 'Level select'}</Sticker></div>
         {/* After the tutorial night (often a random guest Chog from one-tap Play), point at the hero picker. */}
         {run?.tutorial && !outcome.party && <button className="siege-text-button" onClick={() => toPicker(nextLevel || run.level)}>Every Chog plays differently: pick yours →</button>}
         {run && !run.coop ? <ShareCard assets={run.assets} kit={resolveKit(run.assets.kits, run.assets.traits, run.assets.chogs, run.id, run.home)} costume={run.costume} result={outcome} bosses={scene.current?.runStats?.().bossesDefeated} featured={run.id === chogOfDay} seed={run.seed} back={!!run.rival}>{feedbackLink}</ShareCard> : feedbackLink}

@@ -15,6 +15,6 @@ const oversized = await worker.fetch(new Request('https://relay/rooms', { method
 assert.equal(oversized.status, 413); assert.equal(cancelled, true); assert.equal(lookups, 0)
 const denied = await worker.fetch(new Request('https://relay/rooms/ABCDEFGHJK/ws', { headers: { ...headers, Upgrade: 'websocket' } }), env)
 assert.equal(denied.status, 429); assert.equal(denied.headers.get('Retry-After'), '60'); assert.equal(lookups, 0)
-const valid = await worker.fetch(new Request('https://relay/rooms', { method: 'POST', headers, body: JSON.stringify({ version: 4, build: 'ingress-check', level: 1 }) }), env)
+const valid = await worker.fetch(new Request('https://relay/rooms', { method: 'POST', headers, body: JSON.stringify({ version: 5, build: 'ingress-check', level: 1 }) }), env)
 assert.equal(valid.status, 201); assert.equal(lookups, 1)
 console.log('PASS: missing-length stream cancelled at 600 bytes, denied upgrade never looks up a room, valid creation succeeds')
