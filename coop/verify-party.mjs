@@ -36,15 +36,17 @@ try {
     })
     page.on('pageerror', error => errors.push({ player, message: error.message }))
     // Read-only NFT/holder fixtures; no signing, transactions, grants or chain mutations.
-    await page.addInitScript(({ account, player, benchmark }) => {
+    // locked: the host has Rosie Row and opens Lemon Lane, which is still locked for the friend.
+    const stars = benchmark ? { 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3 } : !player && modes.includes('locked') ? { 1: 3 } : {}
+    await page.addInitScript(({ account, player, benchmark, stars }) => {
       localStorage.setItem('knock-stats-off', '1')
-      localStorage.setItem('knock-siege-v1', JSON.stringify({ tutorial: true, stars: benchmark ? { 1: 3, 2: 3, 3: 3, 4: 3, 5: 3, 6: 3 } : {}, settings: { music: 0, effects: 0, lite: !benchmark && !!player, shake: !benchmark && !player, autoFullscreen: false } }))
+      localStorage.setItem('knock-siege-v1', JSON.stringify({ tutorial: true, stars, settings: { music: 0, effects: 0, lite: !benchmark && !!player, shake: !benchmark && !player, autoFullscreen: false } }))
       window.ethereum = { on() {}, removeListener() {}, request: async ({ method }) => {
         if (method === 'eth_accounts' || method === 'eth_requestAccounts') return [account]
         if (method === 'eth_chainId') return '0x8f'
         throw new Error(`Fixture refuses wallet method: ${method}`)
       } }
-    }, { account, player, benchmark })
+    }, { account, player, benchmark, stars })
     const call = data => {
       if (data.startsWith('0x82ad56cb')) {
         const { args } = decodeFunctionData({ abi: aggregate, data })
@@ -71,7 +73,7 @@ try {
     const [host, friend] = pages
     await pages[0].goto(`${SITE}/?siegeStats`)
     await pages[0].getByRole('button', { name: /Hold the porch/ }).click({ force: true })
-    await pages[0].getByRole('button', { name: mode === 'crowd60' ? /^Rare Row/ : /^Rosie Row/ }).click()
+    await pages[0].getByRole('button', { name: mode === 'crowd60' ? /^Rare Row/ : mode === 'locked' ? /^Lemon Lane/ : /^Rosie Row/ }).click()
     await choose(pages[0], 1)
     await pages[0].getByRole('button', { name: 'Porch Party · play together' }).click()
     await pages[0].getByRole('heading', { name: 'Porch Party', exact: true }).waitFor({ timeout: 45000 })
@@ -135,7 +137,99 @@ try {
     const s = window.__siege
     return { tick: s.net.tick, verified: s.net.verifiedTick, status: s.net.state, detail: s.net.detail, seconds: s.clock, wave: s.wave, jars: s.jars, candy: s.candy, kills: s.kills, talents: s.heroes.map(h => h.talentLevels), ended: s.ended, result: s.coopResult, hashes: window.partyHashes, rtt: window.partyRtt, elapsedMs: performance.now() - window.partyStart, snapshot: JSON.stringify(s.net.simulation.snapshot(), (_key, value) => value instanceof Set ? [...value] : value) }
   })
+  // Ends the current night on both peers at the same turn, so the shortcut is part of the agreed simulation: jars decide the stars.
+  const endAt = (page, jars) => page.evaluate(jars => {
+    const s = window.__siege, step = s.networkStep.bind(s)
+    window.partyHashes = []; s.net.options.onHash = (tick, hash) => window.partyHashes.push({ tick, hash })
+    s.networkStep = (dt, turn) => { step(dt, turn); if (turn === 450) { s.jars = jars; s.finish(jars > 0) } }
+    return { tick: s.net.tick, level: s.options.level, seed: s.options.coop.client.room.seed, stars: s.heroes.map(hero => hero.selection.stars) }
+  }, jars)
+  const saved = page => page.evaluate(() => { const save = JSON.parse(localStorage.getItem('knock-siege-v1')); return { stars: save.stars, scores: save.scores } })
+  const card = page => page.locator('dialog.siege-modal--result').innerText()
+  // Both pages leave the result card for a new scene that is running.
+  const nextScene = () => Promise.all(pages.map(page => page.waitForFunction(() => window.__siege && !window.__siege.old && window.__siege.net?.state === 'running', null, { timeout: 90000 })))
+  const finished = () => Promise.all(pages.map(async page => { await page.getByLabel('Porch Party result').waitFor({ timeout: 60000 }); await page.evaluate(() => { window.__siege.old = true }) }))
+  // The relay ends the room on any checkpoint mismatch; this also compares the hashes both pages saw, by turn.
+  const sameCheckpoints = async () => {
+    await Promise.all(pages.map(page => page.waitForFunction(() => window.__siege.net.verifiedTick >= 540, null, { timeout: 60000 })))
+    const lists = await Promise.all(pages.map(page => page.evaluate(() => window.partyHashes)))
+    const peer = new Map(lists[1].map(({ tick, hash }) => [tick, hash])), common = lists[0].filter(({ tick }) => peer.has(tick))
+    assert.ok(common.length >= 5 && common.every(({ tick, hash }) => peer.get(tick) === hash), JSON.stringify(lists))
+    return common.map(({ tick }) => tick)
+  }
   for (const mode of modes) {
+    if (mode === 'next') {
+      const [host, friend] = pages, rounds = []
+      await room(mode)
+      // 1. Rosie Row, won with 12 jars (2 stars).
+      rounds.push(await Promise.all(pages.map(page => endAt(page, 12))))
+      await finished()
+      const first = await Promise.all(pages.map(saved)), texts = await Promise.all(pages.map(card))
+      console.log('round 1 saves', first)
+      // 2. Both saves hold the stars and score, and Lemon Lane opened for both.
+      for (const save of first) { assert.equal(save.stars[1], 2); assert.ok(save.scores[1] > 0) }
+      assert.ok(texts.every(text => /Night 02 unlocked!/i.test(text)), texts.join('\n---\n'))
+      await Promise.all(pages.map((page, i) => page.screenshot({ path: `${evidence}/next-result-${i}.png` })))
+      // 3. Next night: the host waits for the friend, then Lemon Lane starts for both.
+      await host.getByRole('button', { name: 'Next night →' }).click()
+      await host.getByText('Waiting for your partner…').waitFor()
+      await friend.getByRole('button', { name: 'Next night →' }).waitFor()
+      await host.screenshot({ path: `${evidence}/next-waiting-host.png` })
+      await friend.getByRole('button', { name: 'Next night →' }).click()
+      await nextScene()
+      rounds.push(await Promise.all(pages.map(page => endAt(page, 0))))
+      assert.ok(rounds[1].every(r => r.level === 2), JSON.stringify(rounds[1]))
+      assert.deepEqual(rounds[1][0].stars, [{ 1: 2 }, { 1: 2 }]); assert.deepEqual(rounds[1][0], { ...rounds[1][1], tick: rounds[1][0].tick })
+      console.log('round 2 started on Lemon Lane', rounds[1], 'checkpoints', await sameCheckpoints())
+      // 4a. A loss, then Play again on the same night; this time the friend waits.
+      await finished()
+      const lost = await Promise.all(pages.map(saved))
+      // A loss keeps its score as in solo (often 0 this early), with no stars.
+      for (const save of lost) { assert.equal(save.stars[2], 0); assert.equal(typeof save.scores[2], 'number') }
+      assert.ok((await Promise.all(pages.map(card))).every(text => /They got the candy\./i.test(text)))
+      await friend.getByRole('button', { name: 'Play again →' }).click()
+      await friend.getByText('Waiting for your partner…').waitFor()
+      await friend.screenshot({ path: `${evidence}/next-again-friend.png` })
+      await host.getByRole('button', { name: 'Play again →' }).click()
+      await nextScene()
+      rounds.push(await Promise.all(pages.map(page => endAt(page, 5))))
+      assert.ok(rounds[2].every(r => r.level === 2) && rounds[2][0].seed === rounds[2][1].seed && rounds[2][0].seed !== rounds[1][0].seed, JSON.stringify(rounds[2]))
+      console.log('round 3 replays Lemon Lane', rounds[2], 'checkpoints', await sameCheckpoints())
+      // 4b. A 1-star win: Mint Mews stays locked for the host, so only Play again is offered. Then the friend leaves at the result card while the host waits.
+      await finished()
+      const third = await Promise.all(pages.map(saved))
+      for (const save of third) assert.equal(save.stars[2], 1)
+      assert.ok((await Promise.all(pages.map(card))).every(text => /Win with 2★ to unlock Night 03\./i.test(text)))
+      for (const page of pages) assert.equal(await page.getByRole('button', { name: 'Next night →' }).count(), 0)
+      await host.getByRole('button', { name: 'Play again →' }).click()
+      await host.getByText('Waiting for your partner…').waitFor()
+      await friend.getByRole('button', { name: 'Leave room' }).click()
+      await friend.getByRole('heading', { name: 'Pick your porch' }).waitFor()
+      await host.getByText('Your partner left the Porch Party.').waitFor({ timeout: 15000 })
+      assert.equal(await host.getByRole('button', { name: /Next night|Play again/ }).count(), 0)
+      await host.screenshot({ path: `${evidence}/next-partner-left.png` })
+      await host.getByRole('button', { name: 'Leave room' }).click()
+      await host.getByRole('heading', { name: 'Pick your porch' }).waitFor()
+      await writeFile(`${evidence}/next.json`, JSON.stringify({ rounds, saves: { first, lost, third }, errors }, null, 2))
+      console.log('PASS: co-op saves for both, Next night, Play again after a loss, partner leaving at the result card')
+      continue
+    }
+    if (mode === 'locked') {
+      // The friend's save has nothing, so Lemon Lane is locked for them; a 2-star win there still saves and opens Mint Mews for both.
+      await room(mode)
+      const before = await saved(pages[1])
+      assert.deepEqual(before.stars, {})
+      await Promise.all(pages.map(page => endAt(page, 12)))
+      await finished()
+      const after = await Promise.all(pages.map(saved)), texts = await Promise.all(pages.map(card))
+      for (const save of after) { assert.equal(save.stars[2], 2); assert.ok(save.scores[2] > 0) }
+      assert.ok(texts.every(text => /Night 03 unlocked!/i.test(text)), texts.join('\n---\n'))
+      assert.ok(await Promise.all(pages.map(page => page.getByRole('button', { name: 'Next night →' }).isVisible())).then(all => all.every(Boolean)))
+      await pages[1].screenshot({ path: `${evidence}/locked-result-friend.png` })
+      await writeFile(`${evidence}/locked.json`, JSON.stringify({ before, after, errors }, null, 2))
+      console.log('PASS: a friend on a night still locked for them keeps the stars and unlocks the next night', after)
+      continue
+    }
     if (mode === 'errors') {
       // A dead invite, then the host leaving while the friend picks: both end on a plain note, not a broken lobby.
       await pages[1].goto(`${SITE}/?room=AAAAAAAAAA&siegeStats`)

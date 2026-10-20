@@ -1,7 +1,7 @@
 import type { Command } from '../SiegeScene'
 import { CONSUMABLES, SPECIALISATIONS, SPELLS, TARGETING, TOWERS, TRAPS } from '../data/config'
 
-export const PROTOCOL = 4
+export const PROTOCOL = 5
 export const TICK_RATE = 45
 export const INPUT_DELAY = 6
 export const MAX_DELAY = 45
@@ -26,6 +26,8 @@ export type ClientMessage =
   | { type: 'input'; tick: number; commands: CoopCommand[] }
   | { type: 'hash'; tick: number; hash: string }
   | { type: 'ping'; at: number }
+  // On the result card: play this night next (the same one to replay), with the voter's stars as saved now.
+  | { type: 'next'; level: number; stars: Record<string, number> }
 export type ServerMessage =
   | { type: 'welcome'; version: number; player: Player; room: RoomInfo; delay: number; hashEvery: number }
   // joined: the seat is taken. A joined seat with no Chog is still choosing.
@@ -37,17 +39,19 @@ export type ServerMessage =
   | { type: 'disconnected'; player: Player; reason: string }
   | { type: 'error'; reason: string }
   | { type: 'pong'; at: number }
+  // Both players voted for the same night: a new round with a new seed, after a roster with the updated stars.
+  | { type: 'round'; room: RoomInfo }
 
 export function record(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value)
 }
 export const integer = (value: unknown, min: number, max: number): value is number => typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
 const member = (values: object, value: unknown) => typeof value === 'string' && Object.hasOwn(values, value)
+const isStars = (value: unknown): value is Record<string, number> => record(value) && Object.keys(value).length <= 6 && Object.entries(value).every(([key, stars]) => /^[1-6]$/.test(key) && integer(stars, 0, 3))
 export function isHero(value: unknown): value is HeroSelection {
   if (!record(value) || !integer(value.id, 1, 1969) || typeof value.home !== 'boolean' || typeof value.costume !== 'string' || !/^(|crew-(ghosts|witches|pumpkins|bats))$/.test(value.costume)) return false
   if (!Array.isArray(value.owned) || value.owned.length > 64 || !value.owned.every(id => integer(id, 0, 10000))) return false
-  if (typeof value.victoryDance !== 'string' || !/^[a-z0-9-]{1,40}$/.test(value.victoryDance)) return false
-  if (!record(value.stars) || Object.keys(value.stars).length > 6 || !Object.entries(value.stars).every(([key, stars]) => /^[1-6]$/.test(key) && integer(stars, 0, 3))) return false
+  if (typeof value.victoryDance !== 'string' || !/^[a-z0-9-]{1,40}$/.test(value.victoryDance) || !isStars(value.stars)) return false
   const s = value.street
   return record(s) && integer(s.candy, 0, 1000) && typeof s.trap === 'boolean' && typeof s.chog === 'boolean' && integer(s.crew, 0, 4)
 }
@@ -80,6 +84,7 @@ export function isClientMessage(value: unknown): value is ClientMessage {
     case 'input': return integer(value.tick, 0, 1_000_000) && Array.isArray(value.commands) && value.commands.length <= MAX_COMMANDS && value.commands.every(isCommand)
     case 'hash': return integer(value.tick, HASH_EVERY, 1_000_000) && value.tick % HASH_EVERY === 0 && typeof value.hash === 'string' && HASH.test(value.hash)
     case 'ping': return typeof value.at === 'number' && Number.isFinite(value.at) && value.at >= 0
+    case 'next': return integer(value.level, 1, 6) && isStars(value.stars)
     default: return false
   }
 }

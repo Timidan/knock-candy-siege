@@ -38,14 +38,17 @@ export function attachRoom(scene: SiegeScene) {
     }
     return advanced
   })
+  // After the result this round lets go of the room: the result card listens for the partner and the next round's start.
   const unsubscribe = client.subscribe(message => {
     driver.receive(message)
     if (message.type === 'start') session.onStatus('')
     if (!finished && scene.coopResult && driver.verifiedTick >= scene.coopFinishAt) {
-      finished = true; stopClock(); session.onStatus(''); scene.options.onEnd(scene.coopResult)
+      finished = true; stopClock(); unsubscribe(); session.onStatus(''); scene.options.onEnd(scene.coopResult)
     }
   })
-  scene.events.once('shutdown', () => { stopClock(); unsubscribe(); client.close() })
+  // Game.destroy() emits only 'destroy'. The room outlives the scene: leaving it closes the socket.
+  const detach = () => { stopClock(); unsubscribe() }
+  scene.events.once('shutdown', detach); scene.events.once('destroy', detach)
   session.onStatus('Waiting for both Chogs…')
   client.ready(hashState(simulationSnapshot(scene)))
 }

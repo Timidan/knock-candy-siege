@@ -63,7 +63,10 @@ export class RoomClient {
           }
           resolve(client)
         } else if (message.type === 'roster') { client.roster = message.players; client.joined = message.joined }
-        else if (message.type === 'pong' && Number.isFinite(message.at)) {
+        else if (message.type === 'round') {
+          if (message.room?.code !== code || message.room.build !== build) { client.fail('Invalid relay packet'); return }
+          client.room = message.room
+        } else if (message.type === 'pong' && Number.isFinite(message.at)) {
           if (message.at >= client.sampleAfter && client.samples.length < 8) client.samples.push(performance.now() - message.at)
           client.tryReady()
         } else if (message.type === 'start') client.delay = message.delay

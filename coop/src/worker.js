@@ -161,6 +161,19 @@ export class PorchRoom {
         if (peer.state.hash !== state.hash) await this.end({ type: 'desync', tick: state.hashTick })
         else this.broadcast({ type: 'verified', tick: state.hashTick, hash: state.hash })
       }
+    } else if (message.type === 'next') {
+      // The result card's vote: the first one per round stands, and a repeat (a double tap) is ignored, not fatal.
+      // Both must name the same night. Each keeps their Chog, with the stars their vote carries.
+      if (state.next) { ws.serializeAttachment(state); return }
+      state.next = { level: message.level, stars: message.stars }; ws.serializeAttachment(state)
+      if (!peer.state.next) return
+      if (peer.state.next.level !== message.level) { await this.end({ type: 'error', reason: 'Players chose different nights' }); return }
+      // A new round: a new seed and the lifetime of a new room. Each player's inputs for the last round came before their vote.
+      this.meta.room = { ...this.meta.room, level: message.level, seed: crypto.getRandomValues(new Uint32Array(1))[0] }
+      this.meta.started = false; this.meta.created = Date.now()
+      for (const seat of [{ ws, state }, peer]) seat.ws.serializeAttachment({ ...seat.state, hero: { ...seat.state.hero, stars: seat.state.next.stars }, next: null, ready: null, nextTick: 0, hashTick: 0, hash: null })
+      await this.ctx.storage.put('room', this.meta)
+      this.roster(); this.broadcast({ type: 'round', room: this.meta.room })
     }
   }
   async webSocketClose(ws, code, reason) {
