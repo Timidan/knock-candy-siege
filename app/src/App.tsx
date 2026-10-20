@@ -17,7 +17,7 @@ class Boundary extends Component<{ children: ReactNode }, { error: unknown }> {
   componentDidCatch(error: unknown) {
     console.error(error)
     // A chunk from an older deploy is gone; one automatic reload per tab session fetches the new build.
-    if (!/dynamically imported module|Importing a module script failed/i.test(String((error as Error)?.message))) return
+    if (!/dynamically imported module|Importing a module script failed|not a valid JavaScript MIME type/i.test(String((error as Error)?.message))) return
     try { if (sessionStorage.getItem('knock-chunk-reload')) return; sessionStorage.setItem('knock-chunk-reload', '1') } catch { return }
     location.reload()
   }
