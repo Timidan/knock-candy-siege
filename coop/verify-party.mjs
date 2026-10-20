@@ -16,7 +16,7 @@ const benchmark = modes.includes('crowd60')
 const word = value => `0x${BigInt(value).toString(16).padStart(64, '0')}`
 // Each page's relay sockets, so a mode can cut one player's link: 'close' closes both ends (the relay sees it), 'blackhole'
 // stops every frame and closes nothing (a dead network). While cut, a new socket opens to nobody and is closed at once.
-const links = [[], []], cutUntil = [0, 0], cutting = modes.some(mode => ['reconnect', 'drop40'].includes(mode))
+const links = [[], []], cutUntil = [0, 0], cutting = modes.some(mode => ['reconnect', 'drop40', 'silent40'].includes(mode))
 const quietly = promise => Promise.resolve(promise).catch(() => {})
 const cut = (player, ms, how) => {
   cutUntil[player] = Date.now() + ms
@@ -465,18 +465,23 @@ try {
       await nextScene()
       await writeFile(`${evidence}/reconnect-${TAG}.json`, JSON.stringify({ injected: { rttMs: Number(process.env.PARTY_RTT_MS ?? 0), jitterMs: Number(process.env.PARTY_JITTER_MS ?? 0) }, initial, drops, checkpointsCompared: common.length, away, finishedAtTurn: turn, errors }, null, 2))
       console.log('PASS: 5 s and 15 s closed drops, a 12 s silent drop and a 6 s background rejoin, checkpoints match, the night finishes; a drop on the result card resumes and the next night starts', common.length, 'checkpoints')
-    } else if (mode === 'drop40') {
+    } else if (mode === 'drop40' || mode === 'silent40') {
       // Longer than the 30 s grace: the room ends as before a reconnect existed, with the same heading for both.
+      // silent40: nothing closes, so the relay holds the seat only when its alarm finds 20 s of silence (every 15 s),
+      // counting the grace from the last message; the dropped side gives up 30 s after its own stale check.
+      const silent = mode === 'silent40'
       for (let round = 0; round < 6; round++) { await act(round); await pages[0].waitForTimeout(700) }
       const at = Date.now()
-      cut(1, 40000, 'close')
-      await pages[0].getByText('Partner reconnecting…', { exact: true }).waitFor({ timeout: 5000 })
-      const ended = await Promise.all(pages.map(async page => { await page.getByRole('heading', { name: 'Partner disconnected' }).waitFor({ timeout: 45000 }); return Date.now() - at }))
-      assert.ok(ended.every(ms => ms >= 28000 && ms < 40000), JSON.stringify(ended))
+      cut(1, 40000, silent ? 'blackhole' : 'close')
+      // A silent seat is held by the alarm 20–35 s after its last message, so the note may last only until the grace's end.
+      await pages[0].waitForFunction(() => window.partyAway.some(([, type, player]) => type === 'away' && player === 1), null, { timeout: silent ? 40000 : 5000 })
+      const held = Date.now() - at
+      const ended = await Promise.all(pages.map(async page => { await page.getByRole('heading', { name: 'Partner disconnected' }).waitFor({ timeout: 55000 }); return Date.now() - at }))
+      assert.ok(ended.every(ms => ms >= 28000 && ms < (silent ? 50000 : 40000)), JSON.stringify(ended))
       cutUntil[1] = 0 // The network is back for the next mode.
-      await Promise.all(pages.map((page, i) => page.screenshot({ path: `${evidence}/drop40-${i}.png` })))
-      await writeFile(`${evidence}/drop40.json`, JSON.stringify({ initial, endedAfterMs: ended, details: await Promise.all(pages.map(page => page.evaluate(() => window.__siege?.net?.detail ?? null))), errors }, null, 2))
-      console.log('PASS: a 40 s drop ends the room for both after the grace', ended)
+      await Promise.all(pages.map((page, i) => page.screenshot({ path: `${evidence}/${mode}-${i}.png` })))
+      await writeFile(`${evidence}/${mode}.json`, JSON.stringify({ initial, partnerSawHeldAfterMs: held, endedAfterMs: ended, details: await Promise.all(pages.map(page => page.evaluate(() => window.__siege?.net?.detail ?? null))), errors }, null, 2))
+      console.log(`PASS: a 40 s ${silent ? 'silent' : 'closed'} drop ends the room for both after the grace`, { held, ended })
     } else if (mode === 'disconnect') {
       await pages[1].evaluate(() => window.__siege.options.coop.client.close())
       await pages[0].getByRole('heading', { name: 'Partner disconnected' }).waitFor({ timeout: 10000 })
