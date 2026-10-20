@@ -70,6 +70,17 @@ function Modal({ children, label, onEscape, className = '', closing = false, qui
     first?.focus({ preventScroll: true })
     if (dialog) dialog.scrollTop = 0; if (!swap && !quiet && !document.hidden) playUi('ui-open'); return () => dialog?.close()
   }, [])
+  // Fullscreen puts the game shell into the top layer above a modal opened a moment earlier (the first tap opens both):
+  // the menu is then invisible yet still takes taps. Reopening it puts it back on top.
+  useEffect(() => {
+    const raise = () => {
+      const dialog = ref.current
+      if (!dialog?.open || !document.fullscreenElement) return
+      const top = dialog.scrollTop; dialog.close(); dialog.showModal(); dialog.scrollTop = top
+    }
+    document.addEventListener('fullscreenchange', raise)
+    return () => document.removeEventListener('fullscreenchange', raise)
+  }, [])
   return <dialog ref={ref} inert={closing} className={`siege-modal board ${className}${swap ? ' siege-modal--swap' : ''}${closing ? ' siege-modal--closing' : ''}`} aria-label={label} onCancel={event => { event.preventDefault(); onEscape() }} onClick={event => { if ((event.target as Element).closest('button:not(.sticker), a')) playUi('ui-click') }}>
     {closable && <div className="siege-modal-close-anchor"><button type="button" className="siege-modal-close" aria-label="Close" tabIndex={-1} onClick={onEscape}>×</button></div>}
     {children}
