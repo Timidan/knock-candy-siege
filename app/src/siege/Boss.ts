@@ -139,7 +139,10 @@ export function updateBoss(s: SiegeScene, e: Enemy, dt: number) {
 }
 
 function legendTick(s: SiegeScene, e: Enemy, b: BossState, dt: number) {
-  const rig = b.rig!, id = b.id as number
+  const rig = b.rig!, id = b.id as number, route = s.routeFor(e)
+  // Facing is hashed rig state, so the simulation turns the legend toward its next road point; drawBoss only draws it.
+  const next = route.points[Math.min(route.points.length - 1, Math.floor(e.distance / route.length * (route.points.length - 1)) + 1)]
+  if (next.x < e.x - .5) rig.facing = -1; else if (next.x > e.x + .5) rig.facing = 1
   if (b.intro <= 0 && rig.dancing) rig.cancelDance()
   const moving = b.casting <= 0 && b.intro <= 0 && !e.status.stun && !e.status.freeze && !e.status.root
   // Moves fire on a timer from legends.json; the special clip carries the release.
@@ -251,8 +254,7 @@ export function drawBoss(s: SiegeScene, e: Enemy) {
   const route = s.routeFor(e), point = route.points[Math.min(route.points.length - 1, Math.floor(e.distance / route.length * (route.points.length - 1)) + 1)]
   const left = point.x < e.x - .5 ? true : point.x > e.x + .5 ? false : null
   const v = e.art.reaction, motion = !reducedMotion(), spring = motion ? (v.life / .28) ** 2 * Math.cos((.28 - v.life) * 16) : 0
-  if (b.rig) { if (left !== null) b.rig.facing = left ? -1 : 1 }
-  else if (b.sprite) { if (left !== null) b.sprite.setFlipX(left); if (v.flash > 0) b.sprite.setTintFill(0xffffff); else if (e.gold > 0) b.sprite.setTint(0xffd45e); else b.sprite.clearTint() }
+  if (!b.rig && b.sprite) { if (left !== null) b.sprite.setFlipX(left); if (v.flash > 0) b.sprite.setTintFill(0xffffff); else if (e.gold > 0) b.sprite.setTint(0xffd45e); else b.sprite.clearTint() }
   const bounce = b.sprite && b.state !== 'roll' && !e.status.stun && !e.status.freeze && !reducedMotion() && !s.settings.lite && s.quality.tier < 2 ? Math.abs(Math.sin(e.art.walkAge * 7)) * 6 : 0
   const squash = 1 - .06 * Math.max(0, spring)
   // Frog Leap is a real leap: Pepe arcs over the road for the whole dash. A Pumpkin half hops out of the split.
