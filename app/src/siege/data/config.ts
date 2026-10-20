@@ -108,6 +108,9 @@ export const NIGHT_HEALTH = [1.25, 1.95, 1.1, 1.05, 2.9, 1.1]
 export const WAVE_HEALTH = .04
 export const BOSS_HEALTH = 1.5
 export const ENDLESS_HEALTH = 1.25
+// The Legend Gauntlet starts from GAUNTLET_HEALTH and adds GAUNTLET_WAVE_HEALTH per wave (two waves per legend). Its first legend
+// comes in the second wave, so the run starts with GAUNTLET_CANDY more candy (split in co-op like any income).
+export const GAUNTLET_HEALTH = .6, GAUNTLET_WAVE_HEALTH = .2, GAUNTLET_CANDY = 350
 // Kill candy follows that health: an enemy pays its candy times 1 + KILL_CANDY_HEALTH × (health multiplier − 1),
 // so tougher nights, waves and Endless rounds pay more per kill (1 = in full proportion).
 export const KILL_CANDY_HEALTH = 1

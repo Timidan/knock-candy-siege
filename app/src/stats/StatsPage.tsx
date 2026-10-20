@@ -55,7 +55,7 @@ function killRows(stats: Stats): Row[] {
 }
 function levelRows(stats: Stats): Row[] {
   return stats.levels.flatMap(row => {
-    const label = row.level === 'endless' ? 'Endless · Town Square' : row.level === 'daily' ? 'Daily challenge' : LEVELS.find(level => String(level.id) === row.level && !level.endless)?.name
+    const label = row.level === 'endless' ? 'Endless · Town Square' : row.level === 'gauntlet' ? 'Legend Gauntlet · Town Square' : row.level === 'daily' ? 'Daily challenge' : LEVELS.find(level => String(level.id) === row.level && !level.endless && !level.gauntlet)?.name
     return label ? [{ key: row.level, label, n: row.runs }] : []
   })
 }

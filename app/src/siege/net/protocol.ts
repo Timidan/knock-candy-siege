@@ -75,6 +75,8 @@ export function isCommand(value: unknown): value is CoopCommand {
     default: return false // No local pause or speed command in co-op.
   }
 }
+// A Porch Party plays a story night (1-6) or the Legend Gauntlet (8, GAUNTLET_LEVEL in data/level1.ts).
+export const partyLevel = (value: unknown) => integer(value, 1, 6) || value === 8
 export function isClientMessage(value: unknown): value is ClientMessage {
   if (!record(value)) return false
   switch (value.type) {
@@ -84,7 +86,7 @@ export function isClientMessage(value: unknown): value is ClientMessage {
     case 'input': return integer(value.tick, 0, 1_000_000) && Array.isArray(value.commands) && value.commands.length <= MAX_COMMANDS && value.commands.every(isCommand)
     case 'hash': return integer(value.tick, HASH_EVERY, 1_000_000) && value.tick % HASH_EVERY === 0 && typeof value.hash === 'string' && HASH.test(value.hash)
     case 'ping': return typeof value.at === 'number' && Number.isFinite(value.at) && value.at >= 0
-    case 'next': return integer(value.level, 1, 6) && isStars(value.stars)
+    case 'next': return partyLevel(value.level) && isStars(value.stars)
     default: return false
   }
 }

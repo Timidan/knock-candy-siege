@@ -1,4 +1,4 @@
-import { PROTOCOL, INPUT_DELAY, HASH_EVERY, MAX_PACKET_BYTES, BUILD, ROOM_CODE, isClientMessage, integer, record } from '../../app/src/siege/net/protocol.ts'
+import { PROTOCOL, INPUT_DELAY, HASH_EVERY, MAX_PACKET_BYTES, BUILD, ROOM_CODE, isClientMessage, integer, record, partyLevel } from '../../app/src/siege/net/protocol.ts'
 
 const LIFETIME = 60 * 60 * 1000
 const json = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', ...headers } })
@@ -36,7 +36,7 @@ export default {
       const body = new TextDecoder().decode(bytes)
       let data
       try { data = JSON.parse(body) } catch { return json({ error: 'Invalid JSON' }, 400, headers) }
-      if (!record(data) || data.version !== PROTOCOL || typeof data.build !== 'string' || !BUILD.test(data.build) || !integer(data.level, 1, 6)) return json({ error: 'Invalid room options' }, 400, headers)
+      if (!record(data) || data.version !== PROTOCOL || typeof data.build !== 'string' || !BUILD.test(data.build) || !partyLevel(data.level)) return json({ error: 'Invalid room options' }, 400, headers)
       const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
       const code = Array.from(crypto.getRandomValues(new Uint8Array(10)), byte => alphabet[byte % alphabet.length]).join('')
       const room = { code, build: data.build, level: data.level, seed: crypto.getRandomValues(new Uint32Array(1))[0] }

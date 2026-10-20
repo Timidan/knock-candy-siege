@@ -11,7 +11,7 @@ import { ShapePool, circle, plate, curbedMap, YOU, PARTNER, hex } from './render
 import { Quality } from './Quality'
 import { haptic } from './haptics'
 import type { AssetPack } from './assets'
-import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, COOP_STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES, hypot, sine } from './data/config'
+import { ENEMIES, TOWERS, TRAPS, SPELLS, LIMITS, STARTING_CANDY, COOP_STARTING_CANDY, NIGHT_HEALTH, WAVE_HEALTH, KILL_CANDY_HEALTH, EARLY_CALL_CANDY_PER_SECOND, starsFor, SPECIALISATIONS, SPEC_COST, rankCost, towerStats, seededRandom, TARGETING, towerLock, CONSUMABLES, hypot, sine, GAUNTLET_HEALTH, GAUNTLET_WAVE_HEALTH, GAUNTLET_CANDY } from './data/config'
 import type { EnemyKind, Point, SpellKind, Status, TowerKind, TrapKind, Specialisation, Targeting, ConsumableKind, SupplyKind } from './data/config'
 import { LEVELS, TUTORIAL, TIPS } from './data/level1'
 import type { TutorialAction, LevelProp, Wave, BossSpawn } from './data/level1'
@@ -36,6 +36,7 @@ import { TutorialFocus } from './TutorialFocus'
 import { Hints } from './Hints'
 import { canDance, CRYPTO_EMOTES } from './data/shop'
 import { scoreFor } from './data/score'
+import { gauntletScore } from './data/gauntlet'
 import { specialTowerAttack } from './SpecialTowers'
 import { useConsumable, updateConsumables } from './Consumables'
 import type { PlacedItem } from './Consumables'
@@ -55,14 +56,17 @@ export type Command =
   | { type: 'talent'; index: number; level?: number }
   | { type: 'prop'; index: number }
   | { type: 'speed' }
-export type Mode = 'level' | 'endless' | 'daily'
-export type Outcome = { party?: { id: number; level: number }[]; level: number; mode: Mode; daily: number; theme: number; won: boolean; stars: number; jars: number; kills: number; wave: number; heroLevel: number; score: number; earlyCalls: number; seconds: number; date: string }
+export type Mode = 'level' | 'endless' | 'daily' | 'gauntlet'
+// legends: the Legend Gauntlet's legends defeated (0 in other modes).
+export type Outcome = { party?: { id: number; level: number }[]; level: number; mode: Mode; daily: number; theme: number; won: boolean; stars: number; jars: number; kills: number; wave: number; legends: number; heroLevel: number; score: number; earlyCalls: number; seconds: number; date: string }
 // A schedule entry is one enemy to spawn: on a road, or (edge: a quarter of the far-side stretch, see wildRoute) from the edges of the view; risen enemies pay no candy; boss entries spawn a legend or the Great Pumpkin.
 export type Spawn = { chogId?: number; time: number; kind: EnemyKind; path: number; wave: number; distance?: number; route?: number; edge?: number; risen?: boolean; boss?: BossSpawn }
 export type SceneOptions = { coop?: CoopSession; assets: AssetPack; level: number; mode: Mode; daily: Daily | null; seed: number; stars: Record<string, number>; street: StreetBonuses; seen: string[]; onDiscover: (keys: string[]) => void; hero: number; home: boolean; tutorial: boolean; costume: string; owned: number[]; victoryDance: string; settings: Settings; sfx: Sfx; onFullscreen?: () => void; onShop: () => void; onPause: () => void; onEnd: (result: Outcome) => void; onIntro: (kind: string) => void; onTutorial: () => void; onReady: () => void }
 // Decorative cadence and amplitude, in seconds and design pixels, per tower family.
 const TOWER_IDLE: Record<TowerKind, readonly [number, number]> = { egg: [2.4, .8], tp: [1.8, 1.2], lantern: [1.2, 2.4], patch: [1.5, .5], roost: [2.1, 1.4], cauldron: [1.7, .7], catapult: [1.1, .4], lighthouse: [.9, 1.5], organ: [1.4, .9] }
 const WITCHING_WARNING = 3
+// Rosie Row's candy cannon: its art, shots per volley and damage per shot (times the wave's health).
+const CANNON = 'tower/catapult/3', CANNON_SHOTS = 5, CANNON_DAMAGE = 75
 // Compass names for swarmSide, by eighths of a turn from screen right, clockwise.
 const SIDES = ['right', 'bottom right', 'bottom', 'bottom left', 'left', 'top left', 'top', 'top right']
 // Road routes start with a 450px off-screen run-up (Route); crossing it is an enemy's arrival at the entrance.
@@ -141,7 +145,7 @@ export class SiegeScene extends Phaser.Scene {
     const base = this.level.endless ? endlessWave(i + 1, this.seed) : this.level.waves[i], shuffle = this.shuffle
     return this.plans[i] = shuffle ? { ...base, groups: base.groups.map(group => ({ ...group, type: shuffle[group.type] ?? group.type })) } : base
   }
-  healthScale(wave: number) { return this.level.endless ? endlessHealth(wave) : (NIGHT_HEALTH[this.level.id - 1] ?? 1) * (1 + WAVE_HEALTH * wave) }
+  healthScale(wave: number) { return this.level.endless ? endlessHealth(wave) : this.level.gauntlet ? GAUNTLET_HEALTH * (1 + GAUNTLET_WAVE_HEALTH * wave) : (NIGHT_HEALTH[this.level.id - 1] ?? 1) * (1 + WAVE_HEALTH * wave) }
   killCandyScale(wave: number) { return 1 + KILL_CANDY_HEALTH * (this.healthScale(wave) - 1) }
   routeFor(e: Enemy): Route { return e.route ?? (e.path >= this.routes.length ? e.path === this.routes.length + this.flyRoutes.length ? this.detour! : this.flyRoutes[e.path - this.routes.length] : this.routes[e.path]) }
   roadFor(kind: EnemyKind, path: number) { const sw = this.options.assets.geometry.switch; return this.bridgeUp && !ENEMIES[kind].flying && path === sw?.path ? this.routes.length + this.flyRoutes.length : this.entrancePath(kind, path) }
@@ -348,6 +352,7 @@ export class SiegeScene extends Phaser.Scene {
       if (this.options.owned.includes(23)) this.candy += 50
     }
     if (this.options.street.trap) this.stock.pumpkin++
+    if (this.level.gauntlet) this.income(GAUNTLET_CANDY)
     // Co-op: your Chog stands on a ring in your colour with a YOU tag; your partner's has their colour and Chog number.
     this.heroRings = this.heroes.map((hero, player) => this.art.image(hero.x, hero.y, 'hero/ring').setDisplaySize(116, 44).setDepth(6).setTint(!this.options.coop ? 0xffffff : player === this.localPlayer ? YOU : PARTNER))
     if (this.options.coop) this.heroTags = this.heroes.map((hero, player) => this.add.text(0, 0, player === this.localPlayer ? 'YOU' : `#${hero.kit.id}`, { fontFamily: '"Luckiest Guy", sans-serif', fontSize: '28px', color: hex(player === this.localPlayer ? YOU : PARTNER), stroke: '#241b30', strokeThickness: 6 }).setOrigin(.5).setDepth(2750))
@@ -412,6 +417,7 @@ export class SiegeScene extends Phaser.Scene {
     if (this.dark) this.hud.toast('Rare Row is dark. Only light shows enemies: lanterns, your Chog, and the bonfire.', 6)
     else if (daily) this.hud.toast(`Daily #${daily.number} · ${this.level.name}\n${NIGHTS[daily.theme].name}: ${NIGHTS[daily.theme].text}`, 6)
     else if (this.options.mode === 'endless') this.hud.toast('Endless: the waves never stop. A new road opens every ten waves.', 6)
+    else if (this.level.gauntlet) this.hud.toast('Legend Gauntlet: all ten legends, one after another, each with its own move. Keep a jar and beat them all.', 6)
   }
   private cancelGesture() {
     this.holdAt = null; this.holdTime = 0
@@ -625,7 +631,7 @@ export class SiegeScene extends Phaser.Scene {
     }
     for (const z of geometry.zones ?? []) this.zones.push({ ...z, image: this.art.image(z.x, z.y, 'fx/toxic/0').setDisplaySize(z.r * 2.35, z.r * 2.35).setDepth(3) })
     for (const data of geometry.props) if (data.use && data.kind) {
-      const image = this.art.image(data.x, data.y, data.kind === 'bridge' ? 'prop/bridge/down' : `prop/${data.kind}/0`).setOrigin(.5, 1).setDepth(data.y)
+      const image = this.art.image(data.x, data.y, data.kind === 'bridge' ? 'prop/bridge/down' : data.kind === 'cannon' ? CANNON : `prop/${data.kind}/0`).setOrigin(.5, 1).setDepth(data.y)
       const label = this.add.text(data.x, data.y + 12, '', { fontFamily: '"Patrick Hand", sans-serif', fontSize: '30px', color: '#fff0d5', backgroundColor: '#241b30', padding: { x: 10, y: 4 } }).setOrigin(.5, 0).setDepth(2800)
       const index = this.props.length
       image.setInteractive().on('pointerdown', (p: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => { event.stopPropagation(); if (this.mode) this.worldDown(p); else if (!this.focus.active) this.command({ type: 'prop', index }); else this.focus.input(this.viewToWorld(p), true) })
@@ -673,6 +679,7 @@ export class SiegeScene extends Phaser.Scene {
       p.animation = Math.max(0, p.animation - dt)
       if (this.presentationFrozen) continue
       const kind = p.data.kind!, step = (n: number) => Math.min(n - 1, Math.floor((1 - p.animation) * n))
+      if (kind === 'cannon') { p.image.setScale(.8 * (1 + .12 * p.animation), .8 * (1 - .1 * p.animation)); p.label.setText(p.cooldown > 0 ? `${Math.ceil(p.cooldown)}s` : 'Fire the cannon'); continue }
       const name = kind === 'lamp' ? p.animation ? `fall/${step(4)}` : p.used ? 'down' : '0' : kind === 'shop' ? p.animation ? `use/${step(6)}` : String(Math.floor(idleTime * 5) % 4)
         : kind === 'bell' ? p.animation ? `ring/${step(6)}` : '0' : kind === 'grate' ? p.animation ? `open/${step(4)}` : '0' : kind === 'bonfire' ? this.bonfire > 0 ? `burn/${Math.floor(idleTime * 8) % 6}` : '0'
         : p.animation ? `move/${step(4)}` : this.bridgeUp ? 'up' : 'down'
@@ -719,6 +726,18 @@ export class SiegeScene extends Phaser.Scene {
         e.distance = this.routeFor(e).nearest(back[0], back[1]).distance; this.routeFor(e).at(e.distance, e); dropped++
       }
       p.cooldown = dropped ? 16 * slow : 1.5; this.hud.toast(dropped ? `${dropped} dropped down the grate. They climb out upstream in 5 seconds.` : 'Nobody is standing on the grate.')
+    } else if (p.data.kind === 'cannon') {
+      // Rosie Row: a volley of candy corn at the leading ground enemies on the road it covers; an empty road costs nothing.
+      const reach = new Route(p.data.reach!), from = { x: p.data.x, y: p.data.y - 120 }
+      const leaders = this.enemies.filter(e => e.active && e.visible && !e.returning && !ENEMIES[e.kind].flying && reach.nearest(e.x, e.y).gap < 110)
+        .sort((a, b) => b.distance / this.routeFor(b).length - a.distance / this.routeFor(a).length).slice(0, CANNON_SHOTS)
+      if (!leaders.length) { if (this.mine(player)) this.hud.toast('The cannon has nothing to aim at yet.'); return }
+      const damage = CANNON_DAMAGE * this.healthScale(Math.max(0, this.wave - 1))
+      for (let i = 0; i < CANNON_SHOTS; i++) {
+        const target = leaders[i % leaders.length]
+        this.fire(from.x, from.y, target, damage, 'catapult', 70, { frame: 'proj/candycorn', duration: .7 + i * .09, arc: 220 + i * 25, onHit: e => { if (!ENEMIES[e.kind].flying) this.damage(e, damage, 'physical') }, after: () => { this.effect('fx/candycorn/0', target.x, target.y - 35, .6, 1.1) } })
+      }
+      p.cooldown = 25; this.effect('fx/poof/0', from.x, from.y, .5, 1.3); this.shake(.004); this.hud.toast('Candy cannon! A volley at the leaders.')
     } else if (p.data.kind === 'bonfire') {
       // Rare Row: the whole map is lit, and every ghost revealed, for 20 seconds.
       this.bonfire = 20; p.cooldown = 45 * slow; this.hud.toast('The bonfire roars! Everything is lit for 20 seconds.')
@@ -1617,16 +1636,16 @@ export class SiegeScene extends Phaser.Scene {
     if (this.ended) return
     this.cancel(); this.ended = true; this.hud.hide(); this.focus.draw()
     const mode = this.options.mode, daily = this.options.daily
-    const result = { level: this.options.level, mode, daily: mode === 'daily' && daily ? daily.number : 0, theme: mode === 'daily' && daily ? daily.theme : 0, won, jars: this.jars, stars: won ? starsFor(this.jars) : 0, kills: this.kills, wave: this.wave, heroLevel: this.hero.level, earlyCalls: this.earlyCalls, seconds: this.clock, date: new Date().toISOString() }
+    const result = { level: this.options.level, mode, daily: mode === 'daily' && daily ? daily.number : 0, theme: mode === 'daily' && daily ? daily.theme : 0, won, jars: this.jars, stars: won && !this.level.gauntlet ? starsFor(this.jars) : 0, kills: this.kills, wave: this.wave, legends: this.level.gauntlet ? this.bossesDefeated.length : 0, heroLevel: this.hero.level, earlyCalls: this.earlyCalls, seconds: this.clock, date: new Date().toISOString() }
     this.options.sfx.play(won ? 'victory' : 'defeat')
     if (won) this.closeUp()
     if (this.options.coop) {
-      this.coopResult = { ...result, score: scoreFor(result), party: this.heroes.map(hero => ({ id: hero.kit.id, level: hero.level })) }
+      this.coopResult = { ...result, score: this.level.gauntlet ? gauntletScore(result.legends, result.jars) : scoreFor(result), party: this.heroes.map(hero => ({ id: hero.kit.id, level: hero.level })) }
       this.coopFinishAt = Math.ceil(((this.net?.tick ?? 0) + 1) / HASH_EVERY) * HASH_EVERY
       return // The result is released only after the final matching checkpoint; the Chogs dance then (update).
     }
     this.celebrate(won)
-    this.time.delayedCall(reducedMotion() || !won ? 0 : 1200, () => this.options.onEnd({ ...result, score: mode === 'endless' ? endlessScore(this.rewarded.size, this.kills) : scoreFor(result) }))
+    this.time.delayedCall(reducedMotion() || !won ? 0 : 1200, () => this.options.onEnd({ ...result, score: mode === 'endless' ? endlessScore(this.rewarded.size, this.kills) : this.level.gauntlet ? gauntletScore(result.legends, result.jars) : scoreFor(result) }))
   }
   // Every Chog dances its victory dance, or faints. Rig clips and times are checkpoint state, so co-op starts this only after the final checkpoint matched.
   private celebrate(won: boolean) {

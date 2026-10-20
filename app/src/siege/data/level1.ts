@@ -1,20 +1,22 @@
 import type { EnemyKind, Point } from './config'
+import { GAUNTLET_WAVES } from './gauntlet.ts'
 
 // A boss is a legend's token id or the Great Pumpkin; it walks the road beside the wave's ordinary groups.
 export type BossId = number | 'pumpkin'
-export type BossSpawn = { id: BossId; delay?: number; hp?: number }
+// hp: base health in place of data/bosses.ts; revive: the share of health Hellfire Skull rises with (.45 unless set).
+export type BossSpawn = { id: BossId; delay?: number; hp?: number; revive?: number }
 // edge: the group pours in from the edges of the view on the porch's far side instead of a road (Witching Hour swarms).
 export type WaveGroup = { type: EnemyKind; count: number; interval: number; delay?: number; path?: number; edge?: boolean }
 export type Wave = { name: string; groups: WaveGroup[]; bonus: number; countdown: number; witching?: boolean; boss?: BossSpawn }
-export type LevelProp = Point & { kind?: 'lamp' | 'shop' | 'bridge' | 'bell' | 'grate' | 'bonfire'; use?: boolean; reach?: [number, number][]; return?: [number, number]; frame?: string; scale?: number }
+export type LevelProp = Point & { kind?: 'lamp' | 'shop' | 'bridge' | 'bell' | 'grate' | 'bonfire' | 'cannon'; use?: boolean; reach?: [number, number][]; return?: [number, number]; frame?: string; scale?: number }
 export type LevelPad = Point & { boost?: boolean }
 export type Portal = { path: number; enter: [number, number]; exit: [number, number] }
 export type Zone = Point & { kind: 'toxic'; r: number }
 export type LevelGeometry = { size: [number, number]; background: string; paths: [number, number][][]; pads: LevelPad[]; porch: Point; props: LevelProp[]; fly?: [number, number][][]; switch?: { prop: string; path: number; points: [number, number][] }; portals?: Portal[]; zones?: Zone[]; dark?: boolean; lights?: (Point & { r: number })[]; ambient?: { fireflies?: number; leaves?: boolean; fog?: number[]; glows?: (Point & { r: number })[] } }
-export type LevelConfig = { id: number; name: string; geometry: LevelGeometry; waves: Wave[]; endless?: boolean }
-export const ENDLESS_LEVEL = 7
-// Level maps live in levelN.json; the endless plaza is its own file.
-export const mapFile = (level: number) => level === ENDLESS_LEVEL ? 'townsquare' : `level${level}`
+export type LevelConfig = { id: number; name: string; geometry: LevelGeometry; waves: Wave[]; endless?: boolean; gauntlet?: boolean }
+export const ENDLESS_LEVEL = 7, GAUNTLET_LEVEL = 8
+// Level maps live in levelN.json; the plaza of Endless and the Legend Gauntlet is its own file.
+export const mapFile = (level: number) => level === ENDLESS_LEVEL || level === GAUNTLET_LEVEL ? 'townsquare' : `level${level}`
 export const LEVEL1: LevelConfig = {
   id: 1, name: 'Rosie Row',
   geometry: {
@@ -52,7 +54,7 @@ export function readGeometry(value: unknown): LevelGeometry | null {
   if (v.fly && (!Array.isArray(v.fly) || !v.fly.length || !v.fly.every(pathValid))) return null
   if (v.switch && (!Number.isInteger(v.switch.path) || !v.paths[v.switch.path] || !pathValid(v.switch.points))) return null
   const pair = (p: unknown) => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite)
-  if (Array.isArray(v.props) && v.props.some(p => p.use && (!['lamp', 'shop', 'bridge', 'bell', 'grate', 'bonfire'].includes(p.kind ?? '') || !pathValid(p.reach) || (p.kind === 'grate' && !pair(p.return))))) return null
+  if (Array.isArray(v.props) && v.props.some(p => p.use && (!['lamp', 'shop', 'bridge', 'bell', 'grate', 'bonfire', 'cannon'].includes(p.kind ?? '') || !pathValid(p.reach) || (p.kind === 'grate' && !pair(p.return))))) return null
   if (v.portals && (!Array.isArray(v.portals) || !v.portals.every(p => Number.isInteger(p.path) && !!v.paths[p.path] && pair(p.enter) && pair(p.exit)))) return null
   if (v.zones && (!Array.isArray(v.zones) || !v.zones.every(z => z.kind === 'toxic' && point(z) && Number.isFinite(z.r) && z.r > 0))) return null
   if (v.lights && (!Array.isArray(v.lights) || !v.lights.every(l => point(l) && Number.isFinite(l.r) && l.r > 0))) return null
@@ -125,4 +127,4 @@ export const LEVELS: LevelConfig[] = [LEVEL1, {
     wave('Last call', 85, 24, [g('witch', 9, 2), g('mummy', 14, 1), g('skeleton', 12, 1.3), g('bat', 22, .5, 6), g('goblin', 18, .6, 8)]),
     wave('The Great Pumpkin', 115, 24, [g('pumpkin', 10, 1.1), g('mummy', 10, 1.3), g('witch', 8, 2, 5), swarm('ghost', 10, .6), swarm('bat', 16, .5)], { witching: true, boss: { id: 'pumpkin', delay: 6 } }),
   ],
-}, { id: ENDLESS_LEVEL, name: 'Endless', geometry: LEVEL1.geometry, waves: [], endless: true }]
+}, { id: ENDLESS_LEVEL, name: 'Endless', geometry: LEVEL1.geometry, waves: [], endless: true }, { id: GAUNTLET_LEVEL, name: 'Legend Gauntlet', geometry: LEVEL1.geometry, waves: GAUNTLET_WAVES, gauntlet: true }]
